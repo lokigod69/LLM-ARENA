@@ -1,18 +1,3 @@
-// Task 4.2 Complete: useDebate custom hook for managing debate state and flow
-// Centralizes all debate logic and state management
-// FIXED: Alternation issue by restructuring stepTurn to avoid stale closures
-// FIXED: Auto-continuation stopping issue by removing problematic useEffect dependencies
-// Step 2 Implementation: Enhanced useDebate hook with agreeability and position control
-// Added support for personality slider and position assignment
-// Integrates with the new orchestrator parameters
-// Simplified: Removed positionMode complexity, direct manipulation only
-// PHASE 1: Added dual personality system - individual model control with backward compatibility
-// THE ORACLE PHASE 1.1: Configurable insight extraction with updated architecture
-// PHASE B: Enhanced useDebate hook with flexible Model A vs Model B support
-// Replaces hardcoded GPT vs Claude with dynamic model selection system
-// Maintains backward compatibility while adding new flexible interfaces
-// Centralizes all debate logic and state management with model-agnostic approach
-// SIMPLIFIED FLOW: Removed stepTurn functionality - only PLAY/STOP controls
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -67,6 +52,10 @@ interface EnhancedDebateState {
   oracleResults: OracleResult[];
   isOracleAnalyzing: boolean;
   
+  // --- CHANGE 1: ADD NEW STATE PROPERTIES ---
+  accessCode: string | null;
+  queriesRemaining: number | string;
+
   // BACKWARD COMPATIBILITY: Legacy fields (deprecated - remove in Phase 4)
   /** @deprecated Use modelA/modelB instead */
   gptMessages: Message[];
@@ -90,9 +79,13 @@ interface EnhancedDebateState {
 }
 
 interface EnhancedDebateActions {
-  startDebate: (topic: string) => Promise<void>;
-  stopDebate: () => void; // SIMPLIFIED: Just stop - no resume complexity
+  // --- CHANGE 2: MODIFY/ADD ACTIONS ---
+  startDebate: (topic: string, accessCode: string) => Promise<void>; // <-- MODIFIED
+  stopDebate: () => void;
   setMaxTurns: (turns: number) => void;
+  
+  setAccessCode: (code: string | null) => void; // <-- ADDED
+  setQueriesRemaining: (count: number | string) => void; // <-- ADDED
   
   // NEW: Flexible model configuration actions
   setModelA: (config: ModelConfiguration) => void;
@@ -125,6 +118,10 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     currentTurn: 0,
     maxTurns: 20,
     topic: '',
+    
+    // --- CHANGE 3: ADD INITIAL STATE VALUES ---
+    accessCode: null,
+    queriesRemaining: '...',
     
     // NEW: Default flexible model configuration - Updated with exact API names
     modelA: { 
@@ -161,6 +158,20 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       claude: { agreeabilityLevel: 3, position: 'con' },
     },
   });
+
+  // --- CHANGE 4: IMPLEMENT SETTERS AND REF ---
+  const debateStateRef = useRef(state);
+  useEffect(() => {
+    debateStateRef.current = state;
+  }, [state]);
+
+  const setAccessCode = (code: string | null) => {
+    setState(prev => ({ ...prev, accessCode: code }));
+  };
+
+  const setQueriesRemaining = (count: number | string) => {
+    setState(prev => ({ ...prev, queriesRemaining: count }));
+  };
 
   const autoStepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const waitingForTypingRef = useRef<boolean>(false);
@@ -324,6 +335,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           apiModel = 'gpt-4o'; // Default fallback to gpt-4o
       }
       
+      // --- CHANGE 5 PART A: ADD ACCESS CODE TO REQUEST BODY ---
       const requestBody = { 
         prevMessage, 
         model: apiModel, // Use mapped model for API compatibility
@@ -335,6 +347,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         extensivenessLevel, // NEW: Response length control
         personaId, // NEW: Persona ID
         conversationHistory,
+        accessCode: debateStateRef.current.accessCode, // <-- ADDED
         // NEW: Include original model name for future API expansion
         originalModel: targetModel
       };
@@ -355,39 +368,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
 
       console.log('🔥 Fetch completed! Response status:', response.status);
       console.log('💰 DEBUG: API response received, status:', response.status);
-
-      if (!response.ok) {
-        // Enhanced error handling to prevent JSON parsing errors
-        let errorMessage = `Failed to get response from ${targetModel}`;
-        
-        try {
-          // Read the response text once
-          const responseText = await response.text();
-          
-          // Try to parse as JSON first
-          try {
-            const errorData = JSON.parse(responseText);
-            console.error('❌ API Response Error:', errorData);
-            errorMessage = errorData.error || errorMessage;
-          } catch (jsonParseError) {
-            // If JSON parsing fails, it's likely an HTML error page
-            console.error('❌ JSON parsing failed, likely HTML error page');
-            if (responseText.includes('Internal Server Error')) {
-              errorMessage = `${targetModel} API Error: Internal Server Error (check API keys in .env.local)`;
-            } else if (responseText.includes('<!DOCTYPE html>')) {
-              errorMessage = `${targetModel} API Error: Received HTML instead of JSON (likely server error)`;
-            } else {
-              errorMessage = `${targetModel} API Error: ${responseText.substring(0, 100)}...`;
-            }
-          }
-        } catch (textError) {
-          console.error('❌ Failed to read response text:', textError);
-          errorMessage = `${targetModel} API Error: Could not read response`;
-        }
-        
-        throw new Error(errorMessage);
-      }
-
+      
       // Enhanced response parsing with better error handling
       let responseData;
       try {
@@ -400,6 +381,25 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       } catch (error) {
         console.error('❌ Failed to parse successful response:', error);
         throw new Error(`${targetModel} returned invalid response format`);
+      }
+
+      // --- CHANGE 5 PART A: UPDATE QUERIES REMAINING ---
+      if (responseData.queriesRemaining !== undefined) {
+        setQueriesRemaining(responseData.queriesRemaining);
+      }
+
+      if (!response.ok) {
+        // Enhanced error handling to prevent JSON parsing errors
+        let errorMessage = `Failed to get response from ${targetModel}`;
+        
+        try {
+            console.error('❌ API Response Error:', responseData);
+            errorMessage = responseData.error || errorMessage;
+        } catch (e) {
+            errorMessage = `${targetModel} API Error: Could not parse error response`;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       console.log('📥 API Response received:', {
@@ -444,7 +444,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         personaId: targetModelConfig.personaId,
       };
     }
-  }, []);
+  }, [setQueriesRemaining]); // Added setQueriesRemaining to dependency array
 
   // This function is now defined outside and wrapped in useCallback
   const processNextTurn = useCallback(async () => {
@@ -556,7 +556,9 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   // REMOVED: stepTurn functionality - using simplified PLAY/STOP flow only
 
   // Start a new debate with a topic - SIMPLIFIED: Auto-runs until stopped or max turns
-  const startDebate = useCallback(async (topic: string) => {
+  // --- CHANGE 5 PART B: MODIFY STARTDEBATE SIGNATURE AND ADD SETTER ---
+  const startDebate = useCallback(async (topic: string, accessCode: string) => {
+    setAccessCode(accessCode);
     console.log('🎬 STARTING DEBATE (SIMPLIFIED):', topic);
     clearAutoStep();
     
@@ -923,32 +925,8 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   }, [state.isActive, state.currentTurn]);
 
   return {
-    // NEW: Flexible model state
-    isActive: state.isActive,
-    isPaused: state.isPaused,
-    currentTurn: state.currentTurn,
-    maxTurns: state.maxTurns,
-    topic: state.topic,
-    modelA: state.modelA,
-    modelB: state.modelB,
-    modelAMessages: state.modelAMessages,
-    modelBMessages: state.modelBMessages,
-    isModelALoading: state.isModelALoading,
-    isModelBLoading: state.isModelBLoading,
-    lastActiveModel: state.lastActiveModel,
-    oracleResults: state.oracleResults,
-    isOracleAnalyzing: state.isOracleAnalyzing,
-    
-    // BACKWARD COMPATIBILITY: Legacy state
-    gptMessages: state.gptMessages,
-    claudeMessages: state.claudeMessages,
-    isGptLoading: state.isGptLoading,
-    isClaudeLoading: state.isClaudeLoading,
-    lastActiveModel_legacy: state.lastActiveModel_legacy,
-    agreeabilityLevel: state.agreeabilityLevel,
-    positionAssignment: state.positionAssignment,
-    personalityConfig: state.personalityConfig,
-    
+    // --- CHANGE 6: ADD NEW FUNCTIONS TO RETURN OBJECT ---
+    ...state, // This already includes the new state variables
     // NEW: Flexible model actions
     startDebate,
     stopDebate,
@@ -968,5 +946,9 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     setModelPersonality,
     setAgreeabilityLevel,
     setPositionAssignment,
+
+    // Add the new functions
+    setAccessCode,
+    setQueriesRemaining,
   };
-}; 
+};

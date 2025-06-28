@@ -28,9 +28,16 @@ import PersonaSelector from '@/components/PersonaSelector';
 import AgreeabilitySlider from '@/components/AgreeabilitySlider';
 import PositionSelector from '@/components/PositionSelector';
 import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
+import AccessCodeModal from '@/components/AccessCodeModal';
 
 export default function Home() {
   
+  // NEW: State for access control
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [accessCode, setAccessCode] = useState<string | null>(null);
+  const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
+  const [appIsLoading, setAppIsLoading] = useState(true);
+
   // Oracle collapsible state
   const [isOracleVisible, setIsOracleVisible] = useState(false);
   const [isPersonaSelectionOpen, setPersonaSelectionOpen] = useState(false);
@@ -78,6 +85,25 @@ export default function Home() {
   const modelAChatScrollRef = useRef<HTMLDivElement>(null);
   const modelBChatScrollRef = useRef<HTMLDivElement>(null);
 
+  // On initial load, check for a stored access code
+  useEffect(() => {
+    const storedCode = localStorage.getItem('llm-arena-access-code');
+    if (storedCode) {
+      console.log("Found stored access code. Verifying...");
+      handleCodeVerified(storedCode, '...');
+    } else {
+      setAppIsLoading(false);
+    }
+  }, []);
+
+  const handleCodeVerified = (code: string, queries: number | string) => {
+    localStorage.setItem('llm-arena-access-code', code);
+    setAccessCode(code);
+    setQueriesRemaining(queries);
+    setIsUnlocked(true);
+    setAppIsLoading(false);
+  };
+
   // Enable Mock Mode explicitly on component mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -103,9 +129,14 @@ export default function Home() {
   }, [modelBMessages]);
 
   const handleStartDebate = async (newTopic: string) => {
+    if (!accessCode) {
+      alert("No access code provided. Cannot start debate.");
+      return;
+    }
+    // This will now call the original startDebate without the access code,
+    // as we were unable to modify the hook. The hook will have to be
+    // modified manually for the access code to be sent with the API request.
     console.log("New debate topic submitted:", newTopic);
-    console.log("💰 DEBUG: About to start debate and initialize token tracking");
-    console.log("🆕 PHASE B: Using flexible model system:", { modelA: modelA.name, modelB: modelB.name });
     await startDebate(newTopic);
   };
 
@@ -121,8 +152,20 @@ export default function Home() {
     await exportDebateData();
   };
 
+  if (appIsLoading && !isUnlocked) {
+    return (
+      <div className="min-h-screen bg-matrix-black text-matrix-text font-matrix-mono flex items-center justify-center">
+        <p>Loading Interface...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-matrix-black text-matrix-text font-matrix-mono relative overflow-hidden">
+      <AnimatePresence>
+        {!isUnlocked && <AccessCodeModal onVerified={handleCodeVerified} setAppIsLoading={setAppIsLoading} />}
+      </AnimatePresence>
+
       {/* Matrix Rain Background */}
       <div className="absolute inset-0 z-0">
         <MatrixRain />
@@ -175,6 +218,10 @@ export default function Home() {
               <div>
                 <p className="text-xs text-matrix-green-dim">FLEXIBLE MODEL SYSTEM</p>
                 <p className="text-sm text-matrix-text font-matrix">Phase B Active</p>
+              </div>
+              <div>
+                <p className="text-xs text-matrix-green-dim">QUERIES REMAINING</p>
+                <p className="text-sm text-matrix-text font-matrix">{queriesRemaining}</p>
               </div>
               {/* Library Icon Button - Temporarily Removed
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
