@@ -87,3 +87,12 @@ Check the browser console and terminal for detailed API call logs.
 ---
 
 🎉 **Plan A is now live!** Your LLM Arena is ready for real AI debates! 
+
+## Environment Variable Setup
+Create a `.env.local` file in your project's root directory and add the following, replacing the placeholders with your actual keys:
+
+```bash
+# ... existing code ...
+```
+
+That's it! Once your keys are in `.env.local`, the application will be able to authenticate with the respective AI services. 

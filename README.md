@@ -29,15 +29,26 @@ npm install
 Create a `.env.local` file in the project root:
 
 ```env
-# OpenAI API Key for GPT-4
-OPENAI_API_KEY=sk-your-actual-openai-key-here
+# OpenAI API Key (required)
+OPENAI_API_KEY=your-openai-api-key
 
-# Anthropic API Key for Claude
-ANTHROPIC_API_KEY=sk-ant-your-actual-anthropic-key-here
+# Google Gemini API Key (required)
+GOOGLE_GEMINI_API_KEY=your-gemini-api-key
 
-# Supabase Configuration (optional, for auth)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+# Anthropic API Key (required)
+ANTHROPIC_API_KEY=your-anthropic-api-key
+
+# Groq API Key (required)
+GROQ_API_KEY=your-groq-api-key
+
+# Vercel KV Configuration (required for access code system)
+KV_URL=
+KV_REST_API_URL=
+KV_REST_API_TOKEN=
+KV_REST_API_READ_ONLY_TOKEN=
+
+# Admin Access Code (required for generating new codes)
+ADMIN_ACCESS_CODE=your-secret-admin-code
 ```
 
 **Get API Keys:**
