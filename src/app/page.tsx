@@ -29,6 +29,7 @@ import AgreeabilitySlider from '@/components/AgreeabilitySlider';
 import PositionSelector from '@/components/PositionSelector';
 import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
 import AccessCodeModal from '@/components/AccessCodeModal';
+import Link from 'next/link';
 
 export default function Home() {
   
@@ -129,15 +130,12 @@ export default function Home() {
   }, [modelBMessages]);
 
   const handleStartDebate = async (newTopic: string) => {
-    if (!accessCode) {
-      alert("No access code provided. Cannot start debate.");
+    if (!isUnlocked || !accessCode) {
+      alert("Access not verified. Please enter a valid access code.");
       return;
     }
-    // This will now call the original startDebate without the access code,
-    // as we were unable to modify the hook. The hook will have to be
-    // modified manually for the access code to be sent with the API request.
     console.log("New debate topic submitted:", newTopic);
-    await startDebate(newTopic);
+    await startDebate(newTopic, accessCode);
   };
 
   const enableMockMode = () => {
@@ -223,11 +221,9 @@ export default function Home() {
                 <p className="text-xs text-matrix-green-dim">QUERIES REMAINING</p>
                 <p className="text-sm text-matrix-text font-matrix">{queriesRemaining}</p>
               </div>
-              {/* Library Icon Button - Temporarily Removed
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
                 <span role="img" aria-label="Library">📚</span>
               </Link>
-              */}
             </motion.div>
           </div>
         </motion.header>
