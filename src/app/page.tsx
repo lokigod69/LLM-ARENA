@@ -8,9 +8,7 @@
 
 'use client'; // Required for useAuth and useState
 
-import Link from 'next/link';
 import { useState } from 'react';
-import { useAuth } from "@/context/AuthContext";
 import PromptInput from '@/components/PromptInput';
 import ChatColumn from '@/components/ChatColumn';
 import ControlPanel from '@/components/ControlPanel';
@@ -32,7 +30,6 @@ import PositionSelector from '@/components/PositionSelector';
 import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
 
 export default function Home() {
-  const { user, loading, signOut } = useAuth();
   
   // Oracle collapsible state
   const [isOracleVisible, setIsOracleVisible] = useState(false);
@@ -179,10 +176,11 @@ export default function Home() {
                 <p className="text-xs text-matrix-green-dim">FLEXIBLE MODEL SYSTEM</p>
                 <p className="text-sm text-matrix-text font-matrix">Phase B Active</p>
               </div>
-              {/* Library Icon Button */}
+              {/* Library Icon Button - Temporarily Removed
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
                 <span role="img" aria-label="Library">📚</span>
               </Link>
+              */}
             </motion.div>
           </div>
         </motion.header>
