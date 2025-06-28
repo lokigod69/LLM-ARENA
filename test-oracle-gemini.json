@@ -1,0 +1,35 @@
+{
+  "topic": "Should social media be regulated by governments?",
+  "gptMessages": [
+    {
+      "role": "assistant",
+      "content": "Government regulation is necessary to protect users from misinformation, hate speech, and privacy violations. Social media companies have proven unable to self-regulate effectively."
+    }
+  ],
+  "claudeMessages": [
+    {
+      "role": "assistant", 
+      "content": "Government regulation threatens free speech and innovation. Market forces and user choice are better mechanisms for addressing social media issues than heavy-handed government intervention."
+    }
+  ],
+  "gptPersonality": {},
+  "claudePersonality": {},
+  "totalTurns": 2,
+  "config": {
+    "oracleModel": "gemini-2.5-pro-preview-05-06",
+    "primaryLens": "logical",
+    "depthLevel": 2,
+    "outputFormat": "gap_analysis",
+    "verdict": {
+      "enabled": false,
+      "scope": "disabled"
+    },
+    "biasDetection": {
+      "enabled": true,
+      "analyzeDebaterBias": false,
+      "analyzeCensorship": true,
+      "culturalBiasCheck": false,
+      "politicalBiasCheck": true
+    }
+  }
+} 

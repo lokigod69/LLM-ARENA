@@ -1,0 +1,284 @@
+/* Import Matrix-style fonts - must be at the top */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Courier+Prime:wght@400;700&display=swap');
+
+@import "tailwindcss";
+
+/* Matrix-inspired theme with dark cyberpunk aesthetics */
+:root {
+  --matrix-black: #000000;
+  --matrix-dark: #0a0a0a;
+  --matrix-darker: #050505;
+  --matrix-green: #00ff41;
+  --matrix-green-dim: #00cc33;
+  --matrix-green-dark: #008822;
+  --matrix-blue: #00ffff;
+  --matrix-blue-dim: #0099cc;
+  --matrix-blue-dark: #006699;
+  --matrix-orange: #da7756;
+  --matrix-orange-dim: #c86b4a;
+  --matrix-orange-dark: #b55f3e;
+  --matrix-red: #ff0040;
+  --matrix-gray: #1a1a1a;
+  --matrix-gray-light: #333333;
+  --matrix-text: #00ff41;
+  --matrix-text-dim: #cccccc;
+}
+
+/* Colors are defined in :root above and used via CSS custom properties */
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--matrix-black);
+  color: var(--matrix-text);
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  overflow-x: hidden;
+}
+
+/* Matrix-style scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--matrix-darker);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-dark);
+  border-radius: 4px;
+  border: 1px solid var(--matrix-green);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green);
+  box-shadow: 0 0 10px var(--matrix-green);
+}
+
+/* Matrix glow effects */
+.matrix-glow {
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+}
+
+.matrix-glow-strong {
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.6);
+}
+
+.matrix-border {
+  border: 1px solid var(--matrix-green);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 65, 0.3),
+    inset 0 0 10px rgba(0, 255, 65, 0.1);
+}
+
+.matrix-panel {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.9) 0%, 
+    rgba(10, 10, 10, 0.95) 50%, 
+    rgba(0, 0, 0, 0.9) 100%);
+  border: 1px solid var(--matrix-green-dark);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 65, 0.2),
+    inset 0 0 20px rgba(0, 255, 65, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+/* Typewriter effect */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing 2s steps(40, end);
+}
+
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* Matrix rain effect background */
+.matrix-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.1;
+}
+
+/* Neon button effects */
+.matrix-button {
+  background: transparent;
+  border: 2px solid var(--matrix-green);
+  color: var(--matrix-green);
+  padding: 12px 24px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-button:hover {
+  background: var(--matrix-green);
+  color: var(--matrix-black);
+  box-shadow: 
+    0 0 30px var(--matrix-green),
+    inset 0 0 30px rgba(0, 255, 65, 0.2);
+  transform: translateY(-2px);
+}
+
+.matrix-button:active {
+  transform: translateY(0);
+}
+
+/* Matrix input styling */
+.matrix-input {
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid var(--matrix-green-dark);
+  color: var(--matrix-text);
+  padding: 12px 16px;
+  font-family: 'Courier Prime', monospace;
+  transition: all 0.3s ease;
+}
+
+.matrix-input:focus {
+  outline: none;
+  border-color: var(--matrix-green);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.matrix-input::placeholder {
+  color: var(--matrix-green-dim);
+  opacity: 0.7;
+}
+
+/* Matrix slider styling */
+.slider-matrix {
+  background: var(--matrix-gray);
+  outline: none;
+  border-radius: 4px;
+}
+
+.slider-matrix::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--matrix-green);
+  cursor: pointer;
+  border: 2px solid var(--matrix-green-dark);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+  transition: all 0.3s ease;
+}
+
+.slider-matrix::-webkit-slider-thumb:hover {
+  background: var(--matrix-green-dim);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
+  transform: scale(1.1);
+}
+
+.slider-matrix::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--matrix-green);
+  cursor: pointer;
+  border: 2px solid var(--matrix-green-dark);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+/* Message bubble styling */
+.matrix-message {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.9) 0%, 
+    rgba(26, 26, 26, 0.9) 100%);
+  border: 1px solid var(--matrix-green-dark);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.matrix-message::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    var(--matrix-green) 50%, 
+    transparent 100%);
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Pulsing effect for loading states */
+.matrix-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Matrix text effects */
+.matrix-title {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px var(--matrix-green);
+}
+
+.matrix-subtitle {
+  font-family: 'Orbitron', monospace;
+  font-weight: 400;
+  letter-spacing: 2px;
+  color: var(--matrix-green-dim);
+}
+
+/* Custom Matrix theme styles for form elements */
+.matrix-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2300FF00%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.4-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 0.65rem auto;
+  padding-right: 2.5rem; /* Make space for the arrow */
+}
+
+.matrix-select option {
+  background-color: #0D0D0D; /* matrix-dark */
+  color: #00FF00; /* matrix-green */
+}
+
+/* Prevent background scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
