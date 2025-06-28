@@ -214,10 +214,6 @@ export default function Home() {
               className="text-right flex items-center gap-6"
             >
               <div>
-                <p className="text-xs text-matrix-green-dim">FLEXIBLE MODEL SYSTEM</p>
-                <p className="text-sm text-matrix-text font-matrix">Phase B Active</p>
-              </div>
-              <div>
                 <p className="text-xs text-matrix-green-dim">QUERIES REMAINING</p>
                 <p className="text-sm text-matrix-text font-matrix">{queriesRemaining}</p>
               </div>
