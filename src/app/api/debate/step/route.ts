@@ -9,9 +9,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { AvailableModel, Message } from '@/types';
+import { kv } from '@vercel/kv';
+
+interface CodeData {
+  queries_allowed: number;
+  queries_remaining: number;
+  isActive: boolean;
+  created_at: string;
+}
 
 // PHASE B: Updated interface for flexible model system
 interface StepRequest {
+  accessCode: string; // <-- ADDED: For usage control
   prevMessage: string;
   model: string; // Now accepts any model string (will be normalized by orchestrator)
   originalModel?: AvailableModel; // NEW: Original model name for future API expansion
@@ -30,9 +39,9 @@ interface StepRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🎯 STEP API: Request received (FLEXIBLE)');
-    
+    const body: StepRequest = await request.json();
     const { 
+      accessCode,
       prevMessage, 
       model, 
       originalModel,
@@ -43,8 +52,26 @@ export async function POST(request: NextRequest) {
       extensivenessLevel = 3, // Default to balanced if not provided
       personaId,
       conversationHistory, // <-- ADDED
-    }: StepRequest = await request.json();
+    } = body;
 
+    let queriesRemaining: number | string = 'Unlimited';
+
+    // Access Code Validation Logic
+    if (accessCode !== process.env.ADMIN_ACCESS_CODE) {
+      const codeData = await kv.get<CodeData>(accessCode);
+
+      if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {
+        return NextResponse.json({ error: 'Access denied. Invalid or expired code.' }, { status: 403 });
+      }
+
+      // Decrement the count (this is the critical transaction)
+      const newQueriesRemaining = codeData.queries_remaining - 1;
+      await kv.set(accessCode, { ...codeData, queries_remaining: newQueriesRemaining });
+      queriesRemaining = newQueriesRemaining;
+    }
+
+    console.log('🎯 STEP API: Request received (FLEXIBLE)');
+    
     console.log('🎯 STEP API: Parsed request data (FLEXIBLE):', {
       model,
       originalModel,
@@ -91,7 +118,7 @@ export async function POST(request: NextRequest) {
       tokenUsage: response.tokenUsage ? 'included' : 'not available'
     });
 
-    return NextResponse.json(response);
+    return NextResponse.json({ ...response, queriesRemaining });
   } catch (error) {
     console.error('💥 STEP API ERROR (FLEXIBLE):', error);
     console.error('💥 Error details:', {
@@ -103,7 +130,8 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Failed to execute debate step', 
         details: (error as Error).message,
-        model: 'error' 
+        model: 'error',
+        queriesRemaining: 'Error' // Add queriesRemaining to error response
       },
       { status: 500 }
     );
