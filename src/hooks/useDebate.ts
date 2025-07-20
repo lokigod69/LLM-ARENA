@@ -570,7 +570,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       topic,
       modelAMessages: [],
       modelBMessages: [],
-      lastActiveModel: null,
+      lastActiveModel: 'B', // FIX: Initialize lastActiveModel to ensure Model A starts first
     }));
 
     // Start the auto-stepping process

@@ -92,6 +92,8 @@ const TypewriterText = ({
       console.log(`✅ TypewriterText: Completed typing`);
       setIsComplete(true);
       onComplete?.();
+      // NEW: Dispatch global event for useDebate hook
+      window.dispatchEvent(new CustomEvent('typingComplete', { detail: { text: safeText } }));
     }
   }, [currentIndex, textUnits, baseDelay, mode, pauseOnPunctuation, onComplete, isComplete, isSkipped]);
 
@@ -102,6 +104,8 @@ const TypewriterText = ({
       setDisplayText(safeText);
       setIsComplete(true);
       onComplete?.();
+      // NEW: Dispatch global event for useDebate hook
+      window.dispatchEvent(new CustomEvent('typingComplete', { detail: { text: safeText } }));
     }
   };
 
