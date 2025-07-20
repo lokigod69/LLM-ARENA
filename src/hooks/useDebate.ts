@@ -613,7 +613,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   }, []);
 
   const setModelB = useCallback((config: ModelConfiguration) => {
-    setState(prev => ({ ...prev, modelB: { ...prev.modelB, ...config } }));
+    setState(prev => ({ ...prev, modelB: config }));
   }, []);
 
   const setModelConfiguration = useCallback((modelA: ModelConfiguration, modelB: ModelConfiguration) => {
