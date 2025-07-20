@@ -570,7 +570,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       topic,
       modelAMessages: [],
       modelBMessages: [],
-      lastActiveModel: 'B', // FIX: Initialize lastActiveModel to ensure Model A starts first
+      lastActiveModel: null,
     }));
 
     // Start the auto-stepping process
@@ -613,7 +613,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   }, []);
 
   const setModelB = useCallback((config: ModelConfiguration) => {
-    setState(prev => ({ ...prev, modelB: config }));
+    setState(prev => ({ ...prev, modelB: { ...prev.modelB, ...config } }));
   }, []);
 
   const setModelConfiguration = useCallback((modelA: ModelConfiguration, modelB: ModelConfiguration) => {
