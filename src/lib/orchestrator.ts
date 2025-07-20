@@ -1527,7 +1527,6 @@ export async function processDebateTurn(params: {
 
   const modelKey = getModelKey(params.model);
   const modelConfig = MODEL_CONFIGS[modelKey];
-  const agentName = getModelDisplayName(modelKey);
 
   switch (modelConfig.provider) {
     case 'openai':
@@ -1548,7 +1547,7 @@ export async function processDebateTurn(params: {
 
   return {
     ...result,
-    model: agentName,
+    model: modelKey,
     timestamp: new Date().toISOString()
   };
 } 
