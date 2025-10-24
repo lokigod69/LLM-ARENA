@@ -746,6 +746,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         claudeMessages: state.claudeMessages,
         gptPersonality: state.personalityConfig.gpt,
         claudePersonality: state.personalityConfig.claude,
+        accessCode: state.accessCode || undefined,
       };
 
       const response = await fetch('/api/debate/oracle', {
@@ -768,6 +769,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           ...prev,
           oracleResults: [...prev.oracleResults, data.result],
           isOracleAnalyzing: false,
+          queriesRemaining: data.queriesRemaining ?? prev.queriesRemaining,
         }));
       } else {
         throw new Error(data.error || 'Oracle analysis failed');

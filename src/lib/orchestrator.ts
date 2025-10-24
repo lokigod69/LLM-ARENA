@@ -365,6 +365,33 @@ Engage substantively with the previous speaker's points. Be specific and address
   return systemPrompt;
 }
 
+// NETWORK: Add timeout-protected fetch helper for provider calls
+function withTimeout(ms: number): { controller: AbortController; timer: NodeJS.Timeout } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { controller, timer };
+}
+
+async function timedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs = 60000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(input, { ...init, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    if ((err as any)?.name === 'AbortError') {
+      throw new Error(`Provider request timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  }
+}
+
 /**
  * Unified OpenAI API caller supporting multiple OpenAI models
  */
@@ -376,7 +403,7 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
 
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -388,7 +415,7 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
       max_tokens: config.maxTokens,
       temperature: 0.7,
     }),
-  });
+  }, 60000);
 
   if (!response.ok) {
     let errorMessage = `${modelType} API error: ${response.status}`;
@@ -438,7 +465,7 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
   const systemPrompt = messages.find(m => m.role === 'system')?.content || '';
   const userMessages = messages.filter(m => m.role !== 'system');
 
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'x-api-key': apiKey,
@@ -452,7 +479,7 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
       messages: userMessages,
       temperature: 0.7,
     }),
-  });
+  }, 60000);
 
   if (!response.ok) {
     let errorMessage = `Claude API error: ${response.status}`;
@@ -500,7 +527,7 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
   }
 
   // DeepSeek uses OpenAI-compatible API format
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -512,7 +539,7 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
       max_tokens: config.maxTokens,
       temperature: 0.7,
     }),
-  });
+  }, 60000);
 
   if (!response.ok) {
     let errorMessage = `${modelType} API error: ${response.status}`;
@@ -558,7 +585,7 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
   // Gemini uses a different API format. We combine messages into a single text block.
   const combinedText = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
 
-  const response = await fetch(`${config.endpoint}?key=${apiKey}`, {
+  const response = await timedFetch(`${config.endpoint}?key=${apiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -596,7 +623,7 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
         }
       ]
     }),
-  });
+  }, 60000);
 
   if (!response.ok) {
     let errorMessage = `${modelType} API error: ${response.status}`;
@@ -643,7 +670,7 @@ export async function callDeepSeekOracle(oraclePrompt: string): Promise<string> 
   }
 
   // Oracle-specific configuration with higher output limits
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -665,7 +692,7 @@ export async function callDeepSeekOracle(oraclePrompt: string): Promise<string> 
       temperature: 0.1,  // Lower temperature for analytical consistency
       stream: false      // Full response needed for Oracle
     }),
-  });
+  }, 90000);
 
   if (!response.ok) {
     let errorMessage = `DeepSeek Oracle API error: ${response.status}`;
@@ -785,7 +812,7 @@ async function callOpenAIOracle(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -807,7 +834,7 @@ async function callOpenAIOracle(
       temperature: oracleConfig.temperature,
       stream: false
     }),
-  });
+  }, 90000);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
@@ -828,7 +855,7 @@ async function callAnthropicOracle(
   const config = MODEL_CONFIGS['claude-3-5-sonnet-20241022'];
   const apiKey = process.env[config.apiKeyEnv];
   
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'x-api-key': apiKey!,
@@ -847,7 +874,7 @@ async function callAnthropicOracle(
         }
       ],
     }),
-  });
+  }, 90000);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
@@ -869,7 +896,7 @@ async function callDeepSeekOracleFlexible(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
-  const response = await fetch(config.endpoint, {
+  const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -891,7 +918,7 @@ async function callDeepSeekOracleFlexible(
       temperature: oracleConfig.temperature,
       stream: false
     }),
-  });
+  }, 90000);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
@@ -913,7 +940,7 @@ async function callGeminiOracle(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
-  const response = await fetch(`${config.endpoint}?key=${apiKey}`, {
+  const response = await timedFetch(`${config.endpoint}?key=${apiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -933,7 +960,7 @@ async function callGeminiOracle(
         temperature: oracleConfig.temperature,
       }
     }),
-  });
+  }, 90000);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));

@@ -3,6 +3,7 @@
 // Enhanced neutrality enforcement and comprehensive bias detection
 
 import { NextRequest, NextResponse } from 'next/server';
+import { kv } from '@vercel/kv';
 import { v4 as uuidv4 } from 'uuid';
 import type { Message } from '@/types';
 import type { ModelPersonality } from '@/hooks/useDebate';
@@ -258,8 +259,9 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    const body: OracleAnalysisRequest = await request.json();
+    const body: OracleAnalysisRequest & { accessCode?: string } = await request.json();
     const { topic, gptMessages, claudeMessages, gptPersonality, claudePersonality, totalTurns, config } = body;
+    const accessCode = (body as any).accessCode as string | undefined;
 
     console.log('🔮 ORACLE v1.1: Starting configurable analysis...', {
       topic: topic.substring(0, 50) + '...',
@@ -270,6 +272,19 @@ export async function POST(request: NextRequest) {
       biasDetectionEnabled: config.biasDetection.enabled,
       totalTurns
     });
+
+    // Access code quota handling (consume 1 credit per analysis unless admin)
+    let queriesRemaining: number | string = 'Unlimited';
+    if (accessCode && accessCode !== process.env.ADMIN_ACCESS_CODE) {
+      type CodeData = { queries_allowed: number; queries_remaining: number; isActive: boolean; created_at: string };
+      const codeData = await kv.get<CodeData>(accessCode);
+      if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {
+        return NextResponse.json({ success: false, error: 'Access denied. Invalid or expired code.' }, { status: 403 });
+      }
+      const newRemaining = codeData.queries_remaining - 1;
+      await kv.set(accessCode, { ...codeData, queries_remaining: newRemaining });
+      queriesRemaining = newRemaining;
+    }
 
     // Check if we're in mock mode
     const MOCK_MODE = process.env.MOCK_MODE === 'true';
@@ -295,7 +310,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      result 
+      result,
+      queriesRemaining
     });
 
   } catch (error) {
