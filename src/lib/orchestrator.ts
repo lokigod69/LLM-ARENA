@@ -1549,6 +1549,13 @@ export async function processDebateTurn(params: {
   const currentModelName = getModelDisplayName(params.model);
   const messages = params.conversationHistory.map(m => {
     const isCurrentModelSpeaking = m.sender === currentModelName;
+    // DEBUG: log role decision per message
+    console.log('🔍 Role check:', {
+      messageSender: m.sender,
+      currentModel: currentModelName,
+      matches: isCurrentModelSpeaking,
+      assignedRole: isCurrentModelSpeaking ? 'assistant' : 'user'
+    });
     return {
       role: isCurrentModelSpeaking ? 'assistant' : 'user',
       content: m.text,
