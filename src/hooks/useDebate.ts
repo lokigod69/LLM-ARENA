@@ -501,6 +501,11 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     const conversationHistory = [...currentState.modelAMessages, ...currentState.modelBMessages].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
+    console.log('📜 Conversation history being sent:', JSON.stringify({
+      turn: currentState.currentTurn + 1,
+      count: conversationHistory.length,
+      history: conversationHistory.map((m) => ({ sender: m.sender, ts: m.timestamp, text: (m.text || '').slice(0, 60) }))
+    }, null, 2));
 
     try {
       // Make API call

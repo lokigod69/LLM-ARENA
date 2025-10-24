@@ -1545,10 +1545,20 @@ export async function processDebateTurn(params: {
   );
 
   // REAL API Call
-  const messages = params.conversationHistory.map(m => ({ role: m.sender === 'User' ? 'user' : 'assistant', content: m.text }));
-  messages.unshift({ role: 'user', content: params.prevMessage }); // Add the latest message
+  // Build chronological messages with correct roles relative to the current responding model
+  const currentModelName = getModelDisplayName(params.model);
+  const messages = params.conversationHistory.map(m => {
+    const isCurrentModelSpeaking = m.sender === currentModelName;
+    return {
+      role: isCurrentModelSpeaking ? 'assistant' : 'user',
+      content: m.text,
+    };
+  });
+  // Append the latest opponent message last (chronological order)
+  messages.push({ role: 'user', content: params.prevMessage });
 
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
+  console.log('🔍 Message sequence for', currentModelName, ':', fullHistory.map(m => `${m.role}: ${String(m.content).slice(0, 40)}...`).join(' | '));
   
   let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
 
