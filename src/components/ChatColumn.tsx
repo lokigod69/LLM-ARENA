@@ -219,7 +219,7 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                     className="text-sm leading-relaxed font-matrix-mono"
                     style={{ color: colors.primary }}
                   >
-                    {index === messages.length - 1 && message.sender === modelName ? (
+                    {index === messages.length - 1 ? (
                       <TypewriterText 
                         text={message.text}
                         speed={4} // 4 words per second - optimal reading speed

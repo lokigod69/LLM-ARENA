@@ -176,6 +176,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   const autoStepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const waitingForTypingRef = useRef<boolean>(false);
   const processNextTurnRef = useRef<(() => void) | null>(null);
+  const watchdogTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to sync legacy state with new flexible state
   const syncLegacyState = useCallback(() => {
@@ -260,6 +261,10 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       if (waitingForTypingRef.current) {
         console.log('▶️ Typing finished for the current turn, proceeding...');
         waitingForTypingRef.current = false;
+        if (watchdogTimerRef.current) {
+          clearTimeout(watchdogTimerRef.current);
+          watchdogTimerRef.current = null;
+        }
         // Use a timeout to schedule the next turn, allowing UI to update
         autoStepTimeoutRef.current = setTimeout(() => {
           processNextTurnRef.current?.();
@@ -279,6 +284,10 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     if (autoStepTimeoutRef.current) {
       clearTimeout(autoStepTimeoutRef.current);
       autoStepTimeoutRef.current = null;
+    }
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+      watchdogTimerRef.current = null;
     }
   }, []);
 
@@ -520,6 +529,20 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         
         console.log(`✅ Auto-step turn ${newTurn} completed, waiting for typing animation...`);
         waitingForTypingRef.current = true; // Set the flag to wait for typing
+        // Watchdog: auto-advance if typingComplete doesn't fire within 30s
+        if (watchdogTimerRef.current) {
+          clearTimeout(watchdogTimerRef.current);
+          watchdogTimerRef.current = null;
+        }
+        watchdogTimerRef.current = setTimeout(() => {
+          if (waitingForTypingRef.current) {
+            console.warn('⚠️ Watchdog: typingComplete event did not fire within 30s, auto-advancing...');
+            waitingForTypingRef.current = false;
+            autoStepTimeoutRef.current = setTimeout(() => {
+              processNextTurnRef.current?.();
+            }, 1000);
+          }
+        }, 30000);
         
         return {
           ...prev,
