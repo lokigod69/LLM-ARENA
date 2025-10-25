@@ -501,7 +501,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         console.log('💾 Auto-saving debate to library...');
         const debateItem: MarkedItem = {
           id: uuidv4(),
-          type: ['debate'],
+          type: ['star'], // Auto-saved debates are marked as 'star' (important/saved)
           content: {
             topic: currentState.topic,
             modelA: {
