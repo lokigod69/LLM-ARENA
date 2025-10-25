@@ -420,16 +420,18 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       });
       
       // Map the orchestrator response to Message format
-      console.log('📨 RESPONSE MODEL:', {
-        responseModel: responseData.model,
-        displayName: getModelDisplayName(responseData.model),
-        expectedModel: targetModel
+      console.log('📨 MESSAGE CREATION:', {
+        responseDataModel: responseData.model,
+        expectedModel: targetModel,
+        displayNameFromResponse: getModelDisplayName(responseData.model),
+        displayNameFromExpected: getModelDisplayName(targetModel)
       });
       
       const newMessage: Message = {
         id: uuidv4(),
         text: responseData.reply || responseData.text || 'No response received',
-        sender: getModelDisplayName(responseData.model),
+        // FIX: Use the model from state (targetModel), not from response
+        sender: getModelDisplayName(targetModel),
         timestamp: responseData.timestamp || new Date().toISOString(),
         personaId: personaId,
       };
@@ -438,7 +440,8 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         messageId: newMessage.id,
         sender: newMessage.sender,
         textLength: newMessage.text.length,
-        personalityUsed: `Level ${agreeabilityLevel} ${position}`
+        personalityUsed: `Level ${agreeabilityLevel} ${position}`,
+        correctModel: targetModel
       });
       
       return newMessage;
