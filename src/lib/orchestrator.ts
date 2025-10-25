@@ -246,7 +246,9 @@ function generateSystemPrompt(
   extensivenessLevel: number = 3,
   personaId?: string,
   stance?: 'truthSeeker' | 'stubborn',
-  turnNumber: number = 0
+  turnNumber: number = 0,
+  conversationHistory?: any[],
+  model?: string
 ): string {
   let effectiveAgreeability = agreeabilityLevel;
   let effectiveExtensiveness = extensivenessLevel;
@@ -374,33 +376,84 @@ ${getExtensivenessInstructions(effectiveExtensiveness)}
 • Establish your core thesis clearly
 • Make each argument distinct and memorable`;
   } else {
-    // SUBSEQUENT TURNS - Respond and evolve
-    systemPrompt += `3. TURN ${turnNumber + 1} INSTRUCTIONS - CRITICAL:
+    // SUBSEQUENT TURNS - Respond and evolve with keyword tracking
+    
+    // Optional: Lightweight keyword tracking to discourage repetition
+    if (turnNumber > 0 && conversationHistory && conversationHistory.length > 0 && model) {
+      // Extract model's own previous messages
+      const currentModelDisplayName = getModelDisplayName(model as AvailableModel);
+      const myPreviousTurns = conversationHistory
+        .filter((m: any) => m.sender === currentModelDisplayName);
+      
+      // Extract frequently used words (lightweight)
+      if (myPreviousTurns.length > 0) {
+        const allText = myPreviousTurns.map((t: any) => t.text).join(' ').toLowerCase();
+        const words = allText.split(/\s+/).filter((w: string) => w.length > 5);
+        const wordCounts: Record<string, number> = {};
+        
+        words.forEach((word: string) => {
+          wordCounts[word] = (wordCounts[word] || 0) + 1;
+        });
+        
+        // Get top repeated words
+        const repeatedWords = Object.entries(wordCounts)
+          .filter(([_, count]) => count > 2)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([word]) => word);
+        
+        if (repeatedWords.length > 0) {
+          systemPrompt += `
 
-🎯 PRIMARY TASK: RESPOND TO OPPONENT'S LAST POINT
-• READ your opponent's most recent argument carefully
-• IDENTIFY the specific point they just made
-• RESPOND directly to that point - address it, counter it, or concede if strong
-• Quote or reference their specific claim
+⚠️ AVOID REPETITION: You've heavily used these terms: ${repeatedWords.join(', ')}
+Find different terminology and angles this turn.
 
-🆕 SECONDARY TASK: INTRODUCE NEW ANGLE
-• After responding, INTRODUCE a NEW angle or piece of evidence you haven't used yet
-• DO NOT repeat arguments you've already made in previous turns
-• DO NOT use the same phrasing or examples as before
-• Find a fresh perspective on your position
+`;
+        }
+      }
+    }
+    
+    systemPrompt += `
 
-💬 CONVERSATION DYNAMICS:
-• Make the debate FEEL like a real conversation, not scripted talking points
-• BUILD on what's been said - don't just restate your position
-• Acknowledge strong opponent points before countering
-• Show you're listening and adapting your strategy
-• Reference specific claims from their last message
+TURN ${turnNumber + 1} INSTRUCTIONS:
 
-❌ AVOID:
-• Repeating the same core argument with different words
-• Ignoring what your opponent just said
-• Generic talking points that could apply to any turn
-• Circular reasoning or restating your thesis without new support`;
+🎯 MANDATORY STRUCTURE:
+
+1. QUOTE YOUR OPPONENT'S LAST POINT
+   Start by directly referencing what they just argued.
+   Example: "You argue that X, but..." or "Your point about Y overlooks..."
+
+2. RESPOND TO THEIR SPECIFIC CLAIM
+   Address what THEY just said, not your generic position.
+   Counter it, concede if strong, or build on it.
+
+3. INTRODUCE NEW EVIDENCE
+   You MUST bring something new this turn.
+   
+   Options for any topic:
+   • Scientific research or data
+   • Historical examples
+   • Cultural perspectives
+   • Psychological principles
+   • Expert opinions
+   • Concrete scenarios or thought experiments
+   • Cross-domain analogies
+   
+   ❌ AVOID vague phrases like "many people believe" or "it's well known"
+   ✅ USE specific references: "Studies show...", "In 1960s Japan...", "Psychologists call this..."
+
+4. DO NOT REPEAT YOURSELF
+   ❌ Don't reuse the same core argument from previous turns
+   ❌ Don't use the same examples or terminology
+   ✅ Find a DIFFERENT angle on your position
+   ✅ Reference a DIFFERENT domain (if Turn 2 was scientific, Turn 3 should be cultural/historical)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This is a CONVERSATION, not a speech.
+Respond to what your opponent JUST said,
+then advance with FRESH evidence.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
   }
 
   return systemPrompt;
@@ -1582,7 +1635,9 @@ export async function processDebateTurn(params: {
     params.extensivenessLevel,
     params.personaId,
     params.stance,
-    params.turnNumber ?? 0
+    params.turnNumber ?? 0,
+    params.conversationHistory,
+    params.model
   );
   
   console.log('📝 SYSTEM PROMPT:', {
