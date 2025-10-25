@@ -457,11 +457,8 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
 
   // This function is now defined outside and wrapped in useCallback
   const processNextTurn = useCallback(async () => {
-    // Get current state directly, avoiding stale state in closures
-    const currentState = await new Promise<EnhancedDebateState>(resolve => setState(prev => {
-      resolve(prev);
-      return prev;
-    }));
+    // Get FRESH state from ref - this includes the most recently added message
+    const currentState = debateStateRef.current;
 
     // Check if we should continue
     if (!currentState.isActive || currentState.currentTurn >= currentState.maxTurns) {
@@ -505,15 +502,23 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       topic: (currentState.topic || '').slice(0, 60)
     });
     
-    // Combine and sort message history
-    const conversationHistory = [...currentState.modelAMessages, ...currentState.modelBMessages].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    console.log('📜 Conversation history being sent:', JSON.stringify({
+    // Build history from FRESH state (includes all messages up to this point)
+    const conversationHistory = [
+      ...currentState.modelAMessages,
+      ...currentState.modelBMessages
+    ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    console.log('📜 Conversation history being sent:', {
       turn: currentState.currentTurn + 1,
       count: conversationHistory.length,
-      history: conversationHistory.map((m) => ({ sender: m.sender, ts: m.timestamp, text: (m.text || '').slice(0, 60) }))
-    }, null, 2));
+      modelACount: currentState.modelAMessages.length,
+      modelBCount: currentState.modelBMessages.length,
+      history: conversationHistory.map(m => ({
+        sender: m.sender,
+        ts: m.timestamp,
+        text: m.text.slice(0, 60)
+      }))
+    });
 
     try {
       // Make API call
@@ -540,6 +545,14 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         const newModelAMessages = isModelATurn ? [...prev.modelAMessages, response] : prev.modelAMessages;
         const newModelBMessages = !isModelATurn ? [...prev.modelBMessages, response] : prev.modelBMessages;
         
+        // THIS IS CRITICAL - log the NEW state we just created
+        console.log('📊 After adding message:', {
+          turn: newTurn,
+          modelACount: newModelAMessages.length,
+          modelBCount: newModelBMessages.length,
+          totalMessages: newModelAMessages.length + newModelBMessages.length
+        });
+        
         console.log(`✅ Auto-step turn ${newTurn} completed, waiting for typing animation...`);
         waitingForTypingRef.current = true; // Set the flag to wait for typing
         // Watchdog: auto-advance if typingComplete doesn't fire within 30s
@@ -557,7 +570,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           }
         }, 30000);
         
-        return {
+        const newState = {
           ...prev,
           currentTurn: newTurn,
           lastActiveModel: nextModelSide,
@@ -566,6 +579,11 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           isModelALoading: false,
           isModelBLoading: false,
         };
+        
+        // Update ref immediately so next turn sees the latest state
+        debateStateRef.current = newState;
+        
+        return newState;
       });
       
     } catch (error) {
