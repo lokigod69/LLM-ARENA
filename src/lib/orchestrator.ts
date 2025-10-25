@@ -1546,7 +1546,7 @@ export async function processDebateTurn(params: {
 
   // REAL API Call
   // Build chronological messages with correct roles relative to the current responding model
-  const currentModelName = getModelDisplayName(params.model);
+  const currentModelName = getModelDisplayName(params.model as AvailableModel);
   const messages = params.conversationHistory.map(m => {
     const isCurrentModelSpeaking = m.sender === currentModelName;
     // DEBUG: log role decision per message
