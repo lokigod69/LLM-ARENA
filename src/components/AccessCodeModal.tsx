@@ -1,5 +1,6 @@
 // src/components/AccessCodeModal.tsx
 
+// Changes: Added development-mode bypass to accept any access code locally
 // This component creates a modal dialog for users to enter their access code.
 // It is styled to match the application's "Matrix" theme.
 // It handles its own state for the input field, loading status, and error messages.
@@ -24,6 +25,13 @@ export default function AccessCodeModal({ onVerified, setAppIsLoading }: AccessC
     e.preventDefault();
     if (!code) {
       setError('Please enter an access code.');
+      return;
+    }
+    // Development bypass
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 DEV MODE: Bypassing access code verification');
+      console.log('🔧 Code entered:', code);
+      onVerified(code, 'Unlimited');
       return;
     }
     setError('');

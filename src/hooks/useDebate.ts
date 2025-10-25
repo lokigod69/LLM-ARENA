@@ -496,6 +496,14 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     } else {
       prevMessage = currentState.topic || '';
     }
+    console.log('🎯 prevMessage calculation:', {
+      turn: currentState.currentTurn + 1,
+      nextModelSide,
+      modelACount: currentState.modelAMessages.length,
+      modelBCount: currentState.modelBMessages.length,
+      prevMessage: (prevMessage || '').slice(0, 60),
+      topic: (currentState.topic || '').slice(0, 60)
+    });
     
     // Combine and sort message history
     const conversationHistory = [...currentState.modelAMessages, ...currentState.modelBMessages].sort(

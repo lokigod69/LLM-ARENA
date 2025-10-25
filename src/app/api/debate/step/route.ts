@@ -1,4 +1,5 @@
 // Task 2.2 Complete: API route /api/debate/step created.
+// Update: Added development-mode bypass to skip Vercel KV access code checks.
 // This endpoint takes a message and model, then returns the other model's (simulated) reply.
 
 // Step 2 Implementation: Enhanced API route with agreeability and position support
@@ -57,7 +58,13 @@ export async function POST(request: NextRequest) {
     let queriesRemaining: number | string = 'Unlimited';
 
     // Access Code Validation Logic
-    if (accessCode !== process.env.ADMIN_ACCESS_CODE) {
+    // Development mode bypass
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 DEV MODE: Bypassing KV access code check');
+      queriesRemaining = 'Unlimited (Dev)';
+    }
+    // Production: check KV
+    else if (accessCode !== process.env.ADMIN_ACCESS_CODE) {
       const codeData = await kv.get<CodeData>(accessCode);
 
       if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {

@@ -1,4 +1,5 @@
 // Oracle API: Configurable Debate Analysis & Insight Extraction Engine
+// Update: Added development-mode bypass to skip Vercel KV access code checks.
 // Phase 1.1 Implementation: Architectural refactor with separated verdict system
 // Enhanced neutrality enforcement and comprehensive bias detection
 
@@ -275,7 +276,13 @@ export async function POST(request: NextRequest) {
 
     // Access code quota handling (consume 1 credit per analysis unless admin)
     let queriesRemaining: number | string = 'Unlimited';
-    if (accessCode && accessCode !== process.env.ADMIN_ACCESS_CODE) {
+    // Development mode bypass
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 DEV MODE: Bypassing KV access code check (Oracle)');
+      queriesRemaining = 'Unlimited (Dev)';
+    }
+    // Production: check KV when not admin
+    else if (accessCode && accessCode !== process.env.ADMIN_ACCESS_CODE) {
       type CodeData = { queries_allowed: number; queries_remaining: number; isActive: boolean; created_at: string };
       const codeData = await kv.get<CodeData>(accessCode);
       if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {
