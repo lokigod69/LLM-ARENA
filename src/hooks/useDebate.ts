@@ -480,6 +480,41 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     if (currentState.currentTurn >= currentState.maxTurns) {
       console.log('🏁 Max turns reached, debate complete');
       
+      // Auto-save debate to library
+      try {
+        console.log('💾 Auto-saving debate to library...');
+        const debateItem: MarkedItem = {
+          id: uuidv4(),
+          type: ['debate'],
+          content: {
+            topic: currentState.topic,
+            modelA: {
+              name: currentState.modelA.name,
+              displayName: getModelDisplayName(currentState.modelA.name),
+              config: currentState.modelA
+            },
+            modelB: {
+              name: currentState.modelB.name,
+              displayName: getModelDisplayName(currentState.modelB.name),
+              config: currentState.modelB
+            },
+            messages: [...currentState.modelAMessages, ...currentState.modelBMessages].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            ),
+            totalTurns: currentState.currentTurn,
+            maxTurns: currentState.maxTurns
+          },
+          timestamp: new Date().toISOString(),
+          folders: [],
+          annotation: `Auto-saved debate: ${currentState.topic.slice(0, 50)}${currentState.topic.length > 50 ? '...' : ''}`
+        };
+        
+        addLibraryItem(debateItem);
+        console.log('✅ Debate auto-saved to library');
+      } catch (error) {
+        console.error('❌ Failed to auto-save debate:', error);
+      }
+      
       // Automatically stop the debate
       setState(prev => ({
         ...prev,
@@ -489,6 +524,10 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       }));
       
       console.log('✅ Debate ended - Oracle now available for analysis');
+      
+      // Note: Oracle auto-trigger removed - user should manually trigger when ready
+      // This gives them time to review the debate before analyzing
+      
       return;
     }
     

@@ -274,9 +274,50 @@ const LibraryPage: React.FC = () => {
                           {item.annotation}
                         </div>
                       )}
-                      <pre style={{ background: '#111', color: '#fff', padding: 8, borderRadius: 4, fontSize: 12, maxHeight: 120, overflow: 'auto', marginLeft: 32 }}>
-                        {JSON.stringify(item.content, null, 2)}
-                      </pre>
+                      {/* Formatted content display */}
+                      <div style={{ background: '#111', color: '#0f0', padding: 12, borderRadius: 4, fontSize: 13, maxHeight: 200, overflow: 'auto', marginLeft: 32, fontFamily: 'monospace' }}>
+                        {item.content.topic && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Topic:</span> {item.content.topic}
+                          </div>
+                        )}
+                        {item.content.modelA && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Model A:</span> {item.content.modelA.displayName || item.content.modelA.name}
+                            {item.content.modelA.config && (
+                              <span style={{ color: '#888', marginLeft: 8 }}>
+                                (Position: {item.content.modelA.config.position}, Agreeability: {item.content.modelA.config.agreeabilityLevel}/10)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {item.content.modelB && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Model B:</span> {item.content.modelB.displayName || item.content.modelB.name}
+                            {item.content.modelB.config && (
+                              <span style={{ color: '#888', marginLeft: 8 }}>
+                                (Position: {item.content.modelB.config.position}, Agreeability: {item.content.modelB.config.agreeabilityLevel}/10)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {item.content.totalTurns !== undefined && (
+                          <div style={{ marginBottom: 8 }}>
+                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Turns:</span> {item.content.totalTurns} / {item.content.maxTurns}
+                          </div>
+                        )}
+                        {item.content.messages && (
+                          <div>
+                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Messages:</span> {item.content.messages.length} total
+                          </div>
+                        )}
+                        {/* Fallback for other content types */}
+                        {!item.content.topic && !item.content.modelA && (
+                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                            {JSON.stringify(item.content, null, 2)}
+                          </pre>
+                        )}
+                      </div>
                       {/* Edit/Delete buttons */}
                       <div className="absolute top-2 right-2 flex gap-2">
                         <button onClick={() => setEditItem(item)} title="Edit Item" className="text-blue-400 hover:text-blue-300">
