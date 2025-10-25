@@ -369,6 +369,22 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         prevMessage: requestBody.prevMessage.substring(0, 50) + '...'
       });
 
+      // Get current state to determine which model is calling
+      const currentState = debateStateRef.current;
+      const isModelATurn = currentState.lastActiveModel === 'B' || currentState.lastActiveModel === null;
+      
+      console.log('🎯 API CALL DEBUG:', {
+        turn: conversationHistory.length + 1,
+        isModelATurn,
+        callingModel: targetModel,
+        positionSent: position,
+        conversationHistoryLength: conversationHistory.length,
+        historyPreview: conversationHistory.map(m => ({
+          sender: m.sender,
+          text: m.text.slice(0, 50)
+        }))
+      });
+
       console.log('🔥 About to make fetch call...');
       
       const response = await fetch('/api/debate/step', {
@@ -543,13 +559,26 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       nextModelSide,
       modelA: {
         name: currentState.modelA.name,
-        displayName: getModelDisplayName(currentState.modelA.name)
+        displayName: getModelDisplayName(currentState.modelA.name),
+        position: currentState.modelA.position
       },
       modelB: {
         name: currentState.modelB.name,
-        displayName: getModelDisplayName(currentState.modelB.name)
+        displayName: getModelDisplayName(currentState.modelB.name),
+        position: currentState.modelB.position
       },
-      callingModel: isModelATurn ? currentState.modelA.name : currentState.modelB.name
+      callingModel: isModelATurn ? currentState.modelA.name : currentState.modelB.name,
+      callingPosition: nextModelConfig.position
+    });
+    
+    console.log('🎯 API CALL POSITION:', {
+      turn: currentState.currentTurn + 1,
+      isModelATurn,
+      modelACalling: isModelATurn ? currentState.modelA.name : 'waiting',
+      modelBCalling: !isModelATurn ? currentState.modelB.name : 'waiting',
+      positionBeingSent: nextModelConfig.position,
+      expectedModelAPosition: currentState.modelA.position,
+      expectedModelBPosition: currentState.modelB.position
     });
     
     // Set loading state
@@ -582,6 +611,17 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       ...currentState.modelAMessages,
       ...currentState.modelBMessages
     ].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    console.log('📚 CONVERSATION HISTORY CHECK:', {
+      turn: currentState.currentTurn + 1,
+      historyLength: conversationHistory.length,
+      modelACount: currentState.modelAMessages.length,
+      modelBCount: currentState.modelBMessages.length,
+      historyContent: conversationHistory.map(m => ({
+        sender: m.sender,
+        textPreview: m.text.slice(0, 50)
+      }))
+    });
     
     console.log('📜 Conversation history being sent:', {
       turn: currentState.currentTurn + 1,
