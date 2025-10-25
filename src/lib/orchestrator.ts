@@ -1547,25 +1547,34 @@ export async function processDebateTurn(params: {
   // REAL API Call
   // Build chronological messages with correct roles relative to the current responding model
   const currentModelName = getModelDisplayName(params.model as AvailableModel);
+  
+  // Map conversationHistory (already chronological) with correct roles
   const messages = params.conversationHistory.map(m => {
     const isCurrentModelSpeaking = m.sender === currentModelName;
-    // DEBUG: log role decision per message
+    
     console.log('🔍 Role check:', {
       messageSender: m.sender,
       currentModel: currentModelName,
       matches: isCurrentModelSpeaking,
-      assignedRole: isCurrentModelSpeaking ? 'assistant' : 'user'
+      assignedRole: isCurrentModelSpeaking ? 'assistant' : 'user',
+      messageText: m.text.slice(0, 40)
     });
+    
     return {
       role: isCurrentModelSpeaking ? 'assistant' : 'user',
       content: m.text,
     };
   });
-  // Append the latest opponent message last (chronological order)
-  messages.push({ role: 'user', content: params.prevMessage });
+  
+  // DON'T append prevMessage - it's already the last message in conversationHistory!
+  // The frontend already includes all previous messages in conversationHistory
 
+  // Build final history
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
-  console.log('🔍 Message sequence for', currentModelName, ':', fullHistory.map(m => `${m.role}: ${String(m.content).slice(0, 40)}...`).join(' | '));
+  
+  console.log('🔍 Message sequence for', currentModelName, ':', 
+    fullHistory.map((m, idx) => `[${idx}] ${m.role}: ${String(m.content).slice(0, 40)}...`).join(' | ')
+  );
   
   let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
 
