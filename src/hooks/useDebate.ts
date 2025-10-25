@@ -478,7 +478,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
     
     // Determine next model
-    const nextModelSide = currentState.lastActiveModel === 'A' ? 'B' : 'A';
+    const nextModelSide: 'A' | 'B' = currentState.lastActiveModel === 'A' ? 'B' : 'A';
     const nextModelConfig = nextModelSide === 'A' ? currentState.modelA : currentState.modelB;
     const isModelATurn = nextModelSide === 'A';
     
