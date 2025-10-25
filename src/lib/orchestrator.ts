@@ -360,7 +360,13 @@ ${getBehavioralInstructions(effectiveAgreeability)}
 2. Response Length (Extensiveness: ${Math.round(effectiveExtensiveness)}/5):
 ${getExtensivenessInstructions(effectiveExtensiveness)}
 
-Engage substantively with the previous speaker's points. Be specific and address their core arguments directly.`;
+3. CRITICAL - Responsive Debate Rules:
+• RESPOND DIRECTLY to your opponent's most recent argument
+• DO NOT repeat points you've already made in previous turns
+• Build on the conversation by addressing NEW aspects your opponent raised
+• Make the debate FEEL like a real conversation, not scripted talking points
+• Reference specific claims from their last message and counter them
+• Engage substantively with the previous speaker's points - be specific and address their core arguments directly`;
 
   return systemPrompt;
 }
@@ -1550,6 +1556,8 @@ export async function processDebateTurn(params: {
     agreeabilityLevel: params.agreeabilityLevel,
     promptPreview: systemPrompt.slice(0, 200)
   });
+  
+  console.log('📝 FULL SYSTEM PROMPT:', systemPrompt);
 
   // REAL API Call
   // Build chronological messages with correct roles relative to the current responding model

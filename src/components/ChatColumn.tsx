@@ -222,10 +222,10 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                     {index === messages.length - 1 ? (
                       <TypewriterText 
                         text={message.text}
-                        speed={4} // 4 words per second - optimal reading speed
-                        mode="word" // word-by-word for better readability
+                        speed={15} // 15ms per character - faster, smoother typing
+                        mode="character" // character-by-character for smoother animation
                         allowSkip={true} // click to complete instantly
-                        pauseOnPunctuation={true} // natural reading rhythm
+                        pauseOnPunctuation={false} // disable for character mode
                         className="block"
                         onComplete={() => {
                           // Notify parent that typing is complete for this message

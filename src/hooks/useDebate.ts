@@ -265,10 +265,11 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           clearTimeout(watchdogTimerRef.current);
           watchdogTimerRef.current = null;
         }
-        // Use a timeout to schedule the next turn, allowing UI to update
+        // INCREASE DELAY - Wait 2 seconds instead of 1 second
+        // This gives time for animation to fully complete and prevents overlap
         autoStepTimeoutRef.current = setTimeout(() => {
           processNextTurnRef.current?.();
-        }, 1000);
+        }, 2000);  // ← Changed from 1000 to 2000
       }
     };
 
@@ -418,6 +419,12 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       });
       
       // Map the orchestrator response to Message format
+      console.log('📨 RESPONSE MODEL:', {
+        responseModel: responseData.model,
+        displayName: getModelDisplayName(responseData.model),
+        expectedModel: targetModel
+      });
+      
       const newMessage: Message = {
         id: uuidv4(),
         text: responseData.reply || responseData.text || 'No response received',
