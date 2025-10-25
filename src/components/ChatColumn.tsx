@@ -21,12 +21,13 @@ interface ChatColumnProps {
 
 const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
   ({ messages, modelName, isLoading, modelColor, actualModelName }, ref) => {
-    console.log(`🖥️ ChatColumn [${modelName}] rendering with:`, {
-      messageCount: messages.length,
-      messages: messages.map(m => ({ sender: m.sender, text: m.text.substring(0, 50) + '...' })),
-      isLoading,
+    
+    console.log('🎨 ChatColumn render:', {
+      propModelName: modelName,
+      messages: messages.length,
+      firstMessageSender: messages[0]?.sender,
       actualModelName,
-      modelColor
+      isLoading
     });
 
     // DEBUG: Log loading state changes

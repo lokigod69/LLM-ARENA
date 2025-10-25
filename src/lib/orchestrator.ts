@@ -363,9 +363,12 @@ ${getExtensivenessInstructions(effectiveExtensiveness)}
 3. CRITICAL - Responsive Debate Rules:
 • RESPOND DIRECTLY to your opponent's most recent argument
 • DO NOT repeat points you've already made in previous turns
+• After making a point once, find NEW angles and evidence for subsequent turns
+• DO NOT repeat the same phrasing or examples you've already used
 • Build on the conversation by addressing NEW aspects your opponent raised
 • Make the debate FEEL like a real conversation, not scripted talking points
 • Reference specific claims from their last message and counter them
+• Acknowledge strong opponent points and adapt your strategy
 • Engage substantively with the previous speaker's points - be specific and address their core arguments directly`;
 
   return systemPrompt;

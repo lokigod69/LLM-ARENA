@@ -187,7 +187,7 @@ export default function Home() {
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Header - Matrix Style */}
         <motion.header 
-          className="relative border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm"
+          className="sticky top-0 z-50 relative border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm"
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}

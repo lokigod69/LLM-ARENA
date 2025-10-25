@@ -468,12 +468,23 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     const currentState = debateStateRef.current;
 
     // Check if we should continue
-    if (!currentState.isActive || currentState.currentTurn >= currentState.maxTurns) {
-      console.log('🏁 Auto-step process ended:', {
-        isActive: currentState.isActive,
-        currentTurn: currentState.currentTurn,
-        maxTurns: currentState.maxTurns
-      });
+    if (!currentState.isActive) {
+      console.log('🏁 Auto-step process ended: debate stopped');
+      return;
+    }
+    
+    if (currentState.currentTurn >= currentState.maxTurns) {
+      console.log('🏁 Max turns reached, debate complete');
+      
+      // Automatically stop the debate
+      setState(prev => ({
+        ...prev,
+        isActive: false,
+        isModelALoading: false,
+        isModelBLoading: false
+      }));
+      
+      console.log('✅ Debate ended - Oracle now available for analysis');
       return;
     }
     
