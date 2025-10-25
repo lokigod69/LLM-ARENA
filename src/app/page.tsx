@@ -82,6 +82,20 @@ export default function Home() {
     setModelPersonality,
     setModelPersona,
   } = useDebate();
+  
+  // DIAGNOSTIC: Log current model configuration
+  console.log('🎯 PAGE.TSX MODEL CONFIG:', {
+    modelA: {
+      name: modelA.name,
+      displayName: getModelDisplayName(modelA.name),
+      position: modelA.position
+    },
+    modelB: {
+      name: modelB.name,
+      displayName: getModelDisplayName(modelB.name),
+      position: modelB.position
+    }
+  });
 
   const modelAChatScrollRef = useRef<HTMLDivElement>(null);
   const modelBChatScrollRef = useRef<HTMLDivElement>(null);

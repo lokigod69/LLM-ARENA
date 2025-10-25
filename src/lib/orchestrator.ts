@@ -1543,6 +1543,13 @@ export async function processDebateTurn(params: {
     params.stance,
     params.turnNumber ?? 0
   );
+  
+  console.log('📝 SYSTEM PROMPT:', {
+    model: params.model,
+    position: params.position,
+    agreeabilityLevel: params.agreeabilityLevel,
+    promptPreview: systemPrompt.slice(0, 200)
+  });
 
   // REAL API Call
   // Build chronological messages with correct roles relative to the current responding model
@@ -1575,6 +1582,15 @@ export async function processDebateTurn(params: {
   console.log('🔍 Message sequence for', currentModelName, ':', 
     fullHistory.map((m, idx) => `[${idx}] ${m.role}: ${String(m.content).slice(0, 40)}...`).join(' | ')
   );
+  
+  console.log('🌐 SENDING TO API:', {
+    model: params.model,
+    historyCount: messages.length,
+    lastThreeMessages: messages.slice(-3).map(m => ({
+      role: m.role,
+      content: m.content.slice(0, 50)
+    }))
+  });
   
   let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
 

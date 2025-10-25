@@ -477,6 +477,20 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     
     console.log(`🔄 Auto-step turn ${currentState.currentTurn + 1}: ${currentState.lastActiveModel} -> ${nextModelSide} (${nextModelConfig.name})`);
     
+    console.log('🎯 TURN DETAILS:', {
+      turn: currentState.currentTurn + 1,
+      nextModelSide,
+      modelA: {
+        name: currentState.modelA.name,
+        displayName: getModelDisplayName(currentState.modelA.name)
+      },
+      modelB: {
+        name: currentState.modelB.name,
+        displayName: getModelDisplayName(currentState.modelB.name)
+      },
+      callingModel: isModelATurn ? currentState.modelA.name : currentState.modelB.name
+    });
+    
     // Set loading state
     setState(prev => ({
       ...prev,
