@@ -357,6 +357,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         extensivenessLevel, // NEW: Response length control
         personaId, // NEW: Persona ID
         conversationHistory,
+        turnNumber: conversationHistory.length, // NEW: Turn number for turn-specific prompts
         accessCode: debateStateRef.current.accessCode, // <-- ADDED
         // NEW: Include original model name for future API expansion
         originalModel: targetModel

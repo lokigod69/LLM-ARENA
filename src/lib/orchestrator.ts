@@ -344,7 +344,8 @@ function generateSystemPrompt(
     }
   };
 
-  const systemPrompt = `${personaPromptPart}You are ${agentName} participating in a structured debate focused on truth-seeking through discourse.
+  // IMPROVED: Turn-specific prompts for better debate quality
+  let systemPrompt = `${personaPromptPart}You are ${agentName} participating in a structured debate focused on truth-seeking through discourse.
 
 • Stubbornness level S = ${stubbornness.toFixed(1)}
 • Cooperation level C = ${cooperation.toFixed(1)}
@@ -360,16 +361,47 @@ ${getBehavioralInstructions(effectiveAgreeability)}
 2. Response Length (Extensiveness: ${Math.round(effectiveExtensiveness)}/5):
 ${getExtensivenessInstructions(effectiveExtensiveness)}
 
-3. CRITICAL - Responsive Debate Rules:
-• RESPOND DIRECTLY to your opponent's most recent argument
-• DO NOT repeat points you've already made in previous turns
-• After making a point once, find NEW angles and evidence for subsequent turns
-• DO NOT repeat the same phrasing or examples you've already used
-• Build on the conversation by addressing NEW aspects your opponent raised
+`;
+
+  // TURN-SPECIFIC INSTRUCTIONS
+  if (turnNumber === 0) {
+    // FIRST TURN - Establish position
+    systemPrompt += `3. FIRST TURN INSTRUCTIONS:
+• Present 2-3 strong, distinct arguments for your position
+• Use specific examples or evidence
+• Be concise but substantive
+• Set up arguments you can BUILD ON in later turns
+• Establish your core thesis clearly
+• Make each argument distinct and memorable`;
+  } else {
+    // SUBSEQUENT TURNS - Respond and evolve
+    systemPrompt += `3. TURN ${turnNumber + 1} INSTRUCTIONS - CRITICAL:
+
+🎯 PRIMARY TASK: RESPOND TO OPPONENT'S LAST POINT
+• READ your opponent's most recent argument carefully
+• IDENTIFY the specific point they just made
+• RESPOND directly to that point - address it, counter it, or concede if strong
+• Quote or reference their specific claim
+
+🆕 SECONDARY TASK: INTRODUCE NEW ANGLE
+• After responding, INTRODUCE a NEW angle or piece of evidence you haven't used yet
+• DO NOT repeat arguments you've already made in previous turns
+• DO NOT use the same phrasing or examples as before
+• Find a fresh perspective on your position
+
+💬 CONVERSATION DYNAMICS:
 • Make the debate FEEL like a real conversation, not scripted talking points
-• Reference specific claims from their last message and counter them
-• Acknowledge strong opponent points and adapt your strategy
-• Engage substantively with the previous speaker's points - be specific and address their core arguments directly`;
+• BUILD on what's been said - don't just restate your position
+• Acknowledge strong opponent points before countering
+• Show you're listening and adapting your strategy
+• Reference specific claims from their last message
+
+❌ AVOID:
+• Repeating the same core argument with different words
+• Ignoring what your opponent just said
+• Generic talking points that could apply to any turn
+• Circular reasoning or restating your thesis without new support`;
+  }
 
   return systemPrompt;
 }
@@ -1560,7 +1592,12 @@ export async function processDebateTurn(params: {
     promptPreview: systemPrompt.slice(0, 200)
   });
   
-  console.log('📝 FULL SYSTEM PROMPT:', systemPrompt);
+  console.log('📋 FULL SYSTEM PROMPT FOR DEBUGGING:', {
+    model: params.model,
+    position: params.position,
+    turn: params.conversationHistory.length + 1,
+    fullPrompt: systemPrompt
+  });
 
   // REAL API Call
   // Build chronological messages with correct roles relative to the current responding model
