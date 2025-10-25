@@ -384,6 +384,21 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           text: m.text.slice(0, 50)
         }))
       });
+      
+      // CRITICAL: Verify what's actually being sent to API
+      console.error('🔴 CRITICAL POSITION DEBUG:', {
+        turn: conversationHistory.length + 1,
+        targetModel,
+        positionBeingSent: position,
+        topicStatement: topic,
+        agreeabilityLevel,
+        fullRequestBody: {
+          model: requestBody.model,
+          position: requestBody.position,
+          topic: requestBody.topic,
+          prevMessagePreview: requestBody.prevMessage.slice(0, 80)
+        }
+      });
 
       console.log('🔥 About to make fetch call...');
       
@@ -433,6 +448,26 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         model: responseData.model,
         replyLength: responseData.reply?.length || 0,
         timestamp: responseData.timestamp
+      });
+      
+      // CRITICAL: Check for duplicate responses
+      const hashCode = (str: string): number => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i);
+          hash = hash & hash;
+        }
+        return hash;
+      };
+      
+      console.error('🔴 API RESPONSE DEBUG:', {
+        turn: conversationHistory.length + 1,
+        model: responseData.model,
+        replyPreview: responseData.reply?.slice(0, 100),
+        replyHash: hashCode(responseData.reply || ''),
+        replyLength: responseData.reply?.length || 0,
+        targetModelExpected: targetModel,
+        positionExpected: position
       });
       
       // Map the orchestrator response to Message format

@@ -1625,6 +1625,15 @@ export async function processDebateTurn(params: {
     };
   }
 
+  // CRITICAL: Log what position is being used for system prompt
+  console.error('🔴 ORCHESTRATOR POSITION DEBUG:', {
+    model: params.model,
+    position: params.position,
+    topic: params.topic,
+    turnNumber: params.turnNumber,
+    prevMessagePreview: params.prevMessage.slice(0, 80)
+  });
+
   // Generate the dynamic system prompt
   const systemPrompt = generateSystemPrompt(
     params.model,
