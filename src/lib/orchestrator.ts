@@ -283,7 +283,11 @@ function generateSystemPrompt(
 
   const positionText =
     position && topic
-      ? `You must advocate **${position.toUpperCase()}** regarding the statement: "${topic}".`
+      ? position === 'pro'
+        ? `You are arguing FOR the statement: "${topic}".
+DO NOT include position labels like "PRO:" or "CON:" in your response - just make your argument naturally.`
+        : `You are arguing AGAINST the statement: "${topic}".
+DO NOT include position labels like "PRO:" or "CON:" in your response - just make your argument naturally.`
       : '';
 
   // Generate extensiveness instructions based on level (1-5)
@@ -427,20 +431,23 @@ TURN ${turnNumber + 1} INSTRUCTIONS:
    Address what THEY just said, not your generic position.
    Counter it, concede if strong, or build on it.
 
-3. INTRODUCE NEW EVIDENCE
-   You MUST bring something new this turn.
+3. INTRODUCE NEW EVIDENCE - BE SPECIFIC:
+
+   ❌ WEAK (generic):
+   "Studies show..." "Research indicates..." "Many people..."
    
-   Options for any topic:
-   • Scientific research or data
-   • Historical examples
-   • Cultural perspectives
-   • Psychological principles
-   • Expert opinions
-   • Concrete scenarios or thought experiments
-   • Cross-domain analogies
+   ✅ STRONG (specific):
+   "A 2019 study by [researcher/institution]..." 
+   "In [specific country/culture]..."
+   "The [specific principle/theory] states..."
    
-   ❌ AVOID vague phrases like "many people believe" or "it's well known"
-   ✅ USE specific references: "Studies show...", "In 1960s Japan...", "Psychologists call this..."
+   You MUST include at least ONE specific reference:
+   - Named study/researcher
+   - Specific country/culture/historical event  
+   - Named psychological/scientific principle
+   - Concrete numerical data
+   
+   Vague claims without specifics = weak argument.
 
 4. DO NOT REPEAT YOURSELF
    ❌ Don't reuse the same core argument from previous turns
