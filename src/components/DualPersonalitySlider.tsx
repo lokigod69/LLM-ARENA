@@ -318,12 +318,23 @@ export default function DualPersonalitySlider({
 
               {/* Model A Status */}
               <div>
-                <div className="text-sm font-matrix text-center" style={{ color: getPersonalityTextColor(modelA.agreeabilityLevel) }}>
-                  {getPersonalityType(modelA.agreeabilityLevel)}
-                </div>
-                <div className="text-xs text-center opacity-80" style={{ color: getPersonalityTextColor(modelA.agreeabilityLevel) }}>
-                  {getPersonalityDescription(modelA.agreeabilityLevel)}
-                </div>
+                {(() => {
+                  // Use persona's locked value if persona is selected, otherwise use slider value
+                  const effectiveAgreeability = modelA.personaId 
+                    ? (10 - PERSONAS[modelA.personaId].lockedTraits.baseStubbornness)
+                    : modelA.agreeabilityLevel;
+                  
+                  return (
+                    <>
+                      <div className="text-sm font-matrix text-center" style={{ color: getPersonalityTextColor(effectiveAgreeability) }}>
+                        {getPersonalityType(effectiveAgreeability)}
+                      </div>
+                      <div className="text-xs text-center opacity-80" style={{ color: getPersonalityTextColor(effectiveAgreeability) }}>
+                        {getPersonalityDescription(effectiveAgreeability)}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Green Divider */}
@@ -424,12 +435,23 @@ export default function DualPersonalitySlider({
 
               {/* Model B Status */}
               <div>
-                <div className="text-sm font-matrix text-center" style={{ color: getPersonalityTextColor(modelB.agreeabilityLevel) }}>
-                  {getPersonalityType(modelB.agreeabilityLevel)}
-                </div>
-                <div className="text-xs text-center opacity-80" style={{ color: getPersonalityTextColor(modelB.agreeabilityLevel) }}>
-                  {getPersonalityDescription(modelB.agreeabilityLevel)}
-                </div>
+                {(() => {
+                  // Use persona's locked value if persona is selected, otherwise use slider value
+                  const effectiveAgreeability = modelB.personaId 
+                    ? (10 - PERSONAS[modelB.personaId].lockedTraits.baseStubbornness)
+                    : modelB.agreeabilityLevel;
+                  
+                  return (
+                    <>
+                      <div className="text-sm font-matrix text-center" style={{ color: getPersonalityTextColor(effectiveAgreeability) }}>
+                        {getPersonalityType(effectiveAgreeability)}
+                      </div>
+                      <div className="text-xs text-center opacity-80" style={{ color: getPersonalityTextColor(effectiveAgreeability) }}>
+                        {getPersonalityDescription(effectiveAgreeability)}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Divider with Model B color */}

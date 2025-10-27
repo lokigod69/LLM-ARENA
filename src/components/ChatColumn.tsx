@@ -11,16 +11,19 @@ import { getModelColor } from '@/lib/modelConfigs';
 import type { AvailableModel } from '@/types';
 import AudioPlayer from './AudioPlayer';
 
+import { PERSONAS } from '@/lib/personas';
+
 interface ChatColumnProps {
   messages: Message[];
   modelName: string;
   isLoading: boolean;
   modelColor?: string; // Optional color override
   actualModelName?: AvailableModel; // The actual model being used
+  personaId?: string; // ← ADD THIS
 }
 
 const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
-  ({ messages, modelName, isLoading, modelColor, actualModelName }, ref) => {
+  ({ messages, modelName, isLoading, modelColor, actualModelName, personaId }, ref) => {
     
     console.log('🎨 ChatColumn render:', {
       propModelName: modelName,
@@ -78,16 +81,37 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
           ></div>
           
           <div className="relative z-10">
-            <h2 
-              className="text-xl font-matrix font-bold tracking-wider drop-shadow-lg"
-              style={{ color: colors.primary }}
-            >
-              <TypewriterText 
-                text={`${modelName.toUpperCase()} NEURAL CORE`}
-                speed={80}
-                className="drop-shadow-lg"
-              />
-            </h2>
+            {/* Persona-aware header */}
+            {(() => {
+              const persona = personaId ? PERSONAS[personaId] : null;
+              const displayName = persona ? persona.name.toUpperCase() : modelName.toUpperCase();
+              const displayText = persona 
+                ? `${displayName} (${modelName.toUpperCase()})`  // "NIETZSCHE (GPT-4O)"
+                : modelName.toUpperCase();  // Just "GPT-4O"
+              
+              return (
+                <div className="flex items-center justify-center gap-3">
+                  {persona && (
+                    <img 
+                      src={persona.portrait} 
+                      alt={persona.name}
+                      className="w-8 h-8 border border-matrix-green shadow-[0_0_10px_rgba(0,255,0,0.5)]"
+                      style={{ imageRendering: 'crisp-edges' }}
+                    />
+                  )}
+                  <h2 
+                    className="text-xl font-matrix font-bold tracking-wider drop-shadow-lg"
+                    style={{ color: colors.primary }}
+                  >
+                    <TypewriterText 
+                      text={displayText}
+                      speed={80}
+                      className="drop-shadow-lg"
+                    />
+                  </h2>
+                </div>
+              );
+            })()}
             <div className="flex items-center gap-2 mt-1">
               {/* ENHANCED VISUAL FEEDBACK: Dynamic colors for processing dots */}
               {isLoading ? (

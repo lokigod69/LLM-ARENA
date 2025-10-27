@@ -27,7 +27,6 @@ import MarkButton from '@/components/MarkButton';
 import PersonaSelector from '@/components/PersonaSelector';
 import AgreeabilitySlider from '@/components/AgreeabilitySlider';
 import PositionSelector from '@/components/PositionSelector';
-import GlobalAudioPlayer from '@/components/GlobalAudioPlayer';
 import AccessCodeModal from '@/components/AccessCodeModal';
 import Link from 'next/link';
 
@@ -392,6 +391,7 @@ export default function Home() {
                   isLoading={isModelALoading}
                   actualModelName={modelA.name}
                   modelColor={getModelColor(modelA.name)}
+                  personaId={modelA.personaId}
                 />
               </div>
             </div>
@@ -470,10 +470,7 @@ export default function Home() {
             
             {/* 4. Audio Player (Framed) */}
             <div className="w-full p-3 border border-matrix-green/50 rounded-lg bg-matrix-dark/30">
-              <GlobalAudioPlayer 
-                messages={[...modelAMessages, ...modelBMessages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())}
-                isActive={isDebateActive} 
-              />
+              {/* Audio player removed */}
             </div>
           </motion.div>
 
@@ -497,6 +494,7 @@ export default function Home() {
                   isLoading={isModelBLoading}
                   actualModelName={modelB.name}
                   modelColor={getModelColor(modelB.name)}
+                  personaId={modelB.personaId}
                 />
               </div>
             </div>
