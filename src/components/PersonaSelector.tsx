@@ -99,9 +99,6 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
             <span className="text-matrix-green text-xl font-bold font-matrix tracking-wider">
               {PERSONAS[selectedPersonaId].name.toUpperCase()}
             </span>
-            <span className="text-xs text-gray-400 italic">
-              (Click to deselect)
-            </span>
           </div>
         )}
       </div>

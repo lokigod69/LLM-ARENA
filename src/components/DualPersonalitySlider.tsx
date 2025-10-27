@@ -558,22 +558,21 @@ export default function DualPersonalitySlider({
                 >
                   {modelA.extensivenessLevel}
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <div 
-                    className="text-xs font-matrix tracking-wider"
-                    style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}
-                  >
-                    {(() => {
-                      switch(modelA.extensivenessLevel) {
-                        case 1: return 'CONCISE';
-                        case 2: return 'BRIEF';
-                        case 3: return 'BALANCED';
-                        case 4: return 'DETAILED';
-                        case 5: return 'ACADEMIC';
-                        default: return 'BALANCED';
-                      }
-                    })()}
-                  </div>
+                
+                <div 
+                  className="text-sm font-matrix tracking-wider mt-2 mb-1"
+                  style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}
+                >
+                  {(() => {
+                    switch(modelA.extensivenessLevel) {
+                      case 1: return 'CONCISE';
+                      case 2: return 'BRIEF';
+                      case 3: return 'BALANCED';
+                      case 4: return 'DETAILED';
+                      case 5: return 'ACADEMIC';
+                      default: return 'BALANCED';
+                    }
+                  })()}
                 </div>
               </div>
               
@@ -648,22 +647,21 @@ export default function DualPersonalitySlider({
                 >
                   {modelB.extensivenessLevel}
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <div 
-                    className="text-xs font-matrix tracking-wider"
-                    style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}
-                  >
-                    {(() => {
-                      switch(modelB.extensivenessLevel) {
-                        case 1: return 'CONCISE';
-                        case 2: return 'BRIEF';
-                        case 3: return 'BALANCED';
-                        case 4: return 'DETAILED';
-                        case 5: return 'ACADEMIC';
-                        default: return 'BALANCED';
-                      }
-                    })()}
-                  </div>
+                
+                <div 
+                  className="text-sm font-matrix tracking-wider mt-2 mb-1"
+                  style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}
+                >
+                  {(() => {
+                    switch(modelB.extensivenessLevel) {
+                      case 1: return 'CONCISE';
+                      case 2: return 'BRIEF';
+                      case 3: return 'BALANCED';
+                      case 4: return 'DETAILED';
+                      case 5: return 'ACADEMIC';
+                      default: return 'BALANCED';
+                    }
+                  })()}
                 </div>
               </div>
               
