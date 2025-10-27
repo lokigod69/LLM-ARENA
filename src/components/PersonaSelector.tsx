@@ -3,6 +3,31 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { PERSONAS, PersonaDefinition } from '@/lib/personas';
 
+// Card flip animation styles
+const flipStyles = `
+  .flip-card { perspective: 1000px; }
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+  }
+  .flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+  .flip-card-front, .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+  }
+  .flip-card-back { transform: rotateY(180deg); }
+`;
+
+// Helper function for initials
+const getInitials = (name: string): string => {
+  return name.split(' ').map(word => word[0]).join('.').toUpperCase() + '.';
+};
+
 interface PersonaSelectorProps {
   selectedPersonaId: string | null;
   onSelectPersona: (id: string | null) => void;
@@ -16,77 +41,68 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
 }) => {
   const selectedPersona = selectedPersonaId ? PERSONAS[selectedPersonaId] : null;
 
+  const handlePersonaClick = (personaId: string) => {
+    // Toggle behavior: if already selected, deselect
+    if (selectedPersonaId === personaId) {
+      onSelectPersona(null);
+    } else {
+      onSelectPersona(personaId);
+    }
+  };
+
   return (
-    <div className="matrix-panel p-4 rounded-lg border border-matrix-green/30 bg-matrix-dark/50 shadow-lg">
-      <h3 className="text-lg font-matrix text-matrix-green tracking-wider text-center mb-4">{title}</h3>
-      
-      {/* Restructured Grid and Button Layout */}
-      <div>
+    <>
+      <style>{flipStyles}</style>
+      <div className="matrix-panel p-4 rounded-lg border border-matrix-green/30 bg-matrix-dark/50 shadow-lg">
+        <h3 className="text-lg font-matrix text-matrix-green tracking-wider text-center mb-4">{title}</h3>
+        
+        {/* Persona Grid with Flip Cards */}
         <div className="grid grid-cols-5 gap-4">
           {Object.values(PERSONAS).map((persona) => (
             <div
               key={persona.id}
-              onClick={() => onSelectPersona(persona.id === selectedPersonaId ? null : persona.id)}
-              className={`relative group rounded-md overflow-hidden transition-transform transform hover:scale-105 aspect-square cursor-pointer ${
-                selectedPersonaId === persona.id
-                  ? 'ring-2 ring-matrix-blue ring-offset-2 ring-offset-matrix-dark'
-                  : 'border-2 border-matrix-green/30 hover:border-matrix-green'
-              }`}
+              className={`flip-card ${selectedPersonaId === persona.id ? 'flipped' : ''} cursor-pointer hover:scale-105 transition-transform aspect-square rounded-md overflow-hidden`}
+              onClick={() => handlePersonaClick(persona.id)}
             >
-              <img
-                src={persona.portrait}
-                alt={persona.name}
-                className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-75"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <span className="text-white text-xs text-center p-1">{persona.name}</span>
-              </div>
-              {selectedPersonaId === persona.id && (
-                <div className="absolute bottom-1 right-1 bg-matrix-blue rounded-full p-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              <div className="flip-card-inner">
+                {/* Front - Portrait */}
+                <div className="flip-card-front">
+                  <img
+                    src={persona.portrait}
+                    alt={persona.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              )}
+                
+                {/* Back - Black with initials */}
+                <div className="flip-card-back bg-black flex items-center justify-center border border-matrix-green">
+                  <span className="text-matrix-green text-2xl font-bold font-matrix">
+                    {getInitials(persona.name)}
+                  </span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 flex justify-center">
-          {/* No Persona Button */}
-          <div
-            onClick={() => onSelectPersona(null)}
-            className={`relative group rounded-md flex items-center justify-center bg-transparent w-24 h-24 cursor-pointer ${
-              !selectedPersonaId
-                ? 'ring-2 ring-matrix-blue ring-offset-2 ring-offset-matrix-dark'
-                : 'border-2 border-dashed border-matrix-green/40 hover:border-matrix-green'
-            }`}
-          >
-            {/* Icon is always visible */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-8 w-8 text-matrix-green/50 group-hover:text-matrix-green/80 transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-
-            {/* Text overlay appears on hover */}
-            <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md">
-              <span className="text-white text-xs text-center p-1">No Persona</span>
-            </div>
-
-            {/* Add checkmark when selected to match other items */}
-            {!selectedPersonaId && (
-              <div className="absolute bottom-1 right-1 bg-matrix-blue rounded-full p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-              </div>
-            )}
+        {/* Large Selected Persona Display */}
+        {selectedPersonaId && PERSONAS[selectedPersonaId] && (
+          <div className="mt-6 flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)]">
+            <img 
+              src={PERSONAS[selectedPersonaId].portrait} 
+              alt={PERSONAS[selectedPersonaId].name}
+              className="w-32 h-32 border-2 border-matrix-green shadow-[0_0_25px_rgba(0,255,0,0.6)]"
+            />
+            <span className="text-matrix-green text-xl font-bold font-matrix tracking-wider">
+              {PERSONAS[selectedPersonaId].name.toUpperCase()}
+            </span>
+            <span className="text-xs text-gray-400 italic">
+              (Click card to deselect)
+            </span>
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </>
   );
 };
 

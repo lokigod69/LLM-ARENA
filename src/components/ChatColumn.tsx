@@ -95,7 +95,7 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                     <img 
                       src={persona.portrait} 
                       alt={persona.name}
-                      className="w-8 h-8 border border-matrix-green shadow-[0_0_10px_rgba(0,255,0,0.5)]"
+                      className="w-16 h-16 border-2 border-matrix-green shadow-[0_0_15px_rgba(0,255,0,0.6)]"
                       style={{ imageRendering: 'crisp-edges' }}
                     />
                   )}
