@@ -17,6 +17,14 @@ import { EXTENSIVENESS_PRESETS } from '@/types';
 import { getModelDisplayConfig, getModelColor, getModelDisplayName } from '@/lib/modelConfigs';
 import { PERSONAS } from '@/lib/personas';
 
+// Helper function to get effective agreeability (persona locked value or slider value)
+const getEffectiveAgreeability = (model: ModelConfiguration) => {
+  if (model.personaId && PERSONAS[model.personaId]) {
+    return 10 - PERSONAS[model.personaId].lockedTraits.baseStubbornness;
+  }
+  return model.agreeabilityLevel;
+};
+
 // Helper function to get effective extensiveness (persona locked value or slider value)
 const getEffectiveExtensiveness = (model: ModelConfiguration) => {
   if (model.personaId && PERSONAS[model.personaId]) {
@@ -296,13 +304,13 @@ export default function DualPersonalitySlider({
                     scale: { duration: 2, repeat: Infinity }
                   }}
                 >
-                  {getPillIcon(modelA.agreeabilityLevel)}
+                  {getPillIcon(getEffectiveAgreeability(modelA))}
                 </motion.span>
                 <div 
                   className="font-matrix text-lg"
                   style={{ color: getModelColor(modelA.name) }}
                 >
-                  {modelA.agreeabilityLevel}
+                  {getEffectiveAgreeability(modelA)}
                 </div>
               </div>
 
@@ -413,13 +421,13 @@ export default function DualPersonalitySlider({
                     scale: { duration: 2, repeat: Infinity }
                   }}
                 >
-                  {getPillIcon(modelB.agreeabilityLevel)}
+                  {getPillIcon(getEffectiveAgreeability(modelB))}
                 </motion.span>
                 <div 
                   className="font-matrix text-lg"
                   style={{ color: getModelColor(modelB.name) }}
                 >
-                  {modelB.agreeabilityLevel}
+                  {getEffectiveAgreeability(modelB)}
                 </div>
               </div>
 
