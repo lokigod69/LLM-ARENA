@@ -233,9 +233,11 @@ function generateSystemPrompt(
     effectiveAgreeability = 10 - persona.lockedTraits.baseStubbornness;
     effectiveExtensiveness = persona.lockedTraits.responseLength;
     
-    // Build persona prompt (NO stance modifiers)
-    personaPromptPart = persona.identity + '\n\n';
+    // Build persona prompt with stronger separation instructions
+    personaPromptPart = `CRITICAL: You are ${persona.name}. You are NOT responding as the other participant in this debate.\n\n`;
+    personaPromptPart += persona.identity + '\n\n';
     personaPromptPart += `Behavioral Anchors: ${persona.turnRules}\n\n`;
+    personaPromptPart += `You are debating as ${persona.name}. Stay in character. Do not respond as if you are the opponent.\n\n`;
   }
 
   // The rest of the prompt generation now uses the (potentially modified) effective values.

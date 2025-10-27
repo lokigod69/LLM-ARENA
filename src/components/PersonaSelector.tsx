@@ -87,7 +87,10 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
 
         {/* Large Selected Persona Display */}
         {selectedPersonaId && PERSONAS[selectedPersonaId] && (
-          <div className="mt-6 flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)]">
+          <div 
+            className="mt-6 flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)] cursor-pointer hover:border-matrix-green/80 transition-colors"
+            onClick={() => onSelectPersona(null)}
+          >
             <img 
               src={PERSONAS[selectedPersonaId].portrait} 
               alt={PERSONAS[selectedPersonaId].name}
@@ -97,7 +100,7 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
               {PERSONAS[selectedPersonaId].name.toUpperCase()}
             </span>
             <span className="text-xs text-gray-400 italic">
-              (Click card to deselect)
+              (Click to deselect)
             </span>
           </div>
         )}

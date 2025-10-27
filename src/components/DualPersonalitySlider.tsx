@@ -17,6 +17,14 @@ import { EXTENSIVENESS_PRESETS } from '@/types';
 import { getModelDisplayConfig, getModelColor, getModelDisplayName } from '@/lib/modelConfigs';
 import { PERSONAS } from '@/lib/personas';
 
+// Helper function to get effective extensiveness (persona locked value or slider value)
+const getEffectiveExtensiveness = (model: ModelConfiguration) => {
+  if (model.personaId && PERSONAS[model.personaId]) {
+    return PERSONAS[model.personaId].lockedTraits.responseLength;
+  }
+  return model.extensivenessLevel;
+};
+
 // Matrix personality type descriptions
 const getPersonalityType = (level: number): string => {
   if (level <= 1) return 'BLUE PILL WARRIOR';
@@ -586,20 +594,16 @@ export default function DualPersonalitySlider({
                 />
               </div>
               
-              <div className="flex justify-between text-xs mb-3">
-                <span style={{ color: '#3b82f6' }}>💬 CONCISE 📝</span>
-                <span style={{ color: '#ef4444' }}>📖 ACADEMIC 🎓</span>
-              </div>
-              
               <div 
                 className="text-xs text-center p-2 rounded"
                 style={{ 
-                  backgroundColor: `${getResponseLengthColor(modelA.extensivenessLevel)}20`,
-                  color: getResponseLengthColor(modelA.extensivenessLevel)
+                  backgroundColor: `${getResponseLengthColor(getEffectiveExtensiveness(modelA))}20`,
+                  color: getResponseLengthColor(getEffectiveExtensiveness(modelA))
                 }}
               >
                 {(() => {
-                  switch(modelA.extensivenessLevel) {
+                  const effectiveExtensiveness = getEffectiveExtensiveness(modelA);
+                  switch(effectiveExtensiveness) {
                     case 1: return 'Single powerful statement - maximum impact, minimum words';
                     case 2: return 'Brief but complete - essential points only';
                     case 3: return 'Balanced response - key arguments with some context';
@@ -680,20 +684,16 @@ export default function DualPersonalitySlider({
                 />
               </div>
               
-              <div className="flex justify-between text-xs mb-3">
-                <span style={{ color: '#3b82f6' }}>💬 CONCISE 📝</span>
-                <span style={{ color: '#ef4444' }}>📖 ACADEMIC 🎓</span>
-              </div>
-              
               <div 
                 className="text-xs text-center p-2 rounded"
                 style={{ 
-                  backgroundColor: `${getResponseLengthColor(modelB.extensivenessLevel)}20`,
-                  color: getResponseLengthColor(modelB.extensivenessLevel)
+                  backgroundColor: `${getResponseLengthColor(getEffectiveExtensiveness(modelB))}20`,
+                  color: getResponseLengthColor(getEffectiveExtensiveness(modelB))
                 }}
               >
                 {(() => {
-                  switch(modelB.extensivenessLevel) {
+                  const effectiveExtensiveness = getEffectiveExtensiveness(modelB);
+                  switch(effectiveExtensiveness) {
                     case 1: return 'Single powerful statement - maximum impact, minimum words';
                     case 2: return 'Brief but complete - essential points only';
                     case 3: return 'Balanced response - key arguments with some context';
