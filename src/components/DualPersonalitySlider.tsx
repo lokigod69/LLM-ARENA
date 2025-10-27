@@ -529,13 +529,10 @@ export default function DualPersonalitySlider({
                   {modelA.extensivenessLevel}
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-matrix tracking-wider" style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}>
-                      SCOPE
-                    </span>
-                    <span className="text-sm font-mono" style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}>
-                      {modelA.extensivenessLevel}
-                    </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono" style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}>
+                    {modelA.extensivenessLevel}
+                  </span>
                   </div>
                   <div 
                     className="text-xs font-matrix tracking-wider"
@@ -631,13 +628,10 @@ export default function DualPersonalitySlider({
                   {modelB.extensivenessLevel}
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-matrix tracking-wider" style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}>
-                      SCOPE
-                    </span>
-                    <span className="text-sm font-mono" style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}>
-                      {modelB.extensivenessLevel}
-                    </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono" style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}>
+                    {modelB.extensivenessLevel}
+                  </span>
                   </div>
                   <div 
                     className="text-xs font-matrix tracking-wider"
