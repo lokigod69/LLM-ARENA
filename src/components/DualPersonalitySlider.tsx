@@ -554,17 +554,18 @@ export default function DualPersonalitySlider({
                 </div>
                 <div 
                   className="text-2xl font-bold"
-                  style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}
+                  style={{ color: getResponseLengthColor(getEffectiveExtensiveness(modelA)) }}
                 >
-                  {modelA.extensivenessLevel}
+                  {getEffectiveExtensiveness(modelA)}
                 </div>
                 
                 <div 
                   className="text-sm font-matrix tracking-wider mt-2 mb-1"
-                  style={{ color: getResponseLengthColor(modelA.extensivenessLevel) }}
+                  style={{ color: getResponseLengthColor(getEffectiveExtensiveness(modelA)) }}
                 >
                   {(() => {
-                    switch(modelA.extensivenessLevel) {
+                    const effectiveExtensiveness = getEffectiveExtensiveness(modelA);
+                    switch(effectiveExtensiveness) {
                       case 1: return 'CONCISE';
                       case 2: return 'BRIEF';
                       case 3: return 'BALANCED';
@@ -643,17 +644,18 @@ export default function DualPersonalitySlider({
                 </div>
                 <div 
                   className="text-2xl font-bold"
-                  style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}
+                  style={{ color: getResponseLengthColor(getEffectiveExtensiveness(modelB)) }}
                 >
-                  {modelB.extensivenessLevel}
+                  {getEffectiveExtensiveness(modelB)}
                 </div>
                 
                 <div 
                   className="text-sm font-matrix tracking-wider mt-2 mb-1"
-                  style={{ color: getResponseLengthColor(modelB.extensivenessLevel) }}
+                  style={{ color: getResponseLengthColor(getEffectiveExtensiveness(modelB)) }}
                 >
                   {(() => {
-                    switch(modelB.extensivenessLevel) {
+                    const effectiveExtensiveness = getEffectiveExtensiveness(modelB);
+                    switch(effectiveExtensiveness) {
                       case 1: return 'CONCISE';
                       case 2: return 'BRIEF';
                       case 3: return 'BALANCED';
