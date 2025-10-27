@@ -28,7 +28,6 @@ export interface ModelConfiguration {
   agreeabilityLevel: number; // 0-10
   extensivenessLevel: number; // 1-5 (1=brief, 5=academic)
   personaId?: string;
-  stance?: 'truthSeeker' | 'stubborn';
 }
 
 export interface TokenMetrics {

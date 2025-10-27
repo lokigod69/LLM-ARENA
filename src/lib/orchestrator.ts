@@ -17,34 +17,6 @@ import { getModelDisplayName } from './modelConfigs';
 
 const MAX_INFLUENCE = 4.0; // The maximum "pull" the slider can exert on a persona's base agreeability.
 
-/**
- * Calculates the effective agreeability by mapping the full 0-10 slider range
- * onto the persona's possible agreeability range, using their base agreeability as an anchor.
- * @param sliderLevel The UI slider value (0-10)
- * @param baseAgreeability The persona's innate agreeability (0-10)
- * @returns The final, calculated agreeability score.
- */
-function calculateEffectiveAgreeability(sliderLevel: number, baseAgreeability: number): number {
-  const minPossible = Math.max(0, baseAgreeability - MAX_INFLUENCE);
-  const maxPossible = Math.min(10, baseAgreeability + MAX_INFLUENCE);
-
-  if (sliderLevel === 5) {
-    return baseAgreeability; // Neutral slider = base personality.
-  } 
-  
-  else if (sliderLevel < 5) {
-    // Map slider's [0, 5) range to persona's [minPossible, baseAgreeability) range.
-    const sliderPercentage = sliderLevel / 5.0;
-    return minPossible + (sliderPercentage * (baseAgreeability - minPossible));
-  } 
-  
-  else { // sliderLevel > 5
-    // Map slider's (5, 10] range to persona's (baseAgreeability, maxPossible] range.
-    const sliderPercentage = (sliderLevel - 5) / 5.0;
-    return baseAgreeability + (sliderPercentage * (maxPossible - baseAgreeability));
-  }
-}
-
 interface RunTurnParams {
   prevMessage: string;
   model: string; // Extended: 'GPT' | 'Claude' | 'DeepSeek-R1' | 'GPT-4-mini' | 'DeepSeek-v3'
@@ -245,7 +217,6 @@ function generateSystemPrompt(
   maxTurns: number = 20,
   extensivenessLevel: number = 3,
   personaId?: string,
-  stance?: 'truthSeeker' | 'stubborn',
   turnNumber: number = 0,
   conversationHistory?: any[],
   model?: string
@@ -254,25 +225,16 @@ function generateSystemPrompt(
   let effectiveExtensiveness = extensivenessLevel;
   let personaPromptPart = '';
 
-  // If persona is selected, it MODIFIES the slider values.
+  // If persona is selected, use FIXED values (no interpolation)
   if (personaId && PERSONAS[personaId]) {
     const persona = PERSONAS[personaId];
-    const baseAgreeability = 10 - persona.lockedTraits.baseStubbornness;
     
-    // NEW LOGIC: Use the two-sided interpolation model
-    effectiveAgreeability = calculateEffectiveAgreeability(agreeabilityLevel, baseAgreeability);
-
-    const baseLength = persona.lockedTraits.responseLength;
-    effectiveExtensiveness = baseLength + (extensivenessLevel - 3) * 0.5;
-
-    // effectiveAgreeability is already clamped within its function
-    effectiveExtensiveness = Math.max(1, Math.min(5, Math.round(effectiveExtensiveness)));
+    // DIRECT ASSIGNMENT - NO INTERPOLATION
+    effectiveAgreeability = 10 - persona.lockedTraits.baseStubbornness;
+    effectiveExtensiveness = persona.lockedTraits.responseLength;
     
-    // Build the persona-specific part of the prompt
+    // Build persona prompt (NO stance modifiers)
     personaPromptPart = persona.identity + '\n\n';
-    if (stance && persona.stanceModifiers[stance]) {
-      personaPromptPart += `Stance Guidance: ${persona.stanceModifiers[stance]}\n\n`;
-    }
     personaPromptPart += `Behavioral Anchors: ${persona.turnRules}\n\n`;
   }
 
@@ -1592,7 +1554,6 @@ export async function processDebateTurn(params: {
   topic?: string;
   maxTurns?: number;
   personaId?: string;
-  stance?: 'truthSeeker' | 'stubborn';
   turnNumber?: number;
 }): Promise<RunTurnResponse> {
   // Enhanced logging for better debugging
@@ -1650,7 +1611,6 @@ export async function processDebateTurn(params: {
     params.maxTurns,
     params.extensivenessLevel,
     params.personaId,
-    params.stance,
     params.turnNumber ?? 0,
     params.conversationHistory,
     params.model

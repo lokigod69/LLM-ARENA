@@ -17,25 +17,6 @@ import { EXTENSIVENESS_PRESETS } from '@/types';
 import { getModelDisplayConfig, getModelColor, getModelDisplayName } from '@/lib/modelConfigs';
 import { PERSONAS } from '@/lib/personas';
 
-const MAX_INFLUENCE = 4.0;
-
-function calculateEffectiveAgreeability(sliderLevel: number, baseAgreeability: number): number {
-  const minPossible = Math.max(0, baseAgreeability - MAX_INFLUENCE);
-  const maxPossible = Math.min(10, baseAgreeability + MAX_INFLUENCE);
-
-  if (sliderLevel === 5) {
-    return baseAgreeability;
-  } 
-  else if (sliderLevel < 5) {
-    const sliderPercentage = sliderLevel / 5.0;
-    return minPossible + (sliderPercentage * (baseAgreeability - minPossible));
-  } 
-  else {
-    const sliderPercentage = (sliderLevel - 5) / 5.0;
-    return baseAgreeability + (sliderPercentage * (maxPossible - baseAgreeability));
-  }
-}
-
 // Matrix personality type descriptions
 const getPersonalityType = (level: number): string => {
   if (level <= 1) return 'BLUE PILL WARRIOR';
@@ -254,16 +235,6 @@ export default function DualPersonalitySlider({
   const modelAConfig = getModelDisplayConfig(modelA.name);
   const modelBConfig = getModelDisplayConfig(modelB.name);
 
-  const getLiveEffectiveAgreeability = (model: ModelConfiguration) => {
-    if (!model.personaId || !PERSONAS[model.personaId]) {
-      return null;
-    }
-    const persona = PERSONAS[model.personaId];
-    const baseAgreeability = 10 - persona.lockedTraits.baseStubbornness;
-    const effectiveScore = calculateEffectiveAgreeability(model.agreeabilityLevel, baseAgreeability);
-    return `Effective: ${effectiveScore.toFixed(1)}`;
-  };
-
   // Dice Icon for randomization
   const DiceIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -325,11 +296,6 @@ export default function DualPersonalitySlider({
                 >
                   {modelA.agreeabilityLevel}
                 </div>
-                {getLiveEffectiveAgreeability(modelA) && (
-                  <span className="text-xs font-mono text-cyan-400 ml-2">
-                    {getLiveEffectiveAgreeability(modelA)}
-                  </span>
-                )}
               </div>
 
               {/* Model A Slider */}
@@ -338,10 +304,12 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="0"
                   max="10"
-                  value={modelA.agreeabilityLevel}
+                  value={modelA.personaId ? (10 - PERSONAS[modelA.personaId].lockedTraits.baseStubbornness) : modelA.agreeabilityLevel}
                   onChange={handleModelAChange}
-                  disabled={disabled}
-                  className="w-full h-2 bg-matrix-darker rounded-lg appearance-none cursor-pointer slider-model-a"
+                  disabled={disabled || !!modelA.personaId}
+                  className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-model-a ${
+                    disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  }`}
                   style={{
                     background: getBackgroundGradient(modelA.agreeabilityLevel),
                   }}
@@ -434,11 +402,6 @@ export default function DualPersonalitySlider({
                 >
                   {modelB.agreeabilityLevel}
                 </div>
-                {getLiveEffectiveAgreeability(modelB) && (
-                  <span className="text-xs font-mono text-cyan-400 ml-2">
-                    {getLiveEffectiveAgreeability(modelB)}
-                  </span>
-                )}
               </div>
 
               {/* Model B Slider */}
@@ -447,10 +410,12 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="0"
                   max="10"
-                  value={modelB.agreeabilityLevel}
+                  value={modelB.personaId ? (10 - PERSONAS[modelB.personaId].lockedTraits.baseStubbornness) : modelB.agreeabilityLevel}
                   onChange={handleModelBChange}
-                  disabled={disabled}
-                  className="w-full h-2 bg-matrix-darker rounded-lg appearance-none cursor-pointer slider-model-b"
+                  disabled={disabled || !!modelB.personaId}
+                  className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-model-b ${
+                    disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  }`}
                   style={{
                     background: getBackgroundGradient(modelB.agreeabilityLevel),
                   }}
@@ -595,10 +560,12 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="1"
                   max="5"
-                  value={modelA.extensivenessLevel}
+                  value={modelA.personaId ? PERSONAS[modelA.personaId].lockedTraits.responseLength : modelA.extensivenessLevel}
                   onChange={(e) => onModelAChange({ ...modelA, extensivenessLevel: parseInt(e.target.value) })}
-                  disabled={disabled}
-                  className="w-full h-2 bg-matrix-darker rounded-lg appearance-none cursor-pointer slider-response-a"
+                  disabled={disabled || !!modelA.personaId}
+                  className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-response-a ${
+                    disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  }`}
                   style={{
                     background: getResponseLengthGradient(modelA.extensivenessLevel),
                   }}
@@ -695,10 +662,12 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="1"
                   max="5"
-                  value={modelB.extensivenessLevel}
+                  value={modelB.personaId ? PERSONAS[modelB.personaId].lockedTraits.responseLength : modelB.extensivenessLevel}
                   onChange={(e) => onModelBChange({ ...modelB, extensivenessLevel: parseInt(e.target.value) })}
-                  disabled={disabled}
-                  className="w-full h-2 bg-matrix-darker rounded-lg appearance-none cursor-pointer slider-response-b"
+                  disabled={disabled || !!modelB.personaId}
+                  className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-response-b ${
+                    disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  }`}
                   style={{
                     background: getResponseLengthGradient(modelB.extensivenessLevel),
                   }}

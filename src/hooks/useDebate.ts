@@ -895,13 +895,15 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       const currentModelConfig = prev[targetModelKey];
 
       if (!personaId) {
-        // If persona is cleared, reset to a neutral default
+        // Clear persona AND reset sliders to neutral
         return {
           ...prev,
           [targetModelKey]: {
             ...currentModelConfig,
             personaId: undefined,
             stance: undefined, // Also clear deprecated stance
+            agreeabilityLevel: 5,      // ← RESET TO NEUTRAL
+            extensivenessLevel: 3       // ← RESET TO NEUTRAL
           }
         };
       }
@@ -909,16 +911,15 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       const persona = PERSONAS[personaId];
       if (!persona) return prev; // Persona not found, do nothing
 
-      // The 'stance' parameter is now fully redundant.
-      // The persona's identity and base traits are the source of truth.
-      // The agreeability slider then modifies this base state.
-      
+      // Set persona AND update slider values to persona's fixed values
       return {
         ...prev,
         [targetModelKey]: {
           ...currentModelConfig,
           personaId,
           stance: undefined, // Ensure deprecated stance is cleared
+          agreeabilityLevel: 10 - persona.lockedTraits.baseStubbornness,  // ← UPDATE
+          extensivenessLevel: persona.lockedTraits.responseLength          // ← UPDATE
         }
       };
     });
