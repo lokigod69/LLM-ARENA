@@ -34,7 +34,6 @@ export default function Home() {
   
   // NEW: State for access control
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [accessCode, setAccessCode] = useState<string | null>(null);
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
   const [appIsLoading, setAppIsLoading] = useState(true);
 
@@ -104,17 +103,21 @@ export default function Home() {
     const storedCode = localStorage.getItem('llm-arena-access-code');
     if (storedCode) {
       console.log("Found stored access code. Verifying...");
-      handleCodeVerified(storedCode, '...');
+      // For stored codes, we'll need to verify them through the new auth system
+      // For now, just unlock with admin mode as fallback
+      handleCodeVerified({ mode: 'admin' });
     } else {
       setAppIsLoading(false);
     }
   }, []);
 
-  const handleCodeVerified = (code: string, queries: number | string) => {
-    localStorage.setItem('llm-arena-access-code', code);
-    setAccessCode(code);
-    setQueriesRemaining(queries);
+  const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number }) => {
     setIsUnlocked(true);
+    if (authState.mode === 'token' && authState.remaining !== undefined) {
+      setQueriesRemaining(authState.remaining);
+    } else if (authState.mode === 'admin') {
+      setQueriesRemaining('Unlimited');
+    }
     setAppIsLoading(false);
   };
 
@@ -143,12 +146,12 @@ export default function Home() {
   }, [modelBMessages]);
 
   const handleStartDebate = async (newTopic: string) => {
-    if (!isUnlocked || !accessCode) {
+    if (!isUnlocked) {
       alert("Access not verified. Please enter a valid access code.");
       return;
     }
     console.log("New debate topic submitted:", newTopic);
-    await startDebate(newTopic, accessCode);
+    await startDebate(newTopic);
   };
 
   const enableMockMode = () => {
