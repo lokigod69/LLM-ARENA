@@ -2,9 +2,10 @@
 // Update: Added development-mode bypass to skip Vercel KV access code checks.
 // Phase 1.1 Implementation: Architectural refactor with separated verdict system
 // Enhanced neutrality enforcement and comprehensive bias detection
+// AUTH UPDATE: Now uses cookie-based auth and returns remaining queries
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
 import type { Message } from '@/types';
 import type { ModelPersonality } from '@/hooks/useDebate';
@@ -17,6 +18,20 @@ import type {
   VerdictScope,
   BiasDetection 
 } from '@/types/oracle';
+
+// Direct REST API calls to Upstash KV
+const KV_URL = "https://touching-stallion-7895.upstash.io";
+const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+
+async function kv(cmd: string[]) {
+  const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
+  if (!r.ok) {
+    const errorText = await r.text();
+    throw new Error(`KV ${cmd[0]} ${r.status}: ${errorText}`);
+  }
+  return r.json();
+}
 
 // CORE NEUTRALITY: Always enforced for Oracle objectivity
 const ORACLE_NEUTRALITY_DIRECTIVE = `
@@ -274,23 +289,51 @@ export async function POST(request: NextRequest) {
       totalTurns
     });
 
-    // Access code quota handling (consume 1 credit per analysis unless admin)
-    let queriesRemaining: number | string = 'Unlimited';
-    // Development mode bypass
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 DEV MODE: Bypassing KV access code check (Oracle)');
-      queriesRemaining = 'Unlimited (Dev)';
-    }
-    // Production: check KV when not admin
-    else if (accessCode && accessCode !== process.env.ADMIN_ACCESS_CODE) {
-      type CodeData = { queries_allowed: number; queries_remaining: number; isActive: boolean; created_at: string };
-      const codeData = await kv.get<CodeData>(accessCode);
-      if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {
-        return NextResponse.json({ success: false, error: 'Access denied. Invalid or expired code.' }, { status: 403 });
+    // Check authentication via cookies
+    const c = await cookies();
+    const accessMode = c.get('access_mode')?.value;
+    const accessToken = c.get('access_token')?.value;
+    
+    let remainingQueries: number | string = 'Unlimited';
+
+    if (accessMode === 'admin') {
+      // Admin bypass - no quota check
+      remainingQueries = 'Unlimited';
+    } else if (accessMode === 'token' && accessToken) {
+      // Token user - check and decrement quota
+      try {
+        const data = await kv(['HGETALL', `token:${accessToken}`]);
+        
+        if (!data || Object.keys(data).length === 0) {
+          return NextResponse.json({ success: false, error: 'Invalid access token' }, { status: 403 });
+        }
+
+        // Convert Redis hash to object
+        const tokenData: any = {};
+        for (let i = 0; i < data.length; i += 2) {
+          tokenData[data[i]] = data[i + 1];
+        }
+
+        if (tokenData.isActive !== 'true') {
+          return NextResponse.json({ success: false, error: 'Access token has been disabled' }, { status: 403 });
+        }
+
+        const currentRemaining = Number(tokenData.queries_remaining || 0);
+        if (currentRemaining <= 0) {
+          return NextResponse.json({ success: false, error: 'No queries remaining' }, { status: 403 });
+        }
+
+        // Decrement quota
+        const newRemaining = currentRemaining - 1;
+        await kv(['HSET', `token:${accessToken}`, 'queries_remaining', String(newRemaining)]);
+        remainingQueries = newRemaining;
+      } catch (kvError) {
+        console.error('KV Error in oracle:', kvError);
+        return NextResponse.json({ success: false, error: 'Access token validation failed' }, { status: 403 });
       }
-      const newRemaining = codeData.queries_remaining - 1;
-      await kv.set(accessCode, { ...codeData, queries_remaining: newRemaining });
-      queriesRemaining = newRemaining;
+    } else {
+      // No valid authentication
+      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
     // Check if we're in mock mode
@@ -318,7 +361,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       result,
-      queriesRemaining
+      remaining: remainingQueries
     });
 
   } catch (error) {

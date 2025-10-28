@@ -1,6 +1,6 @@
 // src/components/AccessCodeModal.tsx
 
-// Changes: Added development-mode bypass to accept any access code locally
+// Changes: Updated to use new auth system with proper admin/token separation
 // This component creates a modal dialog for users to enter their access code.
 // It is styled to match the application's "Matrix" theme.
 // It handles its own state for the input field, loading status, and error messages.
@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface AccessCodeModalProps {
-  onVerified: (accessCode: string, queriesRemaining: number | string) => void;
+  onVerified: (authState: { mode: 'admin' | 'token', remaining?: number, allowed?: number }) => void;
   setAppIsLoading: (isLoading: boolean) => void;
 }
 
@@ -27,30 +27,24 @@ export default function AccessCodeModal({ onVerified, setAppIsLoading }: AccessC
       setError('Please enter an access code.');
       return;
     }
-    // Development bypass
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 DEV MODE: Bypassing access code verification');
-      console.log('🔧 Code entered:', code);
-      onVerified(code, 'Unlimited');
-      return;
-    }
+    
     setError('');
     setIsLoading(true);
     setAppIsLoading(true);
 
     try {
-      const response = await fetch('/api/verify-code', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ accessCode: code }),
+        body: JSON.stringify({ code }),
       });
 
       const data = await response.json();
 
-      if (response.ok && data.isValid) {
-        onVerified(code, data.queriesRemaining);
+      if (response.ok) {
+        onVerified(data);
       } else {
         setError(data.error || 'An unknown error occurred.');
         setIsLoading(false);

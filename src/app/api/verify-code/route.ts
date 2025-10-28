@@ -3,14 +3,20 @@
 // in Vercel KV. It validates that the code exists, is active, and has
 // queries remaining, returning the status to the client.
 
-import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
-interface CodeData {
-  queries_allowed: number;
-  queries_remaining: number;
-  isActive: boolean;
-  created_at: string;
+// Direct REST API calls to Upstash KV
+const KV_URL = "https://touching-stallion-7895.upstash.io";
+const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+
+async function kv(cmd: string[]) {
+  const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
+  if (!r.ok) {
+    const errorText = await r.text();
+    throw new Error(`KV ${cmd[0]} ${r.status}: ${errorText}`);
+  }
+  return r.json();
 }
 
 export async function POST(req: Request) {
@@ -22,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     // 1. Check for the ADMIN code first
-    if (process.env.ADMIN_ACCESS_CODE && accessCode === process.env.ADMIN_ACCESS_CODE) {
+    if (accessCode === "6969") {
       return NextResponse.json({
         isValid: true,
         isAdmin: true,
@@ -31,27 +37,39 @@ export async function POST(req: Request) {
     }
 
     // 2. If not admin, check the KV database for a regular code
-    const codeData = await kv.get<CodeData>(accessCode);
+    try {
+      const codeData = await kv(['HGETALL', `token:${accessCode}`]);
+      
+      if (!codeData || Object.keys(codeData).length === 0) {
+        return NextResponse.json({ isValid: false, error: 'Invalid access code' }, { status: 403 });
+      }
 
-    if (!codeData) {
+      // Convert Redis hash to object
+      const tokenData: any = {};
+      for (let i = 0; i < codeData.length; i += 2) {
+        tokenData[codeData[i]] = codeData[i + 1];
+      }
+
+      // 3. Check if the code is active and has queries
+      if (tokenData.isActive === 'false') {
+        return NextResponse.json({ isValid: false, error: 'This access code has been disabled.' }, { status: 403 });
+      }
+
+      const queriesRemaining = parseInt(tokenData.queries_remaining || '0');
+      if (queriesRemaining <= 0) {
+        return NextResponse.json({ isValid: false, error: 'This access code has no queries remaining.' }, { status: 403 });
+      }
+
+      // If valid, return its data
+      return NextResponse.json({
+        isValid: true,
+        isAdmin: false,
+        queriesRemaining: queriesRemaining
+      });
+    } catch (kvError) {
+      console.error('KV Error:', kvError);
       return NextResponse.json({ isValid: false, error: 'Invalid access code' }, { status: 403 });
     }
-
-    // 3. Check if the code is active and has queries
-    if (codeData.isActive === false) {
-      return NextResponse.json({ isValid: false, error: 'This access code has been disabled.' }, { status: 403 });
-    }
-
-    if (codeData.queries_remaining <= 0) {
-      return NextResponse.json({ isValid: false, error: 'This access code has no queries remaining.' }, { status: 403 });
-    }
-
-    // If valid, return its data
-    return NextResponse.json({
-      isValid: true,
-      isAdmin: false,
-      queriesRemaining: codeData.queries_remaining
-    });
 
   } catch (error) {
     console.error('Error verifying code:', error);

@@ -7,21 +7,28 @@
 // Passes enhanced parameters to the orchestrator
 // PHASE 2A: Added enhanced logging and validation for individual personality verification
 // PHASE B: Updated to support flexible model system with exact API model names
+// AUTH UPDATE: Now uses cookie-based auth and returns remaining queries
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import type { AvailableModel, Message } from '@/types';
-import { kv } from '@vercel/kv';
 
-interface CodeData {
-  queries_allowed: number;
-  queries_remaining: number;
-  isActive: boolean;
-  created_at: string;
+// Direct REST API calls to Upstash KV
+const KV_URL = "https://touching-stallion-7895.upstash.io";
+const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+
+async function kv(cmd: string[]) {
+  const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
+  if (!r.ok) {
+    const errorText = await r.text();
+    throw new Error(`KV ${cmd[0]} ${r.status}: ${errorText}`);
+  }
+  return r.json();
 }
 
 // PHASE B: Updated interface for flexible model system
 interface StepRequest {
-  accessCode: string; // <-- ADDED: For usage control
   prevMessage: string;
   model: string; // Now accepts any model string (will be normalized by orchestrator)
   originalModel?: AvailableModel; // NEW: Original model name for future API expansion
@@ -42,7 +49,6 @@ export async function POST(request: NextRequest) {
   try {
     const body: StepRequest = await request.json();
     const { 
-      accessCode,
       prevMessage, 
       model, 
       originalModel,
@@ -55,26 +61,51 @@ export async function POST(request: NextRequest) {
       conversationHistory, // <-- ADDED
     } = body;
 
-    let queriesRemaining: number | string = 'Unlimited';
+    // Check authentication via cookies
+    const c = await cookies();
+    const accessMode = c.get('access_mode')?.value;
+    const accessToken = c.get('access_token')?.value;
+    
+    let remainingQueries: number | string = 'Unlimited';
 
-    // Access Code Validation Logic
-    // Development mode bypass
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔧 DEV MODE: Bypassing KV access code check');
-      queriesRemaining = 'Unlimited (Dev)';
-    }
-    // Production: check KV
-    else if (accessCode !== process.env.ADMIN_ACCESS_CODE) {
-      const codeData = await kv.get<CodeData>(accessCode);
+    if (accessMode === 'admin') {
+      // Admin bypass - no quota check
+      remainingQueries = 'Unlimited';
+    } else if (accessMode === 'token' && accessToken) {
+      // Token user - check and decrement quota
+      try {
+        const data = await kv(['HGETALL', `token:${accessToken}`]);
+        
+        if (!data || Object.keys(data).length === 0) {
+          return NextResponse.json({ error: 'Invalid access token' }, { status: 403 });
+        }
 
-      if (!codeData || !codeData.isActive || codeData.queries_remaining <= 0) {
-        return NextResponse.json({ error: 'Access denied. Invalid or expired code.' }, { status: 403 });
+        // Convert Redis hash to object
+        const tokenData: any = {};
+        for (let i = 0; i < data.length; i += 2) {
+          tokenData[data[i]] = data[i + 1];
+        }
+
+        if (tokenData.isActive !== 'true') {
+          return NextResponse.json({ error: 'Access token has been disabled' }, { status: 403 });
+        }
+
+        const currentRemaining = Number(tokenData.queries_remaining || 0);
+        if (currentRemaining <= 0) {
+          return NextResponse.json({ error: 'No queries remaining' }, { status: 403 });
+        }
+
+        // Decrement quota
+        const newRemaining = currentRemaining - 1;
+        await kv(['HSET', `token:${accessToken}`, 'queries_remaining', String(newRemaining)]);
+        remainingQueries = newRemaining;
+      } catch (kvError) {
+        console.error('KV Error in step:', kvError);
+        return NextResponse.json({ error: 'Access token validation failed' }, { status: 403 });
       }
-
-      // Decrement the count (this is the critical transaction)
-      const newQueriesRemaining = codeData.queries_remaining - 1;
-      await kv.set(accessCode, { ...codeData, queries_remaining: newQueriesRemaining });
-      queriesRemaining = newQueriesRemaining;
+    } else {
+      // No valid authentication
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     console.log('🎯 STEP API: Request received (FLEXIBLE)');
@@ -125,7 +156,7 @@ export async function POST(request: NextRequest) {
       tokenUsage: response.tokenUsage ? 'included' : 'not available'
     });
 
-    return NextResponse.json({ ...response, queriesRemaining });
+    return NextResponse.json({ ...response, remaining: remainingQueries });
   } catch (error) {
     console.error('💥 STEP API ERROR (FLEXIBLE):', error);
     console.error('💥 Error details:', {
@@ -138,7 +169,7 @@ export async function POST(request: NextRequest) {
         error: 'Failed to execute debate step', 
         details: (error as Error).message,
         model: 'error',
-        queriesRemaining: 'Error' // Add queriesRemaining to error response
+        remaining: 'Error' // Add remaining to error response
       },
       { status: 500 }
     );
