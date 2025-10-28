@@ -80,7 +80,7 @@ interface EnhancedDebateState {
 
 interface EnhancedDebateActions {
   // --- CHANGE 2: MODIFY/ADD ACTIONS ---
-  startDebate: (topic: string, accessCode: string) => Promise<void>; // <-- MODIFIED
+  startDebate: (topic: string) => Promise<void>; // <-- MODIFIED
   stopDebate: () => void;
   setMaxTurns: (turns: number) => void;
   
