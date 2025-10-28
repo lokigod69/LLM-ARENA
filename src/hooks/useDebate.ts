@@ -761,8 +761,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
 
   // Start a new debate with a topic - SIMPLIFIED: Auto-runs until stopped or max turns
   // --- CHANGE 5 PART B: MODIFY STARTDEBATE SIGNATURE AND ADD SETTER ---
-  const startDebate = useCallback(async (topic: string, accessCode: string) => {
-    setAccessCode(accessCode);
+  const startDebate = useCallback(async (topic: string) => {
     console.log('🎬 STARTING DEBATE (SIMPLIFIED):', topic);
     clearAutoStep();
     
