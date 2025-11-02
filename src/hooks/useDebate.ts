@@ -995,6 +995,102 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   }, []);
 
   // THE ORACLE PHASE 1: Configurable analysis actions (adapted for flexible models)
+  // Save Oracle analysis to Supabase database (optional - only if configured)
+  // Defined here so it can be called from requestOracleAnalysis
+  const saveOracleToSupabase = useCallback(async (oracleResult: any, debateState: EnhancedDebateState) => {
+    // Only save if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.log('⏭️ Skipping Oracle database save (Supabase not configured)');
+      return;
+    }
+
+    // Only save if Oracle result has analysis content
+    if (!oracleResult || !oracleResult.analysis) {
+      console.log('⏭️ Skipping Oracle database save (no analysis content)');
+      return;
+    }
+
+    try {
+      // Map verdict winner from 'GPT'/'Claude'/'Aligned' to actual model names
+      let verdict = null;
+      if (oracleResult.verdict) {
+        const verdictWinner = oracleResult.verdict.winner;
+        let mappedWinner = null;
+        
+        if (verdictWinner === 'GPT' || verdictWinner === 'Claude') {
+          // Check which model matches the verdict winner
+          const isGPT = debateState.modelA.name.includes('gpt') || debateState.modelB.name.includes('gpt');
+          const isClaude = debateState.modelA.name.includes('claude') || debateState.modelB.name.includes('claude');
+          
+          if (verdictWinner === 'GPT' && isGPT) {
+            // Find which model is GPT
+            if (debateState.modelA.name.includes('gpt')) {
+              mappedWinner = `Winner A (${getModelDisplayName(debateState.modelA.name)})`;
+            } else {
+              mappedWinner = `Winner B (${getModelDisplayName(debateState.modelB.name)})`;
+            }
+          } else if (verdictWinner === 'Claude' && isClaude) {
+            // Find which model is Claude
+            if (debateState.modelA.name.includes('claude')) {
+              mappedWinner = `Winner A (${getModelDisplayName(debateState.modelA.name)})`;
+            } else {
+              mappedWinner = `Winner B (${getModelDisplayName(debateState.modelB.name)})`;
+            }
+          } else {
+            // Fallback: map to model positions based on message counts
+            if (debateState.modelAMessages.length > debateState.modelBMessages.length) {
+              mappedWinner = `Winner A (${getModelDisplayName(debateState.modelA.name)})`;
+            } else if (debateState.modelBMessages.length > debateState.modelAMessages.length) {
+              mappedWinner = `Winner B (${getModelDisplayName(debateState.modelB.name)})`;
+            } else {
+              mappedWinner = 'Aligned';
+            }
+          }
+        } else {
+          mappedWinner = 'Aligned';
+        }
+        
+        verdict = mappedWinner;
+      }
+
+      const oracleData = {
+        topic: debateState.topic,
+        modelAName: debateState.modelA.name,
+        modelBName: debateState.modelB.name,
+        modelADisplayName: getModelDisplayName(debateState.modelA.name),
+        modelBDisplayName: getModelDisplayName(debateState.modelB.name),
+        oracleModel: oracleResult.config?.oracleModel || 'deepseek-r1', // Default to DeepSeek R1
+        verdict: verdict,
+        confidence: oracleResult.verdict?.confidence || null,
+        analysis: oracleResult, // Full Oracle result JSON
+        agreeabilityLevel: debateState.modelA.agreeabilityLevel || null,
+        extensivenessLevel: debateState.modelA.extensivenessLevel || null,
+        maxTurns: debateState.maxTurns || null,
+        actualTurns: debateState.currentTurn || null,
+        accessToken: debateState.accessCode || null,
+        debateId: null // Can link to debate if needed in the future
+      };
+
+      const response = await fetch('/api/oracle/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oracleData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Oracle analysis saved to Supabase:', result.id);
+      } else {
+        // Don't throw - saving is optional
+        const errorText = await response.text();
+        console.error('❌ Failed to save Oracle analysis to Supabase:', errorText);
+      }
+    } catch (error) {
+      // Don't throw - saving is optional, don't break user flow
+      console.error('❌ Error saving Oracle analysis to Supabase:', error);
+    }
+  }, []);
+
   const requestOracleAnalysis = useCallback(async (config: OracleConfig) => {
     console.log('🔮 ORACLE: Starting analysis with config (FLEXIBLE):', config);
     
@@ -1039,12 +1135,23 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       
       if (data.success && data.result) {
         console.log('✅ ORACLE: Analysis complete:', data.result);
-        setState(prev => ({
-          ...prev,
-          oracleResults: [...prev.oracleResults, data.result],
-          isOracleAnalyzing: false,
-          queriesRemaining: data.queriesRemaining ?? prev.queriesRemaining,
-        }));
+        setState(prev => {
+          const updatedState = {
+            ...prev,
+            oracleResults: [...prev.oracleResults, data.result],
+            isOracleAnalyzing: false,
+            queriesRemaining: data.queriesRemaining ?? prev.queriesRemaining,
+          };
+          
+          // Auto-save Oracle analysis to Supabase (if configured)
+          // Use updated state to ensure we have the latest data
+          saveOracleToSupabase(data.result, updatedState).catch(err => {
+            // Don't throw - saving is optional, don't break user flow
+            console.error('❌ Failed to save Oracle analysis to Supabase:', err);
+          });
+          
+          return updatedState;
+        });
       } else {
         throw new Error(data.error || 'Oracle analysis failed');
       }

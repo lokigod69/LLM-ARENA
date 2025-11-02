@@ -14,6 +14,8 @@ export function AdminPanel() {
   const [generatedTokens, setGeneratedTokens] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedTokenIndex, setCopiedTokenIndex] = useState<number | null>(null);
+  const [copyAllClicked, setCopyAllClicked] = useState(false);
 
   const generateTokens = async () => {
     setIsGenerating(true);
@@ -46,10 +48,13 @@ export function AdminPanel() {
     }
   };
 
-  const copyToken = async (token: string) => {
+  const copyToken = async (token: string, index: number) => {
     try {
       await navigator.clipboard.writeText(token);
-      // Optional: show toast notification
+      setCopiedTokenIndex(index);
+      setTimeout(() => {
+        setCopiedTokenIndex(null);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy token:', err);
     }
@@ -58,6 +63,10 @@ export function AdminPanel() {
   const copyAll = async () => {
     try {
       await navigator.clipboard.writeText(generatedTokens.join('\n'));
+      setCopyAllClicked(true);
+      setTimeout(() => {
+        setCopyAllClicked(false);
+      }, 2000);
     } catch (err) {
       console.error('Failed to copy all tokens:', err);
     }
@@ -65,7 +74,7 @@ export function AdminPanel() {
 
   return (
     <motion.div
-      className="fixed top-4 right-4 w-96 z-50"
+      className="fixed top-24 right-4 w-96 z-50"
       initial={{ opacity: 0, x: 100 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
@@ -160,9 +169,13 @@ export function AdminPanel() {
                       </label>
                       <button
                         onClick={copyAll}
-                        className="text-xs text-matrix-green hover:text-matrix-green-dim underline font-matrix-mono"
+                        className={`text-xs font-matrix-mono px-2 py-1 border border-matrix-green-dark rounded transition-all ${
+                          copyAllClicked
+                            ? 'bg-matrix-green text-matrix-black font-bold'
+                            : 'text-matrix-green hover:text-matrix-green-dim hover:bg-matrix-green/10 underline'
+                        }`}
                       >
-                        Copy All
+                        {copyAllClicked ? '✓ Copied!' : 'Copy All'}
                       </button>
                     </div>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -175,10 +188,14 @@ export function AdminPanel() {
                             {token}
                           </code>
                           <button
-                            onClick={() => copyToken(token)}
-                            className="text-xs text-matrix-green hover:text-matrix-green-dim font-matrix-mono px-2 py-1 border border-matrix-green-dark rounded hover:bg-matrix-green/10 transition-colors"
+                            onClick={() => copyToken(token, idx)}
+                            className={`text-xs font-matrix-mono px-2 py-1 border border-matrix-green-dark rounded transition-all min-w-[60px] ${
+                              copiedTokenIndex === idx
+                                ? 'bg-matrix-green text-matrix-black font-bold'
+                                : 'text-matrix-green hover:text-matrix-green-dim hover:bg-matrix-green/10'
+                            }`}
                           >
-                            Copy
+                            {copiedTokenIndex === idx ? '✓ Copied!' : 'Copy'}
                           </button>
                         </div>
                       ))}
