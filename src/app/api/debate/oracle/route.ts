@@ -28,6 +28,15 @@ if (!KV_URL || !KV_TOKEN) {
   console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
 }
 
+// Helper to convert Redis HGETALL array to object
+function arrayToObject(arr: string[]): Record<string, string> {
+  const obj: Record<string, string> = {};
+  for (let i = 0; i < arr.length; i += 2) {
+    obj[arr[i]] = arr[i + 1];
+  }
+  return obj;
+}
+
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
   const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
@@ -307,17 +316,15 @@ export async function POST(request: NextRequest) {
     } else if (accessMode === 'token' && accessToken) {
       // Token user - check and decrement quota
       try {
-        const data = await kv(['HGETALL', `token:${accessToken}`]);
+        const rawData = await kv(['HGETALL', `token:${accessToken}`]);
         
-        if (!data || Object.keys(data).length === 0) {
+        // BUG FIX: KV returns { result: ['key', 'value', ...] } - convert array to object
+        if (!rawData || !rawData.result || rawData.result.length === 0) {
           return NextResponse.json({ success: false, error: 'Invalid access token' }, { status: 403 });
         }
 
-        // Convert Redis hash to object
-        const tokenData: any = {};
-        for (let i = 0; i < data.length; i += 2) {
-          tokenData[data[i]] = data[i + 1];
-        }
+        // Convert Redis HGETALL array to object
+        const tokenData = arrayToObject(rawData.result);
 
         if (tokenData.isActive !== 'true') {
           return NextResponse.json({ success: false, error: 'Access token has been disabled' }, { status: 403 });

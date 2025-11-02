@@ -23,6 +23,15 @@ if (!KV_URL || !KV_TOKEN) {
   console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
 }
 
+// Helper to convert Redis HGETALL array to object
+function arrayToObject(arr: string[]): Record<string, string> {
+  const obj: Record<string, string> = {};
+  for (let i = 0; i < arr.length; i += 2) {
+    obj[arr[i]] = arr[i + 1];
+  }
+  return obj;
+}
+
 async function kv(cmd: string[]) {
   if (!KV_URL || !KV_TOKEN) {
     throw new Error('KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
@@ -74,25 +83,23 @@ export async function POST(req: Request) {
     // Token login - verify token exists and is active
     try {
       console.log('🔍 Looking up token in KV:', `token:${code}`);
-      const data = await kv(['HGETALL', `token:${code}`]);
+      const rawData = await kv(['HGETALL', `token:${code}`]);
       
       // DEBUG: Log KV lookup result
       console.log('🗄️ KV LOOKUP RESULT:', {
-        found: !!data && Object.keys(data).length > 0,
-        dataLength: data ? Object.keys(data).length : 0,
-        data: data // log what we got back
+        found: !!rawData && !!rawData.result,
+        dataLength: rawData?.result?.length || 0,
+        rawData: rawData // log what we got back
       });
       
-      if (!data || Object.keys(data).length === 0) {
+      // BUG FIX: KV returns { result: ['key', 'value', ...] } - convert array to object
+      if (!rawData || !rawData.result || rawData.result.length === 0) {
         console.error('❌ Token not found in KV');
         return NextResponse.json({ error: 'Invalid access code' }, { status: 403 });
       }
 
-      // Convert Redis hash to object
-      const tokenData: any = {};
-      for (let i = 0; i < data.length; i += 2) {
-        tokenData[data[i]] = data[i + 1];
-      }
+      // Convert Redis HGETALL array to object
+      const tokenData = arrayToObject(rawData.result);
       
       // DEBUG: Log parsed token data
       console.log('📋 PARSED TOKEN DATA:', {

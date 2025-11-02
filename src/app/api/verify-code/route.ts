@@ -14,6 +14,15 @@ if (!KV_URL || !KV_TOKEN) {
   console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
 }
 
+// Helper to convert Redis HGETALL array to object
+function arrayToObject(arr: string[]): Record<string, string> {
+  const obj: Record<string, string> = {};
+  for (let i = 0; i < arr.length; i += 2) {
+    obj[arr[i]] = arr[i + 1];
+  }
+  return obj;
+}
+
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
   const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
@@ -49,17 +58,15 @@ export async function POST(req: Request) {
 
     // 2. If not admin, check the KV database for a regular code
     try {
-      const codeData = await kv(['HGETALL', `token:${accessCode}`]);
+      const rawData = await kv(['HGETALL', `token:${accessCode}`]);
       
-      if (!codeData || Object.keys(codeData).length === 0) {
+      // BUG FIX: KV returns { result: ['key', 'value', ...] } - convert array to object
+      if (!rawData || !rawData.result || rawData.result.length === 0) {
         return NextResponse.json({ isValid: false, error: 'Invalid access code' }, { status: 403 });
       }
 
-      // Convert Redis hash to object
-      const tokenData: any = {};
-      for (let i = 0; i < codeData.length; i += 2) {
-        tokenData[codeData[i]] = codeData[i + 1];
-      }
+      // Convert Redis HGETALL array to object
+      const tokenData = arrayToObject(rawData.result);
 
       // 3. Check if the code is active and has queries
       if (tokenData.isActive === 'false') {
