@@ -51,6 +51,29 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+// BUG FIX: Calculate maxTokens dynamically based on extensiveness level
+// This prevents mid-sentence cutoffs by ensuring adequate token limits
+// Conservative limits optimized for debate quality - forces concise, impactful arguments
+// IMPORTANT: max_tokens is a SAFETY LIMIT, not a target. System prompts guide actual length.
+// +50 token buffer allows models to complete thoughts naturally without mid-sentence cutoffs.
+// We only pay for tokens actually used, not the max_tokens limit.
+function getMaxTokensForExtensiveness(extensivenessLevel: number = 3): number {
+  switch (Math.round(extensivenessLevel)) {
+    case 1:
+      return 200;  // Target: ~150 tokens (1-2 sharp sentences) + 50 buffer
+    case 2:
+      return 250;  // Target: ~200 tokens (2-3 sentences) + 50 buffer
+    case 3:
+      return 330;  // Target: ~280 tokens (3-4 sentences) + 50 buffer
+    case 4:
+      return 450;  // Target: ~400 tokens (4-5 sentences) + 50 buffer
+    case 5:
+      return 600;  // Target: ~550 tokens (6-7 sentences) + 50 buffer
+    default:
+      return 330;  // Default to balanced + 50 buffer
+  }
+}
+
 function trackTokenUsage(
   systemPrompt: string,
   messages: any[],
@@ -460,13 +483,16 @@ async function timedFetch(
 /**
  * Unified OpenAI API caller supporting multiple OpenAI models
  */
-async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-mini'): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-mini', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
   if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY_PLACEHOLDER') {
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -477,7 +503,7 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
     body: JSON.stringify({
       model: config.modelName,
       messages: messages,
-      max_tokens: config.maxTokens,
+      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   }, 60000);
@@ -501,7 +527,14 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
   }
 
   const data = await response.json();
-  const reply = data.choices[0]?.message?.content || 'No response generated';
+  let reply = data.choices[0]?.message?.content || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'length' || finishReason === 'max_tokens') {
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
   
   // Calculate token usage and cost
   const usage = data.usage;
@@ -519,7 +552,7 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
 /**
  * Unified Anthropic API caller
  */
-async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedAnthropic(messages: any[], extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS['claude-3-5-sonnet-20241022'];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -530,6 +563,9 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
   const systemPrompt = messages.find(m => m.role === 'system')?.content || '';
   const userMessages = messages.filter(m => m.role !== 'system');
 
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -539,7 +575,7 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
     },
     body: JSON.stringify({
       model: config.modelName,
-      max_tokens: config.maxTokens,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages: userMessages,
       temperature: 0.7,
@@ -565,7 +601,14 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
   }
 
   const data = await response.json();
-  const reply = data.content[0]?.text || 'No response generated';
+  let reply = data.content[0]?.text || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.stop_reason || data.content?.[0]?.stop_reason;
+  if (finishReason === 'max_tokens') {
+    console.warn(`⚠️ Response truncated at token limit for Claude (stop_reason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
   
   // Calculate token usage and cost (Anthropic format)
   const usage = data.usage;
@@ -583,13 +626,16 @@ async function callUnifiedAnthropic(messages: any[]): Promise<{reply: string, to
 /**
  * Unified DeepSeek API caller supporting multiple DeepSeek models
  */
-async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | 'deepseek-v3'): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | 'deepseek-v3', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
   if (!apiKey) {
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
   // DeepSeek uses OpenAI-compatible API format
   const response = await timedFetch(config.endpoint, {
@@ -601,7 +647,7 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
     body: JSON.stringify({
       model: config.modelName,
       messages: messages,
-      max_tokens: config.maxTokens,
+      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   }, 60000);
@@ -621,7 +667,14 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
   }
 
   const data = await response.json();
-  const reply = data.choices[0]?.message?.content || 'No response generated';
+  let reply = data.choices[0]?.message?.content || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'length' || finishReason === 'max_tokens') {
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
   
   // Calculate token usage and cost (OpenAI-compatible format)
   const usage = data.usage;
@@ -639,13 +692,16 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
 /**
  * Unified Google Gemini API caller supporting multiple Gemini models
  */
-async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06'): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
   if (!apiKey || apiKey === 'YOUR_GOOGLE_AI_API_KEY_PLACEHOLDER') {
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
   // Gemini uses a different API format. We combine messages into a single text block.
   const combinedText = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
@@ -664,7 +720,7 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
         }
       ],
       generationConfig: {
-        maxOutputTokens: config.maxTokens,
+        maxOutputTokens: maxTokens,
         temperature: 0.7,
         topP: 0.8,
         topK: 40
@@ -705,7 +761,14 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
   }
 
   const data = await response.json();
-  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+  let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.candidates?.[0]?.finishReason;
+  if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finishReason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
   
   // Calculate token usage and cost (Gemini format)
   const usage = data.usageMetadata;
@@ -1678,18 +1741,19 @@ export async function processDebateTurn(params: {
   const modelKey = getModelKey(params.model);
   const modelConfig = MODEL_CONFIGS[modelKey];
 
+  // BUG FIX: Pass extensivenessLevel to API callers for dynamic maxTokens
   switch (modelConfig.provider) {
     case 'openai':
-      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-4o' | 'gpt-4o-mini');
+      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-4o' | 'gpt-4o-mini', params.extensivenessLevel);
       break;
     case 'anthropic':
-      result = await callUnifiedAnthropic(fullHistory);
+      result = await callUnifiedAnthropic(fullHistory, params.extensivenessLevel);
       break;
     case 'deepseek':
-      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3');
+      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', params.extensivenessLevel);
       break;
     case 'google':
-      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06');
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06', params.extensivenessLevel);
       break;
     default:
       throw new Error(`Unsupported model provider`);
