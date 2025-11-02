@@ -552,8 +552,8 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         modelBName: debateState.modelB.name,
         modelADisplayName: getModelDisplayName(debateState.modelA.name),
         modelBDisplayName: getModelDisplayName(debateState.modelB.name),
-        agreeabilityLevel: debateState.agreeabilityLevel || null,
-        extensivenessLevel: debateState.extensivenessLevel || null,
+        agreeabilityLevel: debateState.modelA.agreeabilityLevel || null, // Use modelA's agreeability (or could average both)
+        extensivenessLevel: debateState.modelA.extensivenessLevel || null, // Use modelA's extensiveness (or could average both)
         messages: allMessages, // Full conversation history
         oracleAnalysis: debateState.oracleResults.length > 0 ? debateState.oracleResults : null,
         accessToken: debateState.accessCode || null,
