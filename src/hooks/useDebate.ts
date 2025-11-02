@@ -523,6 +523,64 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
   }, [setQueriesRemaining]); // Added setQueriesRemaining to dependency array
 
+  // Save debate to Supabase database (optional - only if configured)
+  // Defined here so it can be called from processNextTurn
+  const saveDebateToSupabase = useCallback(async (debateState: EnhancedDebateState) => {
+    // Only save if Supabase is configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.log('⏭️ Skipping database save (Supabase not configured)');
+      return;
+    }
+
+    // Only save if debate has content
+    if (!debateState.topic || debateState.currentTurn === 0) {
+      console.log('⏭️ Skipping database save (no debate content)');
+      return;
+    }
+
+    try {
+      // Prepare all messages in chronological order
+      const allMessages = [...debateState.modelAMessages, ...debateState.modelBMessages].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      const debateData = {
+        topic: debateState.topic,
+        maxTurns: debateState.maxTurns,
+        actualTurns: debateState.currentTurn,
+        modelAName: debateState.modelA.name,
+        modelBName: debateState.modelB.name,
+        modelADisplayName: getModelDisplayName(debateState.modelA.name),
+        modelBDisplayName: getModelDisplayName(debateState.modelB.name),
+        agreeabilityLevel: debateState.agreeabilityLevel || null,
+        extensivenessLevel: debateState.extensivenessLevel || null,
+        messages: allMessages, // Full conversation history
+        oracleAnalysis: debateState.oracleResults.length > 0 ? debateState.oracleResults : null,
+        accessToken: debateState.accessCode || null,
+        debateDurationSeconds: null, // Can add timer if needed
+        totalTokensUsed: null // Can track if needed
+      };
+
+      const response = await fetch('/api/debates/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(debateData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Debate saved to Supabase:', result.id);
+      } else {
+        // Don't throw - saving is optional
+        const errorText = await response.text();
+        console.error('❌ Failed to save debate to Supabase:', errorText);
+      }
+    } catch (error) {
+      // Don't throw - saving is optional, don't break user flow
+      console.error('❌ Error saving debate to Supabase:', error);
+    }
+  }, []);
+
   // This function is now defined outside and wrapped in useCallback
   const processNextTurn = useCallback(async () => {
     // Get FRESH state from ref - this includes the most recently added message
@@ -571,6 +629,12 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       } catch (error) {
         console.error('❌ Failed to auto-save debate:', error);
       }
+      
+      // Auto-save debate to Supabase (if configured)
+      saveDebateToSupabase(currentState).catch(err => {
+        // Don't throw - saving is optional, don't break user flow
+        console.error('❌ Failed to save debate to Supabase:', err);
+      });
       
       // Automatically stop the debate
       setState(prev => ({

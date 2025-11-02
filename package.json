@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.78.0",
     "@upstash/redis": "^1.35.6",
     "@vercel/kv": "^3.0.0",
     "dotenv": "^17.2.0",
