@@ -9,6 +9,16 @@ import { NextResponse } from 'next/server';
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
 
+// DEBUG: Log which env vars are being used
+console.log('🔍 KV Credentials Check:', {
+  KV_REST_API_URL_set: !!process.env.KV_REST_API_URL,
+  KV_URL_set: !!process.env.KV_URL,
+  KV_REST_API_TOKEN_set: !!process.env.KV_REST_API_TOKEN,
+  KV_TOKEN_set: !!process.env.KV_TOKEN,
+  KV_URL_final: KV_URL ? 'SET' : 'MISSING',
+  KV_TOKEN_final: KV_TOKEN ? 'SET' : 'MISSING'
+});
+
 if (!KV_URL || !KV_TOKEN) {
   console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
 }
