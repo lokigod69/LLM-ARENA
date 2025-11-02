@@ -28,12 +28,14 @@ import PersonaSelector from '@/components/PersonaSelector';
 import AgreeabilitySlider from '@/components/AgreeabilitySlider';
 import PositionSelector from '@/components/PositionSelector';
 import AccessCodeModal from '@/components/AccessCodeModal';
+import { AdminPanel } from '@/components/AdminPanel';
 import Link from 'next/link';
 
 export default function Home() {
   
   // NEW: State for access control
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
   const [appIsLoading, setAppIsLoading] = useState(true);
 
@@ -110,9 +112,11 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           if (data.mode === 'admin') {
+            setIsAdmin(true);
             handleCodeVerified({ mode: 'admin' });
             return;
           } else if (data.mode === 'token' && data.remaining !== undefined) {
+            setIsAdmin(false);
             handleCodeVerified({
               mode: 'token',
               remaining: data.remaining,
@@ -146,8 +150,10 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           if (data.mode === 'token' && data.remaining !== undefined) {
+            setIsAdmin(false);
             setQueriesRemaining(data.remaining);
           } else if (data.mode === 'admin') {
+            setIsAdmin(true);
             setQueriesRemaining('Unlimited');
           }
         }
@@ -165,10 +171,12 @@ export default function Home() {
 
   const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number }) => {
     setIsUnlocked(true);
-    if (authState.mode === 'token' && authState.remaining !== undefined) {
-      setQueriesRemaining(authState.remaining);
-    } else if (authState.mode === 'admin') {
+    if (authState.mode === 'admin') {
+      setIsAdmin(true);
       setQueriesRemaining('Unlimited');
+    } else if (authState.mode === 'token' && authState.remaining !== undefined) {
+      setIsAdmin(false);
+      setQueriesRemaining(authState.remaining);
     }
     setAppIsLoading(false);
   };
@@ -239,6 +247,9 @@ export default function Home() {
       <AnimatePresence>
         {!isUnlocked && <AccessCodeModal onVerified={handleCodeVerified} setAppIsLoading={setAppIsLoading} />}
       </AnimatePresence>
+
+      {/* Admin Panel - Only visible when logged in as admin */}
+      {isUnlocked && isAdmin && <AdminPanel />}
 
       {/* Matrix Rain Background */}
       <div className="absolute inset-0 z-0">
