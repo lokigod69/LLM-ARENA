@@ -20,7 +20,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   const [isOpen, setIsOpen] = useState(true); // Default to open
 
   const getSliderGradient = (value: number, max: number) => {
-    const percentage = ((value - 2) / (max - 2)) * 100;
+    const percentage = ((value - 1) / (max - 1)) * 100;
     return `linear-gradient(to right, #0047FF, #8024A3 ${percentage}%, #FF0047)`;
   };
 
@@ -68,13 +68,13 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               <input
                 id="max-turns"
                 type="range"
-                min="2"
-                max="50"
+                min="1"
+                max="10"
                 value={maxTurns}
                 onChange={e => onMaxTurnsChange(parseInt(e.target.value, 10))}
                 disabled={isDebateActive}
                 className="w-full h-2 rounded-lg appearance-none cursor-pointer slider-max-turns"
-                style={{ background: getSliderGradient(maxTurns, 50) }}
+                style={{ background: getSliderGradient(maxTurns, 10) }}
               />
             </div>
           </motion.div>

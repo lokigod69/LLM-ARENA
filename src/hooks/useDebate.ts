@@ -116,7 +116,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     isActive: false,
     isPaused: false,
     currentTurn: 0,
-    maxTurns: 20,
+    maxTurns: 5,
     topic: '',
     
     // --- CHANGE 3: ADD INITIAL STATE VALUES ---

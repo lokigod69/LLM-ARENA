@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     console.log('🔧 GEN_CODES: Starting token generation...');
     console.log('🔧 GEN_CODES: ADMIN_ACCESS_CODE env:', process.env.ADMIN_ACCESS_CODE ? 'SET' : 'NOT SET');
     
-    const { adminCode, count = 1, queries = 3 } = await req.json();
+    const { adminCode, count = 1, queries = 30 } = await req.json();
     console.log('🔧 GEN_CODES: Request data:', { adminCode, count, queries });
 
     // PHASE 1: Master token moved to environment variable
