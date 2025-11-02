@@ -1,6 +1,7 @@
 // Task 3.2 Complete + Matrix UI: Matrix-styled prompt input with cyberpunk aesthetics
 // Updated with neon effects, Matrix colors, and futuristic design
 // UI REFINEMENT: Dynamic center-growing input with character-by-character expansion
+// PHASE 1: Added query exhaustion check and disable inputs when queries = 0
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -11,9 +12,13 @@ interface PromptInputProps {
   onStop: () => void;
   isLoading: boolean;
   isDebateActive: boolean;
+  queriesRemaining?: number | string; // PHASE 1: Added for query check
+  isAdmin?: boolean; // PHASE 1: Added for admin bypass
 }
 
-const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive }: PromptInputProps) => {
+const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive, queriesRemaining, isAdmin }: PromptInputProps) => {
+  // PHASE 1: Check if queries are exhausted
+  const isQueriesExhausted = typeof queriesRemaining === 'number' && queriesRemaining <= 0 && !isAdmin;
   const [topic, setTopic] = useState<string>('');
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [inputWidth, setInputWidth] = useState<number>(150); // Start at 150px
@@ -53,7 +58,7 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive }: Promp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (topic.trim() && !isLoading && !isDebateActive) {
+    if (topic.trim() && !isLoading && !isDebateActive && !isQueriesExhausted) {
       onSubmitTopic(topic.trim());
       setTopic(''); // Clear the input after submission
     }
@@ -113,13 +118,13 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive }: Promp
         {/* PLAY Button */}
         <motion.button
           type="submit"
-          disabled={!topic.trim() || isLoading || isDebateActive}
+          disabled={!topic.trim() || isLoading || isDebateActive || isQueriesExhausted}
           className="flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed w-16 h-16 bg-green-600 hover:bg-green-700 text-white rounded-xl flex items-center justify-center transition-all duration-150 shadow-lg hover:shadow-green-500/50 border-2 border-green-500"
           whileHover={{ 
-            scale: (!topic.trim() || isLoading || isDebateActive) ? 1 : 1.05,
-            boxShadow: (!topic.trim() || isLoading || isDebateActive) ? undefined : '0 0 30px rgba(16, 185, 129, 0.6)'
+            scale: (!topic.trim() || isLoading || isDebateActive || isQueriesExhausted) ? 1 : 1.05,
+            boxShadow: (!topic.trim() || isLoading || isDebateActive || isQueriesExhausted) ? undefined : '0 0 30px rgba(16, 185, 129, 0.6)'
           }}
-          whileTap={{ scale: (!topic.trim() || isLoading || isDebateActive) ? 1 : 0.95 }}
+          whileTap={{ scale: (!topic.trim() || isLoading || isDebateActive || isQueriesExhausted) ? 1 : 0.95 }}
           transition={{ duration: 0.2 }}
         >
           {isLoading ? (
@@ -160,8 +165,8 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive }: Promp
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder={''}
-            className={`w-full matrix-input rounded-lg text-lg py-4 px-6 focus:ring-2 focus:ring-matrix-green transition-all duration-150 resize-none min-h-[64px] text-center ${isFocused && !topic ? 'animate-pulse' : ''}`}
-            disabled={isLoading || isDebateActive}
+            className={`w-full matrix-input rounded-lg text-lg py-4 px-6 focus:ring-2 focus:ring-matrix-green transition-all duration-150 resize-none min-h-[64px] text-center ${isFocused && !topic ? 'animate-pulse' : ''} ${isQueriesExhausted ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading || isDebateActive || isQueriesExhausted}
             rows={1}
             style={{
               height: '64px',
@@ -202,6 +207,22 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive }: Promp
           </svg>
         </motion.button>
       </div>
+
+      {/* PHASE 1: Query exhaustion message */}
+      {isQueriesExhausted && (
+        <motion.div
+          className="mt-4 relative"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+            <p className="text-red-400 text-sm text-center font-matrix">
+              ⚠️ No queries remaining. Please contact administrator for more access.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Matrix-style progress bar when loading */}
       {isLoading && (

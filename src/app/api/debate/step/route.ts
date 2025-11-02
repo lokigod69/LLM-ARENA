@@ -8,14 +8,19 @@
 // PHASE 2A: Added enhanced logging and validation for individual personality verification
 // PHASE B: Updated to support flexible model system with exact API model names
 // AUTH UPDATE: Now uses cookie-based auth and returns remaining queries
+// PHASE 1: Moved KV credentials to environment variables
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import type { AvailableModel, Message } from '@/types';
 
-// Direct REST API calls to Upstash KV
-const KV_URL = "https://touching-stallion-7895.upstash.io";
-const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+// Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
+const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
+
+if (!KV_URL || !KV_TOKEN) {
+  console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
+}
 
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;

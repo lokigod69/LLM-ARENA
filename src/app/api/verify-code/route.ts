@@ -2,12 +2,17 @@
 // It checks for a special admin code, and otherwise looks up the code
 // in Vercel KV. It validates that the code exists, is active, and has
 // queries remaining, returning the status to the client.
+// PHASE 1: Moved master token and KV credentials to environment variables
 
 import { NextResponse } from 'next/server';
 
-// Direct REST API calls to Upstash KV
-const KV_URL = "https://touching-stallion-7895.upstash.io";
-const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+// Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
+const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
+
+if (!KV_URL || !KV_TOKEN) {
+  console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
+}
 
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
@@ -27,8 +32,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Access code is required' }, { status: 400 });
     }
 
-    // 1. Check for the ADMIN code first
-    if (accessCode === "6969") {
+    // 1. Check for the ADMIN code first - PHASE 1: From environment variable
+    const ADMIN_ACCESS_CODE = process.env.ADMIN_ACCESS_CODE || "6969";
+    
+    if (!process.env.ADMIN_ACCESS_CODE) {
+      console.warn("⚠️ ADMIN_ACCESS_CODE not set, using default '6969'");
+    }
+    
+    if (accessCode === ADMIN_ACCESS_CODE) {
       return NextResponse.json({
         isValid: true,
         isAdmin: true,

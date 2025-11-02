@@ -111,6 +111,37 @@ export default function Home() {
     }
   }, []);
 
+  // PHASE 1: Periodic query verification - poll every 30 seconds
+  useEffect(() => {
+    if (!isUnlocked || queriesRemaining === 'Unlimited') return;
+    
+    const verifyQueries = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.mode === 'token' && data.remaining !== undefined) {
+            setQueriesRemaining(data.remaining);
+          } else if (data.mode === 'admin') {
+            setQueriesRemaining('Unlimited');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to verify queries:', error);
+      }
+    };
+    
+    // Verify immediately, then every 30 seconds
+    verifyQueries();
+    const interval = setInterval(verifyQueries, 30000); // Every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isUnlocked, queriesRemaining]);
+
   const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number }) => {
     setIsUnlocked(true);
     if (authState.mode === 'token' && authState.remaining !== undefined) {
@@ -150,6 +181,14 @@ export default function Home() {
       alert("Access not verified. Please enter a valid access code.");
       return;
     }
+    
+    // PHASE 1: Pre-flight check - verify queries before starting debate
+    const isAdmin = typeof queriesRemaining === 'string' && queriesRemaining === 'Unlimited';
+    if (!isAdmin && typeof queriesRemaining === 'number' && queriesRemaining <= 0) {
+      alert("No queries remaining. Please contact administrator for more access.");
+      return;
+    }
+    
     console.log("New debate topic submitted:", newTopic);
     await startDebate(newTopic);
   };
@@ -352,6 +391,8 @@ export default function Home() {
                 onStop={stopDebate}
                 isLoading={isModelALoading || isModelBLoading}
                 isDebateActive={isDebateActive}
+                queriesRemaining={queriesRemaining}
+                isAdmin={typeof queriesRemaining === 'string' && queriesRemaining === 'Unlimited'}
               />
             </div>
           </div>

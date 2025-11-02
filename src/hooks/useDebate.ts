@@ -437,6 +437,12 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         try {
             console.error('❌ API Response Error:', responseData);
             errorMessage = responseData.error || errorMessage;
+            
+            // PHASE 1: Handle queries exhausted error specifically
+            if (response.status === 403 && (errorMessage.includes('queries remaining') || errorMessage.includes('No queries'))) {
+              setQueriesRemaining(0);
+              errorMessage = 'No queries remaining. Please contact administrator for more access.';
+            }
         } catch (e) {
             errorMessage = `${targetModel} API Error: Could not parse error response`;
         }

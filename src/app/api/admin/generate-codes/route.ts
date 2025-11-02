@@ -2,13 +2,18 @@
 // It is protected by an environment variable, `ADMIN_ACCESS_CODE`.
 // When called, it generates a specified number of codes using `nanoid`,
 // stores them in Vercel KV with a set number of queries, and returns the new codes.
+// PHASE 1: Moved master token and KV credentials to environment variables
 
 import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 
-// Direct REST API calls to Upstash KV
-const KV_URL = "https://touching-stallion-7895.upstash.io";
-const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+// Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
+const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
+
+if (!KV_URL || !KV_TOKEN) {
+  console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
+}
 
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
@@ -30,8 +35,12 @@ export async function POST(req: Request) {
     const { adminCode, count = 1, queries = 3 } = await req.json();
     console.log('🔧 GEN_CODES: Request data:', { adminCode, count, queries });
 
-    // Hardcoded admin code for testing
-    const expectedAdminCode = "6969";
+    // PHASE 1: Master token moved to environment variable
+    const expectedAdminCode = process.env.ADMIN_ACCESS_CODE || "6969";
+    
+    if (!process.env.ADMIN_ACCESS_CODE) {
+      console.warn("⚠️ ADMIN_ACCESS_CODE not set, using default '6969'");
+    }
     
     if (adminCode !== expectedAdminCode) {
       console.log('🔧 GEN_CODES: Unauthorized access attempt with code:', adminCode);

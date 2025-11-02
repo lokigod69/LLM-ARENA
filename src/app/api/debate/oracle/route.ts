@@ -3,6 +3,7 @@
 // Phase 1.1 Implementation: Architectural refactor with separated verdict system
 // Enhanced neutrality enforcement and comprehensive bias detection
 // AUTH UPDATE: Now uses cookie-based auth and returns remaining queries
+// PHASE 1: Moved KV credentials to environment variables
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -19,9 +20,13 @@ import type {
   BiasDetection 
 } from '@/types/oracle';
 
-// Direct REST API calls to Upstash KV
-const KV_URL = "https://touching-stallion-7895.upstash.io";
-const KV_TOKEN = "AR7XAAImcDIxNTc0YzFkMTg5MDE0NmVkYmZhNDZjZDY1MjVhMzNiOHAyNzg5NQ";
+// Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
+const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
+
+if (!KV_URL || !KV_TOKEN) {
+  console.error('⚠️ KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
+}
 
 async function kv(cmd: string[]) {
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
