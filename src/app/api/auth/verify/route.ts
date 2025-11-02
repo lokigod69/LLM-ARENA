@@ -14,6 +14,10 @@ if (!KV_URL || !KV_TOKEN) {
 }
 
 async function kv(cmd: string[]) {
+  if (!KV_URL || !KV_TOKEN) {
+    throw new Error('KV credentials not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN in environment.');
+  }
+  
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
   const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
   if (!r.ok) {

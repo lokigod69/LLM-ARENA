@@ -98,17 +98,38 @@ export default function Home() {
   const modelAChatScrollRef = useRef<HTMLDivElement>(null);
   const modelBChatScrollRef = useRef<HTMLDivElement>(null);
 
-  // On initial load, check for a stored access code
+  // PHASE 1 FIX: On initial load, check for existing auth cookies
   useEffect(() => {
-    const storedCode = localStorage.getItem('llm-arena-access-code');
-    if (storedCode) {
-      console.log("Found stored access code. Verifying...");
-      // For stored codes, we'll need to verify them through the new auth system
-      // For now, just unlock with admin mode as fallback
-      handleCodeVerified({ mode: 'admin' });
-    } else {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/verify', {
+          method: 'POST',
+          credentials: 'include', // Include cookies
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.mode === 'admin') {
+            handleCodeVerified({ mode: 'admin' });
+            return;
+          } else if (data.mode === 'token' && data.remaining !== undefined) {
+            handleCodeVerified({
+              mode: 'token',
+              remaining: data.remaining,
+              allowed: data.allowed
+            });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to verify auth:', error);
+      }
+      
+      // No valid auth found - show login modal
       setAppIsLoading(false);
-    }
+    };
+    
+    checkAuth();
   }, []);
 
   // PHASE 1: Periodic query verification - poll every 30 seconds

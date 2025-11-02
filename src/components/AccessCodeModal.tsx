@@ -38,6 +38,7 @@ export default function AccessCodeModal({ onVerified, setAppIsLoading }: AccessC
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // PHASE 1 FIX: Include credentials for cookies
         body: JSON.stringify({ code }),
       });
 
