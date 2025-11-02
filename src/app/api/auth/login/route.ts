@@ -41,6 +41,13 @@ export async function POST(req: Request) {
   try {
     const { code } = await req.json();
     
+    // DEBUG: Log login attempt details
+    console.log('🔐 LOGIN ATTEMPT:', {
+      hasCode: !!code,
+      code: code, // temporarily log the actual code
+      timestamp: new Date().toISOString()
+    });
+    
     if (!code) {
       return NextResponse.json({ error: 'Missing access code' }, { status: 400 });
     }
@@ -66,9 +73,18 @@ export async function POST(req: Request) {
 
     // Token login - verify token exists and is active
     try {
+      console.log('🔍 Looking up token in KV:', `token:${code}`);
       const data = await kv(['HGETALL', `token:${code}`]);
       
+      // DEBUG: Log KV lookup result
+      console.log('🗄️ KV LOOKUP RESULT:', {
+        found: !!data && Object.keys(data).length > 0,
+        dataLength: data ? Object.keys(data).length : 0,
+        data: data // log what we got back
+      });
+      
       if (!data || Object.keys(data).length === 0) {
+        console.error('❌ Token not found in KV');
         return NextResponse.json({ error: 'Invalid access code' }, { status: 403 });
       }
 
@@ -77,6 +93,14 @@ export async function POST(req: Request) {
       for (let i = 0; i < data.length; i += 2) {
         tokenData[data[i]] = data[i + 1];
       }
+      
+      // DEBUG: Log parsed token data
+      console.log('📋 PARSED TOKEN DATA:', {
+        tokenData: tokenData,
+        isActive: tokenData.isActive,
+        queries_remaining: tokenData.queries_remaining,
+        queries_allowed: tokenData.queries_allowed
+      });
 
       if (tokenData.isActive !== 'true') {
         return NextResponse.json({ error: 'Access code has been disabled' }, { status: 403 });
