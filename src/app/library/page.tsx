@@ -484,8 +484,6 @@ const LibraryPage: React.FC = () => {
                 )}
               </div>
             )}
-            {/* FolderManager modal */}
-            {showFolderManager && <FolderManager open={showFolderManager} onClose={() => setShowFolderManager(false)} />}
           </div>
         </main>
       </div>
