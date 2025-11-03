@@ -733,15 +733,16 @@ function parseDeepSeekAnalysis(analysis: string, config: OracleConfig): {
     
     // Pattern 4: Gemini might format differently - look for structured blocks
     if (!verdictMatch) {
-      const winnerMatch = analysis.match(/(?:WINNER|VERDICT)[:\s]+(?:Model A|Model B|GPT|Claude|Aligned|Winner A|Winner B)/i);
+      const winnerMatch = analysis.match(/(?:WINNER|VERDICT)[:\s]+(Model A|Model B|GPT|Claude|Aligned|Winner A|Winner B)/i);
       const confMatch = analysis.match(/(?:CONFIDENCE|CONF)[:\s]+(\d+)%/i);
       if (winnerMatch && confMatch) {
-        let winner = winnerMatch[1];
+        let winnerName = winnerMatch[1] || 'Aligned'; // Extract captured group
         // Normalize winner names
-        if (winner.includes('Model A') || winner.includes('Winner A')) winner = 'GPT';
-        if (winner.includes('Model B') || winner.includes('Winner B')) winner = 'Claude';
+        if (winnerName.includes('Model A') || winnerName.includes('Winner A')) winnerName = 'GPT';
+        if (winnerName.includes('Model B') || winnerName.includes('Winner B')) winnerName = 'Claude';
         const reasoningMatch = analysis.match(/(?:REASONING|REASON)[:\s]+([^\n]+(?:\n[^\n]+)*)/i);
-        verdictMatch = [null, winner, confMatch[1], reasoningMatch ? reasoningMatch[1] : 'Analysis complete'];
+        // Create a match-like array structure compatible with the regex match format
+        verdictMatch = [winnerMatch[0], winnerName, confMatch[1], reasoningMatch ? reasoningMatch[1] : 'Analysis complete'] as RegExpMatchArray;
       }
     }
     
