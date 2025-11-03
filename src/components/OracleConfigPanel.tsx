@@ -2,6 +2,7 @@
 // Enhanced architecture with separate verdict system and advanced bias detection
 // ARCHITECTURAL REFACTOR: Cleaner separation of concerns with improved UX
 // REDUNDANCY FIX: Removed overlay popup - Oracle always accessible for better UX
+// UI/UX FIXES: Added cursor-pointer class to analyze button, added loading text feedback below spinner
 
 'use client';
 
@@ -478,56 +479,70 @@ export default function OracleConfigPanel({
       </div>
 
       {/* Analyze Button - Big Crystal Ball Icon */}
-      <motion.button
-        onClick={handleAnalyze}
-        disabled={isAnalyzing || !hasMessages || !isOracleAvailable}
-        className={`w-full h-24 flex items-center justify-center text-6xl rounded-lg transition-all duration-300 border-2 focus:outline-none focus:ring-0 ${
-          isAnalyzing || !hasMessages || !isOracleAvailable
-            ? 'bg-gray-600 border-gray-500 cursor-not-allowed opacity-50'
-            : `hover:scale-105 shadow-lg hover:shadow-xl focus:scale-105`
-        }`}
-        style={{
-          backgroundColor: isAnalyzing || !hasMessages || !isOracleAvailable 
-            ? '#4B5563' 
-            : getModelColor(config.oracleModel),
-          borderColor: isAnalyzing || !hasMessages || !isOracleAvailable 
-            ? '#6B7280' 
-            : getModelColor(config.oracleModel),
-          boxShadow: isAnalyzing || !hasMessages || !isOracleAvailable 
-            ? 'none' 
-            : `0 0 20px ${getModelColor(config.oracleModel)}40`
-        }}
-        whileHover={!isAnalyzing && hasMessages && isOracleAvailable ? { scale: 1.02 } : {}}
-        whileTap={!isAnalyzing && hasMessages && isOracleAvailable ? { scale: 0.98 } : {}}
-      >
-        {isAnalyzing ? (
+      <div className="w-full">
+        <motion.button
+          onClick={handleAnalyze}
+          disabled={isAnalyzing || !hasMessages || !isOracleAvailable}
+          className={`w-full h-24 flex items-center justify-center text-6xl rounded-lg transition-all duration-300 border-2 focus:outline-none focus:ring-0 ${
+            isAnalyzing || !hasMessages || !isOracleAvailable
+              ? 'bg-gray-600 border-gray-500 cursor-not-allowed opacity-50'
+              : `hover:scale-105 shadow-lg hover:shadow-xl focus:scale-105 cursor-pointer`
+          }`}
+          style={{
+            backgroundColor: isAnalyzing || !hasMessages || !isOracleAvailable 
+              ? '#4B5563' 
+              : getModelColor(config.oracleModel),
+            borderColor: isAnalyzing || !hasMessages || !isOracleAvailable 
+              ? '#6B7280' 
+              : getModelColor(config.oracleModel),
+            boxShadow: isAnalyzing || !hasMessages || !isOracleAvailable 
+              ? 'none' 
+              : `0 0 20px ${getModelColor(config.oracleModel)}40`
+          }}
+          whileHover={!isAnalyzing && hasMessages && isOracleAvailable ? { scale: 1.02 } : {}}
+          whileTap={!isAnalyzing && hasMessages && isOracleAvailable ? { scale: 0.98 } : {}}
+        >
+          {isAnalyzing ? (
+            <motion.div
+              className="text-white"
+              animate={{ 
+                rotate: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            >
+              🔮
+            </motion.div>
+          ) : (
+            <motion.div
+              className="text-white drop-shadow-lg"
+              whileHover={{ 
+                scale: 1.1,
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ duration: 0.3 }}
+            >
+              🔮
+            </motion.div>
+          )}
+        </motion.button>
+        {isAnalyzing && (
           <motion.div
-            className="text-white"
-            animate={{ 
-              rotate: [0, 360],
-              scale: [1, 1.1, 1]
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
+            className="text-center mt-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            🔮
-          </motion.div>
-        ) : (
-          <motion.div
-            className="text-white drop-shadow-lg"
-            whileHover={{ 
-              scale: 1.1,
-              rotate: [0, 5, -5, 0]
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            🔮
+            <p className="font-matrix text-matrix-green text-sm tracking-wider">
+              🔮 Oracle analyzing...
+            </p>
           </motion.div>
         )}
-      </motion.button>
+      </div>
 
       {hasMessages && !isOracleAvailable && (
         <div className="text-center text-sm text-amber-400 mt-3">

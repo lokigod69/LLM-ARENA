@@ -15,9 +15,10 @@ Plan A has been implemented! The LLM Arena now uses **real API calls** to OpenAI
 - Create a new API key
 - Make sure you have credits/billing set up
 
-### 3. Supabase Configuration (for auth/database)
-- Visit your Supabase project dashboard
-- Get your project URL and anon key
+### 3. Supabase Configuration (for database)
+- Visit your Supabase project dashboard: https://supabase.com/dashboard
+- Get your project URL and anon key from Settings → API
+- Example URL format: `https://cickzxbllbecfpxdklyl.supabase.co`
 
 ## Setup Instructions
 
@@ -35,9 +36,12 @@ Plan A has been implemented! The LLM Arena now uses **real API calls** to OpenAI
    # Anthropic API Key for Claude
    ANTHROPIC_API_KEY=sk-ant-your-actual-anthropic-key-here
    
-   # Supabase Configuration
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   # Supabase Configuration (server-side)
+   SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
+   SUPABASE_ANON_KEY=your-supabase-anon-key-here
+   
+   # Supabase Configuration (client-side)
+   NEXT_PUBLIC_SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
    ```
 
 3. **Restart the development server:**
@@ -89,10 +93,22 @@ Check the browser console and terminal for detailed API call logs.
 🎉 **Plan A is now live!** Your LLM Arena is ready for real AI debates! 
 
 ## Environment Variable Setup
+
 Create a `.env.local` file in your project's root directory and add the following, replacing the placeholders with your actual keys:
 
-```bash
-# ... existing code ...
+```env
+# OpenAI API Key (required)
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# Anthropic API Key (required)
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+
+# Supabase Configuration (required for database features)
+SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key-here
+NEXT_PUBLIC_SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
 ```
+
+**Note:** The `SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_URL` should match. The anon key can be found in your Supabase project dashboard under Settings → API → Project API keys → `anon` `public`.
 
 That's it! Once your keys are in `.env.local`, the application will be able to authenticate with the respective AI services. 

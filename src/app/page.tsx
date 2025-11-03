@@ -5,6 +5,7 @@
 // Maintains Matrix cyberpunk theme while adding complete model flexibility
 // Backward compatibility maintained for existing functionality
 // Enhanced UI with new model selector and personality controls
+// UI/UX FIXES: Added cursor-pointer class to Oracle Analysis button
 
 'use client'; // Required for useAuth and useState
 
@@ -523,7 +524,7 @@ export default function Home() {
                   {/* Analysis Box */}
                   <button
                     onClick={() => setIsOracleVisible(!isOracleVisible)}
-                    className="w-full flex flex-col items-center gap-2 p-3 border border-purple-500/50 rounded-lg bg-purple-900/20 hover:bg-purple-900/40 transition-colors"
+                    className="w-full flex flex-col items-center gap-2 p-3 border border-purple-500/50 rounded-lg bg-purple-900/20 hover:bg-purple-900/40 transition-colors cursor-pointer"
                   >
                     <span role="img" aria-label="analyze" className="text-2xl">🔮</span>
                     <span className="font-matrix text-purple-300">Analysis</span>

@@ -3,6 +3,7 @@
 // ARCHITECTURAL REFACTOR: Updated to support separate verdict and bias detection
 // UI ENHANCEMENT: Made large analysis reports collapsible to save space
 // MarkButton integration: Added MarkButton after each Oracle result for marking (heart/star) Oracle analyses
+// UI/UX FIXES: Removed duplicate model name from dropdown title, moved verdict out of purple box to separate orange box below
 
 'use client';
 
@@ -56,9 +57,7 @@ export default function OracleResultsPanel({ result }: OracleResultsPanelProps) 
         >
           <div className="flex items-center gap-2">
             <h4 className="font-matrix text-purple-400 tracking-wider">
-              <span style={{ color: getModelColor(result.config.oracleModel) }}>
-                {getModelDisplayName(result.config.oracleModel)}
-              </span> {result.config.primaryLens.toUpperCase()} LENS ANALYSIS
+              {result.config.primaryLens.toUpperCase()} LENS ANALYSIS
             </h4>
           </div>
           <motion.span 
@@ -82,60 +81,60 @@ export default function OracleResultsPanel({ result }: OracleResultsPanelProps) 
               <div className="text-matrix-green-dim whitespace-pre-wrap leading-relaxed">
                 {result.analysis}
               </div>
-
-              {/* Verdict Section - NOW INSIDE COLLAPSIBLE */}
-              {result.verdict && (
-                <div className="mt-6 pt-4 border-t border-purple-500/30">
-                  <h4 className="font-matrix text-amber-400 mb-3 tracking-wider flex items-center justify-between">
-                    <span>⚖️ VERDICT ANALYSIS</span>
-                    <span className="text-xs text-amber-300 uppercase">
-                      {result.verdict.scope} SCOPE
-                    </span>
-                  </h4>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`text-2xl font-matrix ${
-                          result.verdict.winner === 'GPT' ? 'text-green-400' :
-                          result.verdict.winner === 'Claude' ? 'text-blue-400' :
-                          'text-yellow-400'
-                        }`}>
-                          {result.verdict.winner === 'GPT' ? '🟢 GPT-4' :
-                           result.verdict.winner === 'Claude' ? '🔵 CLAUDE' :
-                           '🟡 ALIGNED'}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-matrix text-amber-400">
-                          {result.verdict.confidence}%
-                        </div>
-                        <div className="text-xs text-amber-300">CONFIDENCE</div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-sm text-amber-200 bg-amber-900/30 p-3 rounded">
-                      <strong>Reasoning:</strong> {result.verdict.reasoning}
-                    </div>
-                    
-                    {result.verdict.scope === 'lens' && (
-                      <div className="text-xs text-amber-300 italic">
-                        * Verdict based specifically on {result.config.primaryLens} lens criteria
-                      </div>
-                    )}
-                    
-                    {result.verdict.scope === 'meta' && (
-                      <div className="text-xs text-amber-300 italic">
-                        * Verdict based on comprehensive multi-dimensional analysis
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {/* Verdict Section - Separate Orange Box Below Analysis */}
+      {result.verdict && (
+        <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/30 border border-amber-500/50 rounded-lg p-4 space-y-3">
+          <h4 className="font-matrix text-amber-400 mb-3 tracking-wider flex items-center justify-between">
+            <span>⚖️ VERDICT ANALYSIS</span>
+            <span className="text-xs text-amber-300 uppercase">
+              {result.verdict.scope} SCOPE
+            </span>
+          </h4>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`text-2xl font-matrix ${
+                  result.verdict.winner === 'GPT' ? 'text-green-400' :
+                  result.verdict.winner === 'Claude' ? 'text-blue-400' :
+                  'text-yellow-400'
+                }`}>
+                  {result.verdict.winner === 'GPT' ? '🟢 GPT-4' :
+                   result.verdict.winner === 'Claude' ? '🔵 CLAUDE' :
+                   '🟡 ALIGNED'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-matrix text-amber-400">
+                  {result.verdict.confidence}%
+                </div>
+                <div className="text-xs text-amber-300">CONFIDENCE</div>
+              </div>
+            </div>
+            
+            <div className="text-sm text-amber-200 bg-amber-900/30 p-3 rounded">
+              <strong>Reasoning:</strong> {result.verdict.reasoning}
+            </div>
+            
+            {result.verdict.scope === 'lens' && (
+              <div className="text-xs text-amber-300 italic">
+                * Verdict based specifically on {result.config.primaryLens} lens criteria
+              </div>
+            )}
+            
+            {result.verdict.scope === 'meta' && (
+              <div className="text-xs text-amber-300 italic">
+                * Verdict based on comprehensive multi-dimensional analysis
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bias Analysis Section - NEW: Enhanced experimental analysis */}
       {result.biasAnalysis && (
