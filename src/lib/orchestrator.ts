@@ -1024,6 +1024,13 @@ async function callDeepSeekOracleFlexible(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
+  console.log(`🔮 DEEPSEEK ORACLE FLEXIBLE: Using ${modelType}`, {
+    endpoint: config.endpoint,
+    modelName: config.modelName,
+    maxTokens: oracleConfig.maxTokens,
+    timeout: 90000
+  });
+  
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -1046,15 +1053,29 @@ async function callDeepSeekOracleFlexible(
       temperature: oracleConfig.temperature,
       stream: false
     }),
-  }, 90000);
+  }, 90000); // 90 seconds timeout - DeepSeek Reasoner can take 30-60 seconds
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-    throw new Error(`DeepSeek Oracle API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    const errorMsg = `DeepSeek Oracle API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`;
+    console.error(`❌ DEEPSEEK ORACLE ERROR:`, {
+      status: response.status,
+      modelType,
+      modelName: config.modelName,
+      error: errorData.error
+    });
+    throw new Error(errorMsg);
   }
 
   const data = await response.json();
-  return data.choices[0]?.message?.content || 'No analysis generated';
+  const analysis = data.choices[0]?.message?.content || 'No analysis generated';
+  
+  console.log(`✅ DEEPSEEK ORACLE FLEXIBLE: ${modelType} analysis complete`, {
+    analysisLength: analysis.length,
+    tokensUsed: data.usage?.total_tokens
+  });
+  
+  return analysis;
 }
 
 /**
