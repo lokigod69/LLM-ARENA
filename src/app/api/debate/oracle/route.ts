@@ -603,6 +603,16 @@ async function generateRealAnalysis(request: OracleAnalysisRequest, startTime: n
     // Parse the analysis to extract different components
     const parsedResult = parseDeepSeekAnalysis(analysis, request.config);
     
+    // Log parsing results for debugging
+    console.log(`🔍 ORACLE PARSING RESULTS: ${selectedModel}`, {
+      analysisLength: parsedResult.analysis.length,
+      hasVerdict: !!parsedResult.verdict,
+      verdictWinner: parsedResult.verdict?.winner,
+      verdictConfidence: parsedResult.verdict?.confidence,
+      hasBiasAnalysis: !!parsedResult.biasAnalysis,
+      rawAnalysisPreview: analysis.substring(0, 200) + '...'
+    });
+    
     return {
       id: uuidv4(),
       timestamp: new Date(),
@@ -613,12 +623,27 @@ async function generateRealAnalysis(request: OracleAnalysisRequest, startTime: n
       processingTime: Date.now() - startTime
     };
     
-  } catch (error) {
-    console.error('❌ ORACLE REAL ANALYSIS ERROR:', error);
+  } catch (error: any) {
+    console.error('❌ ORACLE REAL ANALYSIS ERROR:', {
+      error: error?.message || error,
+      model: selectedModel,
+      errorStack: error?.stack
+    });
     
-    // Fallback to mock analysis if real analysis fails
-    console.log('🔄 ORACLE: Falling back to mock analysis due to error');
-    return generateMockAnalysis(request, startTime);
+    // Don't fall back to mock in production - let the error propagate
+    // This ensures we catch API key issues and other critical errors
+    if (error?.message?.includes('not configured') || error?.message?.includes('API key')) {
+      throw new Error(`Oracle API configuration error: ${error.message}. Please check your environment variables.`);
+    }
+    
+    // Only fall back to mock if explicitly in mock mode
+    if (process.env.MOCK_MODE === 'true') {
+      console.log('🔄 ORACLE: Falling back to mock analysis due to error (MOCK_MODE enabled)');
+      return generateMockAnalysis(request, startTime);
+    }
+    
+    // Otherwise, propagate the error so the frontend can handle it
+    throw error;
   }
 }
 
@@ -690,26 +715,64 @@ function parseDeepSeekAnalysis(analysis: string, config: OracleConfig): {
   // Start with the full analysis
   let cleanAnalysis = analysis;
   
-  // Try to extract verdict if enabled (simple parsing for now)
+  // Try to extract verdict if enabled (enhanced parsing with multiple patterns)
   let verdict: any = undefined;
   if (config.verdict.enabled && config.verdict.scope !== 'disabled') {
-    // Match verdict section (Winner: ... Confidence: ... Reasoning: ...)
-    const verdictMatch = analysis.match(/Winner:\s*(GPT|Claude|Aligned)[\s\S]*?Confidence:\s*(\d+)%[\s\S]*?Reasoning:\s*([^\n]+(?:\n[^\n]+)*)/i);
+    // Pattern 1: Standard format "Winner: GPT\nConfidence: 85%\nReasoning: ..."
+    let verdictMatch = analysis.match(/Winner:\s*(GPT|Claude|Aligned)[\s\S]*?Confidence:\s*(\d+)%[\s\S]*?Reasoning:\s*([^\n]+(?:\n[^\n]+)*)/i);
+    
+    // Pattern 2: Alternative format "Winner: GPT\nConfidence: 85%"
+    if (!verdictMatch) {
+      verdictMatch = analysis.match(/Winner:\s*(GPT|Claude|Aligned)\s*[:\-]?\s*(?:Confidence|Conf):\s*(\d+)%/i);
+    }
+    
+    // Pattern 3: Look for "Winner A" or "Winner B" or "Aligned" near confidence
+    if (!verdictMatch) {
+      verdictMatch = analysis.match(/(?:Winner|Verdict):\s*(Winner A|Winner B|GPT|Claude|Aligned|Model A|Model B)[\s\S]*?(?:Confidence|Conf):\s*(\d+)%/i);
+    }
+    
+    // Pattern 4: Gemini might format differently - look for structured blocks
+    if (!verdictMatch) {
+      const winnerMatch = analysis.match(/(?:WINNER|VERDICT)[:\s]+(?:Model A|Model B|GPT|Claude|Aligned|Winner A|Winner B)/i);
+      const confMatch = analysis.match(/(?:CONFIDENCE|CONF)[:\s]+(\d+)%/i);
+      if (winnerMatch && confMatch) {
+        let winner = winnerMatch[1];
+        // Normalize winner names
+        if (winner.includes('Model A') || winner.includes('Winner A')) winner = 'GPT';
+        if (winner.includes('Model B') || winner.includes('Winner B')) winner = 'Claude';
+        const reasoningMatch = analysis.match(/(?:REASONING|REASON)[:\s]+([^\n]+(?:\n[^\n]+)*)/i);
+        verdictMatch = [null, winner, confMatch[1], reasoningMatch ? reasoningMatch[1] : 'Analysis complete'];
+      }
+    }
+    
     if (verdictMatch) {
+      let winner = verdictMatch[1];
+      // Normalize winner values
+      if (winner.includes('Model A') || winner.includes('Winner A')) winner = 'GPT';
+      if (winner.includes('Model B') || winner.includes('Winner B')) winner = 'Claude';
+      
       verdict = {
-        winner: verdictMatch[1],
-        confidence: parseInt(verdictMatch[2]),
-        reasoning: verdictMatch[3].trim(),
+        winner: (winner === 'GPT' || winner === 'Claude' ? winner : 'Aligned') as 'GPT' | 'Claude' | 'Aligned',
+        confidence: parseInt(verdictMatch[2]) || null,
+        reasoning: verdictMatch[3]?.trim() || 'Analysis complete',
         scope: config.verdict.scope
       };
       
+      console.log(`✅ VERDICT EXTRACTED:`, {
+        winner: verdict.winner,
+        confidence: verdict.confidence,
+        reasoningLength: verdict.reasoning.length
+      });
+      
       // Remove verdict section from analysis text to avoid duplication
-      // Match the entire verdict section from "Winner:" to end of reasoning
-      const verdictSectionPattern = /(?:^|\n)Winner:\s*(?:GPT|Claude|Aligned)[\s\S]*?Reasoning:\s*[^\n]+(?:\n[^\n]+)*(?:\n\n|\n|$)/i;
+      const verdictSectionPattern = /(?:^|\n)(?:Winner|Verdict|VERDICT)[:\s]*(?:GPT|Claude|Aligned|Model A|Model B|Winner A|Winner B)[\s\S]*?(?:Reasoning|REASONING)[:\s]*[^\n]+(?:\n[^\n]+)*(?=\n\n|\n[A-Z]|$)/i;
       cleanAnalysis = cleanAnalysis.replace(verdictSectionPattern, '').trim();
       
       // Also remove any standalone "VERDICT:" or "VERDICT ANALYSIS:" sections
-      cleanAnalysis = cleanAnalysis.replace(/(?:^|\n)(?:VERDICT|VERDICT ANALYSIS):[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '').trim();
+      cleanAnalysis = cleanAnalysis.replace(/(?:^|\n)(?:VERDICT|VERDICT ANALYSIS)[:\s]+[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '').trim();
+    } else {
+      console.warn(`⚠️ VERDICT NOT FOUND in analysis for ${config.oracleModel}. Verdict was requested but could not be parsed.`);
+      console.log(`   Analysis preview: ${analysis.substring(0, 500)}...`);
     }
   }
   

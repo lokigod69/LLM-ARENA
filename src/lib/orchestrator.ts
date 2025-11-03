@@ -875,10 +875,19 @@ export async function callFlexibleOracle(
   const modelKey = getModelKey(modelName);
   const config = MODEL_CONFIGS[modelKey] as typeof MODEL_CONFIGS[keyof typeof MODEL_CONFIGS];
   
-  // Check for API key
+  // Check for API key with detailed logging
   const apiKey = process.env[config.apiKeyEnv];
+  console.log(`🔑 ORACLE API KEY CHECK: ${modelName}`, {
+    apiKeyEnv: config.apiKeyEnv,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length || 0,
+    containsPlaceholder: apiKey?.includes('PLACEHOLDER') || false,
+    firstChars: apiKey ? apiKey.substring(0, 10) + '...' : 'N/A'
+  });
+  
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    console.log('🎭 ORACLE MOCK MODE: No API key, using mock analysis');
+    console.error(`🎭 ORACLE MOCK MODE: ${config.apiKeyEnv} is missing or placeholder. Using mock analysis.`);
+    console.error(`   Please set ${config.apiKeyEnv} in Vercel environment variables or .env.local`);
     return generateMockOracleAnalysis(oraclePrompt, modelName);
   }
 
@@ -1035,8 +1044,15 @@ async function callDeepSeekOracleFlexible(
     endpoint: config.endpoint,
     modelName: config.modelName,
     maxTokens: oracleConfig.maxTokens,
-    timeout: 90000
+    timeout: 90000,
+    hasApiKey: !!apiKey,
+    apiKeyEnv: config.apiKeyEnv,
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'
   });
+  
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your environment variables.`);
+  }
   
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -1096,6 +1112,20 @@ async function callGeminiOracle(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
+  console.log(`🔮 GEMINI ORACLE: Using ${modelType}`, {
+    endpoint: config.endpoint,
+    modelName: config.modelName,
+    maxTokens: oracleConfig.maxTokens,
+    temperature: oracleConfig.temperature,
+    hasApiKey: !!apiKey,
+    apiKeyEnv: config.apiKeyEnv,
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'
+  });
+  
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your environment variables.`);
+  }
+  
   const response = await timedFetch(`${config.endpoint}?key=${apiKey}`, {
     method: 'POST',
     headers: {
@@ -1120,11 +1150,28 @@ async function callGeminiOracle(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    console.error(`❌ GEMINI ORACLE ERROR:`, {
+      status: response.status,
+      modelType,
+      modelName: config.modelName,
+      error: errorData.error
+    });
     throw new Error(`Gemini Oracle API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis generated';
+  const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis generated';
+  
+  console.log(`✅ GEMINI ORACLE: ${modelType} analysis complete`, {
+    analysisLength: analysis.length,
+    hasCandidates: !!data.candidates,
+    candidateCount: data.candidates?.length || 0,
+    finishReason: data.candidates?.[0]?.finishReason,
+    finishMessage: data.candidates?.[0]?.finishMessage,
+    rawResponsePreview: JSON.stringify(data).substring(0, 300) + '...'
+  });
+  
+  return analysis;
 }
 
 /**

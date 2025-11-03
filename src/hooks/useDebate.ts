@@ -129,48 +129,75 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
   };
 
+  // Load debate state from localStorage on mount
+  const loadDebateState = (): Partial<EnhancedDebateState> | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('llm-arena-current-debate');
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      // Only restore if debate was in progress (not completed)
+      if (parsed.isActive || (parsed.modelAMessages && parsed.modelAMessages.length > 0)) {
+        console.log('📥 RESTORING DEBATE STATE from localStorage', {
+          isActive: parsed.isActive,
+          currentTurn: parsed.currentTurn,
+          topic: parsed.topic,
+          messageCount: parsed.modelAMessages?.length || 0
+        });
+        return parsed;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load debate state from localStorage:', error);
+      return null;
+    }
+  };
+
+  const savedState = loadDebateState();
+  
   const [state, setState] = useState<EnhancedDebateState>({
-    isActive: false,
-    isPaused: false,
-    currentTurn: 0,
-    maxTurns: 5,
-    topic: '',
+    // Restore saved state or use defaults
+    isActive: savedState?.isActive ?? false,
+    isPaused: savedState?.isPaused ?? false,
+    currentTurn: savedState?.currentTurn ?? 0,
+    maxTurns: savedState?.maxTurns ?? 5,
+    topic: savedState?.topic ?? '',
     
     // --- CHANGE 3: ADD INITIAL STATE VALUES ---
-    accessCode: null,
-    queriesRemaining: '...',
+    accessCode: savedState?.accessCode ?? null,
+    queriesRemaining: savedState?.queriesRemaining ?? '...',
     
     // NEW: Default flexible model configuration - Updated with exact API names
-    modelA: { 
+    modelA: savedState?.modelA ?? { 
       name: 'gpt-4o' as AvailableModel, 
       position: 'pro' as ModelPosition, 
       agreeabilityLevel: 7,
       extensivenessLevel: 3 // Default: Balanced response
     },
-    modelB: { 
+    modelB: savedState?.modelB ?? { 
       name: 'claude-3-5-sonnet-20241022' as AvailableModel, 
       position: 'con' as ModelPosition, 
       agreeabilityLevel: 3,
       extensivenessLevel: 3 // Default: Balanced response
     },
-    modelAMessages: [],
-    modelBMessages: [],
+    modelAMessages: savedState?.modelAMessages ?? [],
+    modelBMessages: savedState?.modelBMessages ?? [],
     isModelALoading: false,
     isModelBLoading: false,
-    lastActiveModel: null,
+    lastActiveModel: savedState?.lastActiveModel ?? null,
     
     oracleResults: loadOracleResults(), // Load from localStorage on mount
     isOracleAnalyzing: false,
     
     // BACKWARD COMPATIBILITY: Initialize legacy fields
-    gptMessages: [],
-    claudeMessages: [],
+    gptMessages: savedState?.gptMessages ?? [],
+    claudeMessages: savedState?.claudeMessages ?? [],
     isGptLoading: false,
     isClaudeLoading: false,
-    lastActiveModel_legacy: null,
-    agreeabilityLevel: 5,
-    positionAssignment: { gpt: 'pro', claude: 'con' },
-    personalityConfig: {
+    lastActiveModel_legacy: savedState?.lastActiveModel_legacy ?? null,
+    agreeabilityLevel: savedState?.agreeabilityLevel ?? 5,
+    positionAssignment: savedState?.positionAssignment ?? { gpt: 'pro', claude: 'con' },
+    personalityConfig: savedState?.personalityConfig ?? {
       gpt: { agreeabilityLevel: 7, position: 'pro' },
       claude: { agreeabilityLevel: 3, position: 'con' },
     },
@@ -191,6 +218,62 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       console.error('Failed to save Oracle results to localStorage:', error);
     }
   }, [state.oracleResults]);
+
+  // Persist debate state to localStorage when it changes (only if debate is in progress)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Only save if debate is active or has messages (debate in progress)
+    if (state.isActive || (state.modelAMessages.length > 0 || state.modelBMessages.length > 0)) {
+      try {
+        const stateToSave = {
+          isActive: state.isActive,
+          isPaused: state.isPaused,
+          currentTurn: state.currentTurn,
+          maxTurns: state.maxTurns,
+          topic: state.topic,
+          modelA: state.modelA,
+          modelB: state.modelB,
+          modelAMessages: state.modelAMessages,
+          modelBMessages: state.modelBMessages,
+          lastActiveModel: state.lastActiveModel,
+          // Legacy fields for backward compatibility
+          gptMessages: state.gptMessages,
+          claudeMessages: state.claudeMessages,
+          lastActiveModel_legacy: state.lastActiveModel_legacy,
+          agreeabilityLevel: state.agreeabilityLevel,
+          positionAssignment: state.positionAssignment,
+          personalityConfig: state.personalityConfig,
+        };
+        localStorage.setItem('llm-arena-current-debate', JSON.stringify(stateToSave));
+      } catch (error) {
+        console.error('Failed to save debate state to localStorage:', error);
+      }
+    } else {
+      // Clear saved state if debate is not active and no messages
+      try {
+        localStorage.removeItem('llm-arena-current-debate');
+      } catch (error) {
+        console.error('Failed to clear debate state from localStorage:', error);
+      }
+    }
+  }, [
+    state.isActive,
+    state.isPaused,
+    state.currentTurn,
+    state.maxTurns,
+    state.topic,
+    state.modelA,
+    state.modelB,
+    state.modelAMessages,
+    state.modelBMessages,
+    state.lastActiveModel,
+    state.gptMessages,
+    state.claudeMessages,
+    state.lastActiveModel_legacy,
+    state.agreeabilityLevel,
+    state.positionAssignment,
+    state.personalityConfig,
+  ]);
 
   const setAccessCode = (code: string | null) => {
     setState(prev => ({ ...prev, accessCode: code }));
