@@ -72,6 +72,7 @@ export default function Home() {
     requestOracleAnalysis,
     clearOracleResults,
     exportDebateData,
+    clearDebate,
     // BACKWARD COMPATIBILITY: Legacy state for existing components
     gptMessages,
     claudeMessages,
@@ -426,6 +427,10 @@ export default function Home() {
                 isDebateActive={isDebateActive}
                 queriesRemaining={queriesRemaining}
                 isAdmin={typeof queriesRemaining === 'string' && queriesRemaining === 'Unlimited'}
+                currentTurn={currentTurn}
+                maxTurns={maxTurns}
+                onNewDebate={clearDebate}
+                hasMessages={modelAMessages.length > 0 || modelBMessages.length > 0}
               />
             </div>
           </div>

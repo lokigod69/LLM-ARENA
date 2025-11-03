@@ -99,6 +99,7 @@ interface EnhancedDebateActions {
   requestOracleAnalysis: (config: OracleConfig) => Promise<void>;
   clearOracleResults: () => void;
   exportDebateData: () => void;
+  clearDebate: () => void; // Clear all debate state for new debate
   
   // BACKWARD COMPATIBILITY: Legacy actions (deprecated - remove in Phase 4)
   /** @deprecated Use setModelA/setModelB instead */
@@ -1312,6 +1313,47 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
   }, []);
 
+  // Clear all debate state for new debate - keeps config, clears messages/topic/turns
+  const clearDebate = useCallback(() => {
+    console.log('🔄 Clearing debate state for new debate...');
+    
+    // Stop any active debate
+    clearAutoStep();
+    
+    setState(prev => ({
+      ...prev,
+      isActive: false,
+      isPaused: false,
+      currentTurn: 0,
+      topic: '',
+      modelAMessages: [],
+      modelBMessages: [],
+      isModelALoading: false,
+      isModelBLoading: false,
+      lastActiveModel: null,
+      // Clear legacy messages
+      gptMessages: [],
+      claudeMessages: [],
+      isGptLoading: false,
+      isClaudeLoading: false,
+      lastActiveModel_legacy: null,
+    }));
+    
+    // Clear Oracle results
+    clearOracleResults();
+    
+    // Clear saved debate state from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('llm-arena-current-debate');
+      } catch (error) {
+        console.error('Failed to clear debate state from localStorage:', error);
+      }
+    }
+    
+    console.log('✅ Debate cleared - ready for new topic');
+  }, [clearAutoStep, clearOracleResults]);
+
   // Export debate and Oracle analysis data
   const exportDebateData = useCallback(() => {
     const exportData = {
@@ -1463,6 +1505,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     requestOracleAnalysis,
     clearOracleResults,
     exportDebateData,
+    clearDebate,
     
     // BACKWARD COMPATIBILITY: Legacy actions
     setPersonalityConfig,

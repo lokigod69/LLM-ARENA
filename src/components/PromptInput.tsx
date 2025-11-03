@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PromptInputProps {
   onSubmitTopic: (topic: string) => void;
@@ -14,9 +14,43 @@ interface PromptInputProps {
   isDebateActive: boolean;
   queriesRemaining?: number | string; // PHASE 1: Added for query check
   isAdmin?: boolean; // PHASE 1: Added for admin bypass
+  currentTurn?: number; // For determining if debate is complete
+  maxTurns?: number; // For determining if debate is complete
+  onNewDebate?: () => void; // Handler for [NEW] button
+  hasMessages?: boolean; // Check if debate has messages (to warn if not saved)
 }
 
-const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive, queriesRemaining, isAdmin }: PromptInputProps) => {
+const PromptInput = ({ 
+  onSubmitTopic, 
+  onStop, 
+  isLoading, 
+  isDebateActive, 
+  queriesRemaining, 
+  isAdmin,
+  currentTurn = 0,
+  maxTurns = 5,
+  onNewDebate,
+  hasMessages = false
+}: PromptInputProps) => {
+  const [showNewDebateModal, setShowNewDebateModal] = useState(false);
+  
+  // Determine if debate is complete
+  const isDebateComplete = !isDebateActive && (currentTurn >= maxTurns || hasMessages);
+  
+  const handleNewDebateClick = () => {
+    // If debate has messages but might not be saved, show warning
+    if (hasMessages) {
+      setShowNewDebateModal(true);
+    } else {
+      // No messages or debate already cleared, just clear
+      onNewDebate?.();
+    }
+  };
+  
+  const confirmNewDebate = () => {
+    setShowNewDebateModal(false);
+    onNewDebate?.();
+  };
   // PHASE 1: Check if queries are exhausted
   const isQueriesExhausted = typeof queriesRemaining === 'number' && queriesRemaining <= 0 && !isAdmin;
   const [topic, setTopic] = useState<string>('');
@@ -33,7 +67,8 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive, queries
       const containerWidth = containerRef.current.offsetWidth;
       
       // More generous spacing - align with debate protocol box edges
-      const buttonSpace = 64 + 64 + 12; // Just buttons + gap, minimal padding
+      // Account for STOP button (64px) + [NEW] button (if visible) + gaps
+      const buttonSpace = 64 + (isDebateComplete && onNewDebate ? 70 : 0) + 64 + 24; // STOP + [NEW] (if shown) + gaps
       const maxWidth = containerWidth - buttonSpace - 48; // Match protocol box width
       const minWidth = 150;
       
@@ -45,7 +80,7 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive, queries
         setInputWidth(targetWidth);
       }
     }
-  }, [inputWidth]);
+  }, [inputWidth, isDebateComplete, onNewDebate]);
 
   useEffect(() => {
     // Reset to minimum width when input is cleared
@@ -206,7 +241,74 @@ const PromptInput = ({ onSubmitTopic, onStop, isLoading, isDebateActive, queries
             <path d="M6 6h12v12H6z"/>
           </svg>
         </motion.button>
+
+        {/* [NEW] Button - Only shows when debate is complete */}
+        {isDebateComplete && onNewDebate && (
+          <motion.button
+            type="button"
+            onClick={handleNewDebateClick}
+            className="flex-shrink-0 px-4 py-2 bg-black border border-matrix-green text-matrix-green font-matrix-mono text-sm hover:bg-matrix-green/10 hover:shadow-[0_0_20px_rgba(0,255,65,0.5)] transition-all rounded-lg"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            whileHover={{ 
+              scale: 1.05,
+              boxShadow: '0 0 25px rgba(0,255,65,0.6)'
+            }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            [NEW]
+          </motion.button>
+        )}
       </div>
+
+      {/* New Debate Confirmation Modal */}
+      <AnimatePresence>
+        {showNewDebateModal && (
+          <motion.div
+          className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowNewDebateModal(false)}
+        >
+          <motion.div
+            className="bg-matrix-dark border border-matrix-green-dark rounded-lg shadow-2xl p-8 max-w-md w-full font-matrix"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-matrix-green mb-4">⚠️ Start New Debate?</h3>
+            <p className="text-matrix-text mb-6">
+              Current debate has not been saved to Library. Starting a new debate will clear all current data.
+            </p>
+            <p className="text-matrix-green-dim text-sm mb-6">
+              Continue anyway?
+            </p>
+            <div className="flex justify-end gap-4">
+              <motion.button
+                onClick={() => setShowNewDebateModal(false)}
+                className="bg-matrix-green/10 hover:bg-matrix-green/30 text-matrix-green font-bold px-6 py-2 rounded shadow transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                onClick={confirmNewDebate}
+                className="bg-black border border-matrix-green text-matrix-green font-matrix-mono px-6 py-2 rounded shadow hover:bg-matrix-green/10 hover:shadow-[0_0_20px_rgba(0,255,65,0.5)] transition-all"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                [NEW]
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* PHASE 1: Query exhaustion message */}
       {isQueriesExhausted && (
