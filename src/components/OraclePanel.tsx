@@ -123,7 +123,7 @@ export default function OraclePanel({
                   {/* Results Header with Clear Button */}
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-matrix text-matrix-green tracking-wider">
-                      📊 ORACLE RESULTS
+                      📊 RESULTS
                     </h3>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-matrix-green-dim">

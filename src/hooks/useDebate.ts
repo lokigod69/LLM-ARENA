@@ -112,6 +112,23 @@ interface EnhancedDebateActions {
 }
 
 export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
+  // Load Oracle results from localStorage on mount
+  const loadOracleResults = (): OracleResult[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem('llm-arena-oracle-results');
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      // Convert timestamp strings back to Date objects
+      return parsed.map((r: any) => ({
+        ...r,
+        timestamp: new Date(r.timestamp)
+      }));
+    } catch {
+      return [];
+    }
+  };
+
   const [state, setState] = useState<EnhancedDebateState>({
     isActive: false,
     isPaused: false,
@@ -142,7 +159,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     isModelBLoading: false,
     lastActiveModel: null,
     
-    oracleResults: [],
+    oracleResults: loadOracleResults(), // Load from localStorage on mount
     isOracleAnalyzing: false,
     
     // BACKWARD COMPATIBILITY: Initialize legacy fields
@@ -164,6 +181,16 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   useEffect(() => {
     debateStateRef.current = state;
   }, [state]);
+
+  // Persist Oracle results to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('llm-arena-oracle-results', JSON.stringify(state.oracleResults));
+    } catch (error) {
+      console.error('Failed to save Oracle results to localStorage:', error);
+    }
+  }, [state.oracleResults]);
 
   const setAccessCode = (code: string | null) => {
     setState(prev => ({ ...prev, accessCode: code }));
@@ -1170,6 +1197,14 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       ...prev,
       oracleResults: [],
     }));
+    // Also clear from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('llm-arena-oracle-results');
+      } catch (error) {
+        console.error('Failed to clear Oracle results from localStorage:', error);
+      }
+    }
   }, []);
 
   // Export debate and Oracle analysis data

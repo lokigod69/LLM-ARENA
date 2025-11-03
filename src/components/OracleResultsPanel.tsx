@@ -39,7 +39,7 @@ export default function OracleResultsPanel({ result }: OracleResultsPanelProps) 
               style={{ color: getModelColor(result.config.oracleModel) }}
             >
               {getModelDisplayName(result.config.oracleModel)}
-            </span> • {result.config.primaryLens.toUpperCase()} LENS • DEPTH {result.config.depthLevel}/5 • 
+            </span> • DEPTH {result.config.depthLevel}/5 • 
             {result.config.outputFormat.replace('_', ' ').toUpperCase()}
           </div>
         </div>
@@ -57,7 +57,7 @@ export default function OracleResultsPanel({ result }: OracleResultsPanelProps) 
         >
           <div className="flex items-center gap-2">
             <h4 className="font-matrix text-purple-400 tracking-wider">
-              {result.config.primaryLens.toUpperCase()} LENS ANALYSIS
+              ANALYSIS
             </h4>
           </div>
           <motion.span 
