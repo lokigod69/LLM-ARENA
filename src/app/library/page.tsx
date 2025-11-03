@@ -22,6 +22,9 @@ import Link from 'next/link';
 import EditItemModal from '../../components/EditItemModal';
 import FolderManager from '../../components/FolderManager';
 import MatrixRain from '../../components/MatrixRain';
+import type { OracleResult } from '@/types/oracle';
+import OracleResultsPanel from '@/components/OracleResultsPanel';
+import { motion } from 'framer-motion';
 
 const LibraryPage: React.FC = () => {
   // State for library data
@@ -30,6 +33,8 @@ const LibraryPage: React.FC = () => {
   const [likeCategories, setLikeCategories] = useState<string[]>([]);
   const [starReasons, setStarReasons] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false); // <-- To prevent hydration mismatch
+  const [activeView, setActiveView] = useState<'marked' | 'oracle'>('marked');
+  const [oracleResults, setOracleResults] = useState<OracleResult[]>([]);
 
   // State for UI controls
   const [typeFilter, setTypeFilter] = useState<MarkType | 'all'>('all');
@@ -51,6 +56,24 @@ const LibraryPage: React.FC = () => {
     setFolders(getAllFolders());
     setLikeCategories(getLikeCategories());
     setStarReasons(getStarReasons());
+    
+    // Load Oracle results from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('llm-arena-oracle-results');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const results = parsed.map((r: any) => ({
+            ...r,
+            timestamp: new Date(r.timestamp)
+          }));
+          setOracleResults(results);
+        }
+      } catch (error) {
+        console.error('Failed to load Oracle results:', error);
+      }
+    }
+    
     setIsLoaded(true); // Mark as loaded
   }, []);
 
@@ -177,8 +200,43 @@ const LibraryPage: React.FC = () => {
         </header>
         <main className="flex-1 max-w-5xl mx-auto w-full p-8">
           <div className="matrix-panel p-8 rounded-xl bg-gradient-to-b from-matrix-black to-matrix-dark border border-matrix-green-dark shadow-lg">
-            <div className="flex flex-wrap gap-4 mb-8 items-center">
-              <button onClick={() => setShowFolderManager(true)} className="bg-matrix-green/10 hover:bg-matrix-green/30 text-matrix-green font-matrix px-4 py-2 rounded shadow transition-colors font-bold">Manage Folders</button>
+            {/* View Toggle: Marked Items vs Oracle Analyses */}
+            <div className="flex gap-2 mb-6 border-b border-matrix-green-dark pb-4">
+              <motion.button
+                onClick={() => setActiveView('marked')}
+                className={`px-6 py-3 font-matrix tracking-wider transition-all duration-200 ${
+                  activeView === 'marked'
+                    ? 'bg-matrix-green/20 text-matrix-green border-b-2 border-matrix-green'
+                    : 'text-matrix-green-dim hover:text-matrix-green hover:bg-matrix-green/10'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                📚 MARKED ITEMS
+              </motion.button>
+              <motion.button
+                onClick={() => setActiveView('oracle')}
+                className={`px-6 py-3 font-matrix tracking-wider transition-all duration-200 ${
+                  activeView === 'oracle'
+                    ? 'bg-matrix-green/20 text-matrix-green border-b-2 border-matrix-green'
+                    : 'text-matrix-green-dim hover:text-matrix-green hover:bg-matrix-green/10'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                🔮 ORACLE ANALYSES
+                {oracleResults.length > 0 && (
+                  <span className="ml-2 bg-purple-500 text-white text-xs rounded-full px-2 py-1">
+                    {oracleResults.length}
+                  </span>
+                )}
+              </motion.button>
+            </div>
+            
+            {activeView === 'marked' ? (
+              <>
+                <div className="flex flex-wrap gap-4 mb-8 items-center">
+                  <button onClick={() => setShowFolderManager(true)} className="bg-matrix-green/10 hover:bg-matrix-green/30 text-matrix-green font-matrix px-4 py-2 rounded shadow transition-colors font-bold">Manage Folders</button>
               <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="matrix-select bg-matrix-dark text-matrix-green border border-matrix-green-dark rounded px-3 py-2 font-matrix">
                 <option value="all">All Types</option>
                 <option value="like">❤️ Liked</option>
@@ -368,6 +426,32 @@ const LibraryPage: React.FC = () => {
                     <button style={{ color: '#ff4d4d' }} onClick={confirmBulkDelete}>Delete All</button>
                   </div>
                 </div>
+              </div>
+            )}
+                {/* FolderManager modal */}
+                {showFolderManager && <FolderManager open={showFolderManager} onClose={() => setShowFolderManager(false)} />}
+              </>
+            ) : (
+              /* Oracle Analyses View */
+              <div className="space-y-4">
+                {oracleResults.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-4xl text-matrix-green-dim mb-4">🔮</div>
+                    <h3 className="text-lg font-matrix text-matrix-green-dim mb-2">NO ORACLE ANALYSES</h3>
+                    <p className="text-sm text-matrix-green-dim max-w-xs mx-auto">
+                      Run Oracle analyses in the Arena to see them here
+                    </p>
+                    <Link href="/" className="mt-4 inline-block text-matrix-green hover:text-matrix-green-dim font-matrix tracking-wider">
+                      → GO TO ARENA
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {oracleResults.slice().reverse().map((result) => (
+                      <OracleResultsPanel key={result.id} result={result} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {/* FolderManager modal */}

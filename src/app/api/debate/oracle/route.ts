@@ -687,23 +687,38 @@ function parseDeepSeekAnalysis(analysis: string, config: OracleConfig): {
   verdict?: any;
   biasAnalysis?: any;
 } {
-  // For now, return the full analysis
-  // In the future, could parse specific sections if DeepSeek uses structured output
-  const result: any = {
-    analysis: analysis
-  };
-
+  // Start with the full analysis
+  let cleanAnalysis = analysis;
+  
   // Try to extract verdict if enabled (simple parsing for now)
+  let verdict: any = undefined;
   if (config.verdict.enabled && config.verdict.scope !== 'disabled') {
-    const verdictMatch = analysis.match(/Winner:\s*(GPT|Claude|Aligned)[\s\S]*?Confidence:\s*(\d+)%[\s\S]*?Reasoning:\s*([^\n]+)/i);
+    // Match verdict section (Winner: ... Confidence: ... Reasoning: ...)
+    const verdictMatch = analysis.match(/Winner:\s*(GPT|Claude|Aligned)[\s\S]*?Confidence:\s*(\d+)%[\s\S]*?Reasoning:\s*([^\n]+(?:\n[^\n]+)*)/i);
     if (verdictMatch) {
-      result.verdict = {
+      verdict = {
         winner: verdictMatch[1],
         confidence: parseInt(verdictMatch[2]),
         reasoning: verdictMatch[3].trim(),
         scope: config.verdict.scope
       };
+      
+      // Remove verdict section from analysis text to avoid duplication
+      // Match the entire verdict section from "Winner:" to end of reasoning
+      const verdictSectionPattern = /(?:^|\n)Winner:\s*(?:GPT|Claude|Aligned)[\s\S]*?Reasoning:\s*[^\n]+(?:\n[^\n]+)*(?:\n\n|\n|$)/i;
+      cleanAnalysis = cleanAnalysis.replace(verdictSectionPattern, '').trim();
+      
+      // Also remove any standalone "VERDICT:" or "VERDICT ANALYSIS:" sections
+      cleanAnalysis = cleanAnalysis.replace(/(?:^|\n)(?:VERDICT|VERDICT ANALYSIS):[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '').trim();
     }
+  }
+  
+  const result: any = {
+    analysis: cleanAnalysis // Return cleaned analysis without verdict
+  };
+  
+  if (verdict) {
+    result.verdict = verdict;
   }
 
   // Try to extract bias analysis if enabled (simple parsing for now)

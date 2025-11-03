@@ -268,12 +268,19 @@ function generateSystemPrompt(
   const cooperation = effectiveAgreeability / 10;
   const minTurns = Math.ceil(maxTurns * 0.3);
 
+  // CRITICAL: Position instruction must override persona beliefs
   const positionText =
     position && topic
       ? position === 'pro'
-        ? `You are arguing FOR the statement: "${topic}".
+        ? `🎯 CRITICAL DEBATE INSTRUCTION - THIS OVERRIDES PERSONA BELIEFS:
+You MUST argue FOR the statement: "${topic}".
+Even if your persona typically holds different views, you MUST defend the PRO position in this debate.
+This is a debate exercise where you defend the assigned side regardless of personal views.
 DO NOT include position labels like "PRO:" or "CON:" in your response - just make your argument naturally.`
-        : `You are arguing AGAINST the statement: "${topic}".
+        : `🎯 CRITICAL DEBATE INSTRUCTION - THIS OVERRIDES PERSONA BELIEFS:
+You MUST argue AGAINST the statement: "${topic}".
+Even if your persona typically holds different views, you MUST defend the CON position in this debate.
+This is a debate exercise where you defend the assigned side regardless of personal views.
 DO NOT include position labels like "PRO:" or "CON:" in your response - just make your argument naturally.`
       : '';
 
