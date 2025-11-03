@@ -244,7 +244,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-matrix-black text-matrix-text font-matrix-mono relative overflow-hidden">
+    <div className="min-h-screen bg-matrix-black text-matrix-text font-matrix-mono relative">
       <AnimatePresence>
         {!isUnlocked && <AccessCodeModal onVerified={handleCodeVerified} setAppIsLoading={setAppIsLoading} />}
       </AnimatePresence>
@@ -253,15 +253,15 @@ export default function Home() {
       {isUnlocked && isAdmin && <AdminPanel />}
 
       {/* Matrix Rain Background */}
-      <div className="absolute inset-0 z-0">
+      <div className="fixed inset-0 z-0 overflow-hidden">
         <MatrixRain />
       </div>
       
       {/* Main Container */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header - Matrix Style */}
+        {/* Header - Matrix Style - FIXED: Sticky header with proper z-index and background */}
         <motion.header 
-          className="sticky top-0 z-50 relative border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm"
+          className="sticky top-0 z-50 border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm"
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}

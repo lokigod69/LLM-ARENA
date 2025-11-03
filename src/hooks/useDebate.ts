@@ -134,19 +134,32 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     if (typeof window === 'undefined') return null;
     try {
       const stored = localStorage.getItem('llm-arena-current-debate');
-      if (!stored) return null;
+      if (!stored) {
+        console.log('📂 No saved debate state in localStorage');
+        return null;
+      }
       const parsed = JSON.parse(stored);
-      // Only restore if debate was in progress (not completed)
-      if (parsed.isActive || (parsed.modelAMessages && parsed.modelAMessages.length > 0)) {
+      // Restore if debate has any data (topic, messages, or was active)
+      const hasData = parsed.topic?.length > 0 || 
+                      parsed.modelAMessages?.length > 0 || 
+                      parsed.modelBMessages?.length > 0 || 
+                      parsed.isActive;
+      
+      if (hasData) {
         console.log('📥 RESTORING DEBATE STATE from localStorage', {
           isActive: parsed.isActive,
           currentTurn: parsed.currentTurn,
           topic: parsed.topic,
-          messageCount: parsed.modelAMessages?.length || 0
+          messageACount: parsed.modelAMessages?.length || 0,
+          messageBCount: parsed.modelBMessages?.length || 0,
+          modelA: parsed.modelA?.name,
+          modelB: parsed.modelB?.name
         });
         return parsed;
+      } else {
+        console.log('📂 Saved debate state exists but has no data, skipping restore');
+        return null;
       }
-      return null;
     } catch (error) {
       console.error('Failed to load debate state from localStorage:', error);
       return null;
@@ -222,8 +235,10 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   // Persist debate state to localStorage when it changes (only if debate is in progress)
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Only save if debate is active or has messages (debate in progress)
-    if (state.isActive || (state.modelAMessages.length > 0 || state.modelBMessages.length > 0)) {
+    // Save if debate is active OR has messages (debate was started, even if paused/completed)
+    const hasDebateData = state.isActive || state.modelAMessages.length > 0 || state.modelBMessages.length > 0 || state.topic.length > 0;
+    
+    if (hasDebateData) {
       try {
         const stateToSave = {
           isActive: state.isActive,
@@ -245,13 +260,20 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           personalityConfig: state.personalityConfig,
         };
         localStorage.setItem('llm-arena-current-debate', JSON.stringify(stateToSave));
+        console.log('💾 Saving debate state to localStorage', {
+          isActive: state.isActive,
+          currentTurn: state.currentTurn,
+          topic: state.topic,
+          messageCount: state.modelAMessages.length + state.modelBMessages.length
+        });
       } catch (error) {
         console.error('Failed to save debate state to localStorage:', error);
       }
     } else {
-      // Clear saved state if debate is not active and no messages
+      // Clear saved state if debate is not active and no messages/topic
       try {
         localStorage.removeItem('llm-arena-current-debate');
+        console.log('🗑️ Clearing debate state from localStorage (no active debate)');
       } catch (error) {
         console.error('Failed to clear debate state from localStorage:', error);
       }

@@ -1,59 +1,50 @@
-// LibraryPage: Now displays likeCategory and starReason, and allows filtering by these attributes
-// Also includes a navigation link to the Library page
-// Now supports editing and deleting items with modals/dialogs
-// Now supports bulk actions (multi-select, bulk delete/export)
-// All logic is encapsulated within this page
+// LibraryPage: Displays saved debates and Oracle analyses
+// Features: Collapsible debate cards, bulk actions (multi-select, delete, export)
+// Removed: Folder system, edit functionality (debates are read-only)
+// Delete is localStorage-only (no Supabase deletion)
 
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   getAllItems,
-  getAllFolders,
   exportLibraryAsJSON,
   exportLibraryAsCSV,
   getLikeCategories,
   getStarReasons,
   removeItem,
   MarkedItem,
-  Folder,
   MarkType
 } from '../../lib/libraryStorage';
 import Link from 'next/link';
-import EditItemModal from '../../components/EditItemModal';
-import FolderManager from '../../components/FolderManager';
 import MatrixRain from '../../components/MatrixRain';
 import type { OracleResult } from '@/types/oracle';
 import OracleResultsPanel from '@/components/OracleResultsPanel';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const LibraryPage: React.FC = () => {
   // State for library data
   const [items, setItems] = useState<MarkedItem[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [likeCategories, setLikeCategories] = useState<string[]>([]);
   const [starReasons, setStarReasons] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false); // <-- To prevent hydration mismatch
   const [activeView, setActiveView] = useState<'marked' | 'oracle'>('marked');
   const [oracleResults, setOracleResults] = useState<OracleResult[]>([]);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set()); // Track expanded debate cards
 
   // State for UI controls
   const [typeFilter, setTypeFilter] = useState<MarkType | 'all'>('all');
-  const [folderFilter, setFolderFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [likeCategoryFilter, setLikeCategoryFilter] = useState('all');
   const [starReasonFilter, setStarReasonFilter] = useState('all');
-  const [editItem, setEditItem] = useState<MarkedItem | null>(null);
   const [deleteItem, setDeleteItem] = useState<MarkedItem | null>(null);
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
-  const [showFolderManager, setShowFolderManager] = useState(false);
 
   // Load data from localStorage on client-side only
   useEffect(() => {
     setItems(getAllItems());
-    setFolders(getAllFolders());
     setLikeCategories(getLikeCategories());
     setStarReasons(getStarReasons());
     
@@ -80,12 +71,23 @@ const LibraryPage: React.FC = () => {
   // Recalculate items when dependencies change
   const refreshItems = () => {
     setItems(getAllItems());
-    setFolders(getAllFolders());
+  };
+
+  // Toggle expanded state for debate cards
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
   };
 
   const filteredItems = items.filter(item => {
     const matchesType = typeFilter === 'all' || item.type.includes(typeFilter);
-    const matchesFolder = folderFilter === 'all' || item.folders.includes(folderFilter);
     const matchesSearch =
       !search ||
       (item.annotation && item.annotation.toLowerCase().includes(search.toLowerCase())) ||
@@ -98,7 +100,7 @@ const LibraryPage: React.FC = () => {
       typeFilter !== 'star' && starReasonFilter === 'all' ? true :
       typeFilter === 'star' && starReasonFilter === 'all' ? true :
       item.starReason === starReasonFilter || starReasonFilter === 'all';
-    return matchesType && matchesFolder && matchesSearch && matchesLikeCategory && matchesStarReason;
+    return matchesType && matchesSearch && matchesLikeCategory && matchesStarReason;
   });
 
   // Bulk actions logic
@@ -133,12 +135,11 @@ const LibraryPage: React.FC = () => {
     if (format === 'json') {
       data = JSON.stringify(selectedItems, null, 2);
     } else {
-      const headers = ['id', 'type', 'timestamp', 'folders', 'annotation', 'likeCategory', 'starReason', 'content'];
+      const headers = ['id', 'type', 'timestamp', 'annotation', 'likeCategory', 'starReason', 'content'];
       const rows = selectedItems.map(i => [
         i.id,
         i.type.join(','),
         i.timestamp,
-        i.folders.join(','),
         i.annotation || '',
         i.likeCategory || '',
         i.starReason || '',
@@ -187,7 +188,7 @@ const LibraryPage: React.FC = () => {
         <MatrixRain />
       </div>
       <div className="relative z-10 flex flex-col min-h-screen">
-        <header className="border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm">
+        <header className="sticky top-0 z-50 border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm">
           <div className="flex justify-between items-center p-6">
             <div className="flex items-center gap-3">
               <img src="/assets/logo.png" alt="LLM Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
@@ -236,17 +237,10 @@ const LibraryPage: React.FC = () => {
             {activeView === 'marked' ? (
               <>
                 <div className="flex flex-wrap gap-4 mb-8 items-center">
-                  <button onClick={() => setShowFolderManager(true)} className="bg-matrix-green/10 hover:bg-matrix-green/30 text-matrix-green font-matrix px-4 py-2 rounded shadow transition-colors font-bold">Manage Folders</button>
               <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="matrix-select bg-matrix-dark text-matrix-green border border-matrix-green-dark rounded px-3 py-2 font-matrix">
                 <option value="all">All Types</option>
                 <option value="like">❤️ Liked</option>
                 <option value="star">⭐ Inquiry</option>
-              </select>
-              <select value={folderFilter} onChange={e => setFolderFilter(e.target.value)} className="matrix-select bg-matrix-dark text-matrix-green border border-matrix-green-dark rounded px-3 py-2 font-matrix">
-                <option value="all">All Folders</option>
-                {folders.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
               </select>
               {typeFilter === 'like' && (
                 <select value={likeCategoryFilter} onChange={e => setLikeCategoryFilter(e.target.value)} className="matrix-select bg-matrix-dark text-matrix-green border border-matrix-green-dark rounded px-3 py-2 font-matrix">
@@ -300,108 +294,146 @@ const LibraryPage: React.FC = () => {
                 <div style={{ color: '#aaa' }}>No items found.</div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  {filteredItems.map(item => (
-                    <div key={item.id} style={{ background: '#232323', borderRadius: 8, padding: 16, minHeight: 120, position: 'relative' }}>
-                      {/* Bulk select checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => toggleSelectOne(item.id)}
-                        style={{ position: 'absolute', top: 8, left: 8, width: 18, height: 18 }}
-                      />
-                      <div style={{ fontSize: 18, marginBottom: 8, marginLeft: 32 }}>
-                        {item.type.includes('like') && <span title="Liked">❤️</span>}
-                        {item.type.includes('star') && <span title="Inquiry">⭐</span>}
-                        <span style={{ marginLeft: 8, color: '#aaa', fontSize: 12 }}>{new Date(item.timestamp).toLocaleString()}</span>
-                      </div>
-                      <div style={{ fontSize: 14, marginBottom: 8, marginLeft: 32 }}>
-                        <b>Folders:</b> {item.folders.map(fid => folders.find(f => f.id === fid)?.name).filter(Boolean).join(', ') || 'None'}
-                      </div>
-                      {item.type.includes('like') && item.likeCategory && (
-                        <div style={{ color: '#00e6e6', marginBottom: 8, marginLeft: 32 }}>
-                          <b>Category:</b> {item.likeCategory}
-                        </div>
-                      )}
-                      {item.type.includes('star') && item.starReason && (
-                        <div style={{ color: '#ffd700', marginBottom: 8, marginLeft: 32 }}>
-                          <b>Reason:</b> {item.starReason}
-                        </div>
-                      )}
-                      {item.annotation && (
-                        <div style={{ fontStyle: 'italic', color: '#ffd700', marginBottom: 8, marginLeft: 32 }}>
-                          {item.annotation}
-                        </div>
-                      )}
-                      {/* Formatted content display */}
-                      <div style={{ background: '#111', color: '#0f0', padding: 12, borderRadius: 4, fontSize: 13, maxHeight: 200, overflow: 'auto', marginLeft: 32, fontFamily: 'monospace' }}>
-                        {item.content.topic && (
-                          <div style={{ marginBottom: 8 }}>
-                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Topic:</span> {item.content.topic}
+                  {filteredItems.map(item => {
+                    const isExpanded = expandedItems.has(item.id);
+                    const topicTitle = item.content.topic || item.annotation || 'Untitled Debate';
+                    
+                    return (
+                      <motion.div 
+                        key={item.id} 
+                        className="matrix-panel bg-gradient-to-br from-matrix-dark to-matrix-black border border-matrix-green-dark rounded-lg p-4 position-relative"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        {/* Bulk select checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleSelectOne(item.id)}
+                          className="absolute top-2 left-2 w-4 h-4"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        
+                        {/* Collapsible Header - Topic + Metadata */}
+                        <motion.button
+                          onClick={() => toggleExpanded(item.id)}
+                          className="w-full text-left flex items-center justify-between gap-2 pb-3 border-b border-matrix-green-dark/30"
+                          whileHover={{ scale: 1.01 }}
+                        >
+                          <div className="flex-1 flex items-center gap-2">
+                            <span className="text-matrix-green text-lg font-matrix tracking-wider truncate">
+                              {item.type.includes('like') && <span title="Liked">❤️</span>}
+                              {item.type.includes('star') && <span title="Inquiry">⭐</span>}
+                              {' '}
+                              {topicTitle}
+                            </span>
                           </div>
-                        )}
-                        {item.content.modelA && (
-                          <div style={{ marginBottom: 8 }}>
-                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Model A:</span> {item.content.modelA.displayName || item.content.modelA.name}
-                            {item.content.modelA.config && (
-                              <span style={{ color: '#888', marginLeft: 8 }}>
-                                (Position: {item.content.modelA.config.position}, Agreeability: {item.content.modelA.config.agreeabilityLevel}/10)
-                              </span>
-                            )}
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className="text-xs text-matrix-green-dim">
+                              {new Date(item.timestamp).toLocaleDateString()}
+                            </span>
+                            <motion.span 
+                              className="text-matrix-green-dim"
+                              animate={{ rotate: isExpanded ? 180 : 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              ▼
+                            </motion.span>
                           </div>
-                        )}
-                        {item.content.modelB && (
-                          <div style={{ marginBottom: 8 }}>
-                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Model B:</span> {item.content.modelB.displayName || item.content.modelB.name}
-                            {item.content.modelB.config && (
-                              <span style={{ color: '#888', marginLeft: 8 }}>
-                                (Position: {item.content.modelB.config.position}, Agreeability: {item.content.modelB.config.agreeabilityLevel}/10)
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {item.content.totalTurns !== undefined && (
-                          <div style={{ marginBottom: 8 }}>
-                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Turns:</span> {item.content.totalTurns} / {item.content.maxTurns}
-                          </div>
-                        )}
-                        {item.content.messages && (
-                          <div>
-                            <span style={{ color: '#0f0', fontWeight: 'bold' }}>Messages:</span> {item.content.messages.length} total
-                          </div>
-                        )}
-                        {/* Fallback for other content types */}
-                        {!item.content.topic && !item.content.modelA && (
-                          <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                            {JSON.stringify(item.content, null, 2)}
-                          </pre>
-                        )}
-                      </div>
-                      {/* Edit/Delete buttons */}
-                      <div className="absolute top-2 right-2 flex gap-2">
-                        <button onClick={() => setEditItem(item)} title="Edit Item" className="text-blue-400 hover:text-blue-300">
-                          ✏️
-                        </button>
-                        <button onClick={() => setDeleteItem(item)} title="Delete Item" className="text-red-400 hover:text-red-300">
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                        </motion.button>
+
+                        {/* Expanded Content */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="mt-4 space-y-4"
+                            >
+                              {item.type.includes('like') && item.likeCategory && (
+                                <div className="text-matrix-green-dim text-sm">
+                                  <b className="text-matrix-green">Category:</b> {item.likeCategory}
+                                </div>
+                              )}
+                              {item.type.includes('star') && item.starReason && (
+                                <div className="text-matrix-green-dim text-sm">
+                                  <b className="text-matrix-green">Reason:</b> {item.starReason}
+                                </div>
+                              )}
+                              {item.annotation && (
+                                <div className="italic text-matrix-green-dim text-sm border-l-2 border-matrix-green/30 pl-3">
+                                  {item.annotation}
+                                </div>
+                              )}
+                              
+                              {/* Debate Details */}
+                              <div className="bg-matrix-black border border-matrix-green-dark/30 rounded p-3 space-y-2 text-sm font-mono">
+                                {item.content.topic && (
+                                  <div>
+                                    <span className="text-matrix-green font-bold">Topic:</span> {item.content.topic}
+                                  </div>
+                                )}
+                                {item.content.modelA && (
+                                  <div>
+                                    <span className="text-matrix-green font-bold">Model A:</span> {item.content.modelA.displayName || item.content.modelA.name}
+                                    {item.content.modelA.config && (
+                                      <span className="text-matrix-green-dim ml-2">
+                                        ({item.content.modelA.config.position}, Agreeability: {item.content.modelA.config.agreeabilityLevel}/10)
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {item.content.modelB && (
+                                  <div>
+                                    <span className="text-matrix-green font-bold">Model B:</span> {item.content.modelB.displayName || item.content.modelB.name}
+                                    {item.content.modelB.config && (
+                                      <span className="text-matrix-green-dim ml-2">
+                                        ({item.content.modelB.config.position}, Agreeability: {item.content.modelB.config.agreeabilityLevel}/10)
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {item.content.totalTurns !== undefined && (
+                                  <div>
+                                    <span className="text-matrix-green font-bold">Turns:</span> {item.content.totalTurns} / {item.content.maxTurns}
+                                  </div>
+                                )}
+                                {item.content.messages && (
+                                  <div>
+                                    <span className="text-matrix-green font-bold">Messages:</span> {item.content.messages.length} total
+                                  </div>
+                                )}
+                                {!item.content.topic && !item.content.modelA && (
+                                  <pre className="text-xs whitespace-pre-wrap">
+                                    {JSON.stringify(item.content, null, 2)}
+                                  </pre>
+                                )}
+                              </div>
+                              
+                              {/* Delete button - only shown when expanded */}
+                              <div className="flex justify-end pt-2">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteItem(item);
+                                  }}
+                                  className="bg-red-500/20 hover:bg-red-500/40 text-red-400 font-matrix px-4 py-2 rounded shadow transition-colors text-sm"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-            {/* Edit modal */}
-            {editItem && (
-              <EditItemModal
-                open={!!editItem}
-                item={editItem}
-                onClose={() => {
-                  setEditItem(null);
-                  // Force re-render, not ideal but works for now
-                  window.location.reload();
-                }}
-              />
-            )}
             {/* Delete confirmation dialog */}
             {deleteItem && (
               <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
@@ -428,8 +460,6 @@ const LibraryPage: React.FC = () => {
                 </div>
               </div>
             )}
-                {/* FolderManager modal */}
-                {showFolderManager && <FolderManager open={showFolderManager} onClose={() => setShowFolderManager(false)} />}
               </>
             ) : (
               /* Oracle Analyses View */
