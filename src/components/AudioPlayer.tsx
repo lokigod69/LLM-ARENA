@@ -101,9 +101,17 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       return;
     }
 
+    // LOG: What voice parameters we have
+    console.log('🔊 AudioPlayer.handlePlay called:', {
+      personaId: personaId || 'NONE',
+      modelName: modelName || 'NONE',
+      textPreview: text.substring(0, 50) + '...',
+    });
+
     // Check cache first
     const cachedUrl = getCachedAudio();
     if (cachedUrl) {
+      console.log('✅ AudioPlayer: Using cached audio');
       try {
         const audio = new Audio(cachedUrl);
         audioRef.current = audio;
@@ -123,9 +131,15 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
 
     // Fetch new audio
     if (!personaId && !modelName) {
+      console.error('❌ AudioPlayer: No voice available (no personaId or modelName)');
       setError('No voice available');
       return;
     }
+
+    console.log('📡 AudioPlayer: Fetching audio from API with:', {
+      personaId: personaId || 'NONE',
+      modelName: modelName || 'NONE',
+    });
 
     setIsLoading(true);
     setError(null);

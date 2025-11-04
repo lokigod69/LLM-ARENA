@@ -107,15 +107,32 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
     onComplete: () => void,
     personaId?: string
   ): Promise<void> => {
+    // CRITICAL: Prioritize message.personaId over column-level personaId
+    // Message-level personaId is more specific (set when message was created)
+    const effectivePersonaId = message.personaId || personaId;
+
+    // LOG: What we're playing
+    console.log('🎵 PlayAllButton.playMessage called:', {
+      messageId: message.id,
+      messagePersonaId: message.personaId || 'NONE',
+      columnPersonaId: personaId || 'NONE',
+      effectivePersonaId: effectivePersonaId || 'NONE',
+      modelName,
+      textPreview: message.text.substring(0, 50) + '...',
+    });
+
     setPlayingMessageId(message.id);
 
     try {
-      // Check cache first
-      let audioUrl = getCachedAudio(message.text, personaId, modelName);
+      // Check cache first - use effectivePersonaId
+      let audioUrl = getCachedAudio(message.text, effectivePersonaId, modelName);
 
       if (!audioUrl) {
-        // Fetch from API
-        audioUrl = await fetchAudio(message.text, personaId, modelName);
+        console.log('📡 PlayAllButton: Fetching audio from API');
+        // Fetch from API - use effectivePersonaId
+        audioUrl = await fetchAudio(message.text, effectivePersonaId, modelName);
+      } else {
+        console.log('✅ PlayAllButton: Using cached audio');
       }
 
       const audio = new Audio(audioUrl);

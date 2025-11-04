@@ -13,31 +13,64 @@ export async function POST(request: Request) {
   try {
     const { text, personaId, modelName } = await request.json();
 
+    // LOG: What we received
+    console.log('🎤 TTS API called with:', {
+      personaId: personaId || 'NONE',
+      modelName: modelName || 'NONE',
+      textPreview: text?.substring(0, 50) + '...' || 'NO TEXT',
+    });
+
     if (!text) {
+      console.error('❌ TTS API: Missing text parameter');
       return new NextResponse('Missing text', { status: 400 });
     }
 
     // Get voice ID from persona or model
     let voiceId: string | undefined;
+    let voiceSource: 'persona' | 'model' | 'none' = 'none';
     
     if (personaId) {
       // Priority 1: Use persona voice if personaId is provided
+      console.log('🔍 TTS API: Looking up persona:', personaId);
       const persona = PERSONAS[personaId];
       if (!persona) {
+        console.error('❌ TTS API: Persona not found:', personaId);
         return new NextResponse('Persona not found', { status: 404 });
       }
       voiceId = persona.elevenLabsVoiceId;
+      voiceSource = 'persona';
+      console.log('✅ TTS API: Found persona voice:', {
+        personaId,
+        personaName: persona.name,
+        voiceId: voiceId || 'MISSING',
+      });
     } else if (modelName) {
       // Priority 2: Use model voice if modelName is provided
+      console.log('🔍 TTS API: Looking up model:', modelName);
       const modelConfig = MODEL_CONFIGS[modelName as keyof typeof MODEL_CONFIGS];
       if (modelConfig && 'elevenLabsVoiceId' in modelConfig) {
         voiceId = (modelConfig as any).elevenLabsVoiceId;
+        voiceSource = 'model';
+        console.log('✅ TTS API: Found model voice:', {
+          modelName,
+          voiceId: voiceId || 'MISSING',
+        });
+      } else {
+        console.error('❌ TTS API: Model config not found or missing voice ID:', modelName);
       }
     }
 
     if (!voiceId) {
+      console.error('❌ TTS API: No voice ID available');
       return new NextResponse('No voice ID available. Please provide personaId or modelName with configured voice.', { status: 400 });
     }
+
+    console.log('🎯 TTS API: Using voice:', {
+      voiceId,
+      voiceSource,
+      personaId: personaId || 'NONE',
+      modelName: modelName || 'NONE',
+    });
 
     // Get ElevenLabs API key from environment
     const apiKey = process.env.ELEVENLABS_API_KEY;
