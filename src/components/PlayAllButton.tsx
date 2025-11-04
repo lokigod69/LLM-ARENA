@@ -97,10 +97,43 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
       
       request.onsuccess = () => {
         const result = request.result;
-        resolve(result ? result.blob : null);
+        
+        if (!result) {
+          console.log('❌ PlayAllButton: No blob found in IndexedDB:', key);
+          resolve(null);
+          return;
+        }
+        
+        // LOG: Retrieved data details
+        console.log('📦 PlayAllButton: Retrieved from IndexedDB:', {
+          key,
+          hasArrayBuffer: !!result.arrayBuffer,
+          type: result.type,
+          size: result.size,
+        });
+        
+        try {
+          // Reconstruct Blob from ArrayBuffer
+          const blob = new Blob([result.arrayBuffer], { type: result.type || 'audio/mpeg' });
+          
+          // LOG: Reconstructed blob details
+          console.log('🔄 PlayAllButton: Reconstructed blob:', {
+            type: blob.type,
+            size: blob.size,
+            isBlob: blob instanceof Blob,
+          });
+          
+          resolve(blob);
+        } catch (error) {
+          console.error('❌ PlayAllButton: Error reconstructing blob:', error);
+          resolve(null);
+        }
       };
       
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('❌ PlayAllButton: IndexedDB get error:', request.error);
+        reject(request.error);
+      };
     });
   };
 
@@ -120,23 +153,58 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
   };
 
   const saveBlobToIndexedDB = async (db: IDBDatabase, key: string, blob: Blob): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['audioBlobs', 'metadata'], 'readwrite');
-      
-      const blobStore = transaction.objectStore('audioBlobs');
-      const blobRequest = blobStore.put({ key, blob });
-      
-      const metadataStore = transaction.objectStore('metadata');
-      const metadataRequest = metadataStore.put({ 
-        key, 
-        timestamp: Date.now() 
-      });
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      
-      blobRequest.onerror = () => reject(blobRequest.error);
-      metadataRequest.onerror = () => reject(metadataRequest.error);
+    // LOG: Blob details before saving
+    console.log('💾 PlayAllButton: Saving blob to IndexedDB:', {
+      key,
+      type: blob.type,
+      size: blob.size,
+      isBlob: blob instanceof Blob,
+    });
+    
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Convert blob to ArrayBuffer for IndexedDB storage
+        const arrayBuffer = await blob.arrayBuffer();
+        
+        const transaction = db.transaction(['audioBlobs', 'metadata'], 'readwrite');
+        
+        // Save blob as ArrayBuffer with metadata
+        const blobStore = transaction.objectStore('audioBlobs');
+        const blobRequest = blobStore.put({ 
+          key, 
+          arrayBuffer,
+          type: blob.type, // Store MIME type to reconstruct Blob later
+          size: blob.size,
+        });
+        
+        // Save metadata
+        const metadataStore = transaction.objectStore('metadata');
+        const metadataRequest = metadataStore.put({ 
+          key, 
+          timestamp: Date.now() 
+        });
+        
+        transaction.oncomplete = () => {
+          console.log('✅ PlayAllButton: Blob saved to IndexedDB successfully:', key);
+          resolve();
+        };
+        transaction.onerror = () => {
+          console.error('❌ PlayAllButton: Transaction error:', transaction.error);
+          reject(transaction.error);
+        };
+        
+        blobRequest.onerror = () => {
+          console.error('❌ PlayAllButton: Blob save error:', blobRequest.error);
+          reject(blobRequest.error);
+        };
+        metadataRequest.onerror = () => {
+          console.error('❌ PlayAllButton: Metadata save error:', metadataRequest.error);
+          reject(metadataRequest.error);
+        };
+      } catch (error) {
+        console.error('❌ PlayAllButton: Error converting blob to ArrayBuffer:', error);
+        reject(error);
+      }
     });
   };
 
@@ -158,7 +226,16 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
         // Check if cache is still valid (24 hours)
         const metadata = await getCacheMetadata(db, cacheKey);
         if (metadata && Date.now() - metadata.timestamp < 24 * 60 * 60 * 1000) {
+          // Create blob URL from reconstructed blob
           const url = URL.createObjectURL(blob);
+          
+          // LOG: Blob URL creation
+          console.log('🔗 PlayAllButton: Created blob URL:', {
+            url: url.substring(0, 50) + '...',
+            blobType: blob.type,
+            blobSize: blob.size,
+          });
+          
           console.log('✅ PlayAllButton: CACHE HIT (IndexedDB):', cacheKey);
           return url;
         } else {

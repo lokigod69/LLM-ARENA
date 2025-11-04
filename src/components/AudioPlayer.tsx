@@ -55,7 +55,16 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
         // Check if cache is still valid (24 hours)
         const metadata = await getCacheMetadata(db, cacheKey);
         if (metadata && Date.now() - metadata.timestamp < 24 * 60 * 60 * 1000) {
+          // Create blob URL from reconstructed blob
           const url = URL.createObjectURL(blob);
+          
+          // LOG: Blob URL creation
+          console.log('🔗 AudioPlayer: Created blob URL:', {
+            url: url.substring(0, 50) + '...',
+            blobType: blob.type,
+            blobSize: blob.size,
+          });
+          
           console.log('✅ AudioPlayer: CACHE HIT (IndexedDB):', cacheKey);
           return url;
         } else {
@@ -142,25 +151,58 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   };
 
   const saveBlobToIndexedDB = async (db: IDBDatabase, key: string, blob: Blob): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['audioBlobs', 'metadata'], 'readwrite');
-      
-      // Save blob
-      const blobStore = transaction.objectStore('audioBlobs');
-      const blobRequest = blobStore.put({ key, blob });
-      
-      // Save metadata
-      const metadataStore = transaction.objectStore('metadata');
-      const metadataRequest = metadataStore.put({ 
-        key, 
-        timestamp: Date.now() 
-      });
-      
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      
-      blobRequest.onerror = () => reject(blobRequest.error);
-      metadataRequest.onerror = () => reject(metadataRequest.error);
+    // LOG: Blob details before saving
+    console.log('💾 AudioPlayer: Saving blob to IndexedDB:', {
+      key,
+      type: blob.type,
+      size: blob.size,
+      isBlob: blob instanceof Blob,
+    });
+    
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Convert blob to ArrayBuffer for IndexedDB storage
+        const arrayBuffer = await blob.arrayBuffer();
+        
+        const transaction = db.transaction(['audioBlobs', 'metadata'], 'readwrite');
+        
+        // Save blob as ArrayBuffer with metadata
+        const blobStore = transaction.objectStore('audioBlobs');
+        const blobRequest = blobStore.put({ 
+          key, 
+          arrayBuffer,
+          type: blob.type, // Store MIME type to reconstruct Blob later
+          size: blob.size,
+        });
+        
+        // Save metadata
+        const metadataStore = transaction.objectStore('metadata');
+        const metadataRequest = metadataStore.put({ 
+          key, 
+          timestamp: Date.now() 
+        });
+        
+        transaction.oncomplete = () => {
+          console.log('✅ AudioPlayer: Blob saved to IndexedDB successfully:', key);
+          resolve();
+        };
+        transaction.onerror = () => {
+          console.error('❌ AudioPlayer: Transaction error:', transaction.error);
+          reject(transaction.error);
+        };
+        
+        blobRequest.onerror = () => {
+          console.error('❌ AudioPlayer: Blob save error:', blobRequest.error);
+          reject(blobRequest.error);
+        };
+        metadataRequest.onerror = () => {
+          console.error('❌ AudioPlayer: Metadata save error:', metadataRequest.error);
+          reject(metadataRequest.error);
+        };
+      } catch (error) {
+        console.error('❌ AudioPlayer: Error converting blob to ArrayBuffer:', error);
+        reject(error);
+      }
     });
   };
 
@@ -172,10 +214,43 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       
       request.onsuccess = () => {
         const result = request.result;
-        resolve(result ? result.blob : null);
+        
+        if (!result) {
+          console.log('❌ AudioPlayer: No blob found in IndexedDB:', key);
+          resolve(null);
+          return;
+        }
+        
+        // LOG: Retrieved data details
+        console.log('📦 AudioPlayer: Retrieved from IndexedDB:', {
+          key,
+          hasArrayBuffer: !!result.arrayBuffer,
+          type: result.type,
+          size: result.size,
+        });
+        
+        try {
+          // Reconstruct Blob from ArrayBuffer
+          const blob = new Blob([result.arrayBuffer], { type: result.type || 'audio/mpeg' });
+          
+          // LOG: Reconstructed blob details
+          console.log('🔄 AudioPlayer: Reconstructed blob:', {
+            type: blob.type,
+            size: blob.size,
+            isBlob: blob instanceof Blob,
+          });
+          
+          resolve(blob);
+        } catch (error) {
+          console.error('❌ AudioPlayer: Error reconstructing blob:', error);
+          resolve(null);
+        }
       };
       
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('❌ AudioPlayer: IndexedDB get error:', request.error);
+        reject(request.error);
+      };
     });
   };
 
@@ -245,11 +320,16 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     }
 
     // LOG: What voice parameters we have
+    const voiceId = personaId || modelName || 'default';
     console.log('🔊 AudioPlayer.handlePlay called:', {
       personaId: personaId || 'NONE',
       modelName: modelName || 'NONE',
+      voiceId: voiceId,
       textPreview: text.substring(0, 50) + '...',
     });
+    
+    // LOG: Voice ID being used (for debugging)
+    console.log('🎤 AudioPlayer: Using voice ID:', voiceId, 'for persona:', personaId || 'NONE', 'model:', modelName || 'NONE');
 
     // Check cache first (async)
     const cachedUrl = await getCachedAudio();
@@ -304,13 +384,21 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       }
 
       const blob = await response.blob();
-      console.log('📦 AudioPlayer: Received blob from API, size:', blob.size, 'bytes');
+      console.log('📦 AudioPlayer: Received blob from API:', {
+        type: blob.type,
+        size: blob.size,
+        isBlob: blob instanceof Blob,
+      });
       
       // Cache the blob itself (persistent storage)
       await cacheAudio(blob);
       
       const url = URL.createObjectURL(blob);
-      console.log('🎵 AudioPlayer: Created blob URL, playing audio');
+      console.log('🎵 AudioPlayer: Created blob URL, playing audio:', {
+        url: url.substring(0, 50) + '...',
+        blobType: blob.type,
+        blobSize: blob.size,
+      });
 
       const audio = new Audio(url);
       audioRef.current = audio;
