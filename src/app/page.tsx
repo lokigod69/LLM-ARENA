@@ -6,6 +6,7 @@
 // Backward compatibility maintained for existing functionality
 // Enhanced UI with new model selector and personality controls
 // UI/UX FIXES: Added cursor-pointer class to Oracle Analysis button
+// UI FIX: Removed onNewDebate prop from PromptInput - [NEW] button removed
 
 'use client'; // Required for useAuth and useState
 
@@ -429,8 +430,6 @@ export default function Home() {
                 isAdmin={typeof queriesRemaining === 'string' && queriesRemaining === 'Unlimited'}
                 currentTurn={currentTurn}
                 maxTurns={maxTurns}
-                onNewDebate={clearDebate}
-                hasMessages={modelAMessages.length > 0 || modelBMessages.length > 0}
               />
             </div>
           </div>

@@ -1,6 +1,7 @@
 // Admin Panel Component
 // Matrix-themed UI for admin token generation
 // Only visible when logged in with admin code
+// UI FIX: Panel now starts collapsed by default
 
 'use client';
 
@@ -8,7 +9,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AdminPanel() {
-  const [isOpen, setIsOpen] = useState(true); // Default to open
+  const [isOpen, setIsOpen] = useState(false); // Default to collapsed
   const [tokenCount, setTokenCount] = useState(1);
   const [queriesPerToken, setQueriesPerToken] = useState(30);
   const [generatedTokens, setGeneratedTokens] = useState<string[]>([]);

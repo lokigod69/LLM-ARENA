@@ -2,6 +2,7 @@
 // Features: Collapsible debate cards, bulk actions (multi-select, delete, export)
 // Removed: Folder system, edit functionality (debates are read-only)
 // Delete is localStorage-only (no Supabase deletion)
+// UI FIX: Debate titles now truncate to 80 chars when collapsed, show full on hover and when expanded
 
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
@@ -293,15 +294,19 @@ const LibraryPage: React.FC = () => {
               {filteredItems.length === 0 ? (
                 <div style={{ color: '#aaa' }}>No items found.</div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredItems.map(item => {
                     const isExpanded = expandedItems.has(item.id);
                     const topicTitle = item.content.topic || item.annotation || 'Untitled Debate';
+                    // Truncate title when collapsed - show full when expanded
+                    const displayTitle = !isExpanded && topicTitle.length > 80 
+                      ? topicTitle.substring(0, 80) + '...' 
+                      : topicTitle;
                     
                     return (
                       <motion.div 
                         key={item.id} 
-                        className="matrix-panel bg-gradient-to-br from-matrix-dark to-matrix-black border border-matrix-green-dark rounded-lg p-4 position-relative"
+                        className="matrix-panel bg-gradient-to-br from-matrix-dark to-matrix-black border border-matrix-green-dark rounded-lg p-4 position-relative max-w-full"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
@@ -321,12 +326,15 @@ const LibraryPage: React.FC = () => {
                           className="w-full text-left flex items-center justify-between gap-2 pb-3 border-b border-matrix-green-dark/30"
                           whileHover={{ scale: 1.01 }}
                         >
-                          <div className="flex-1 flex items-center gap-2">
-                            <span className="text-matrix-green text-lg font-matrix tracking-wider truncate">
+                          <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <span 
+                              className="text-matrix-green text-lg font-matrix tracking-wider truncate block"
+                              title={topicTitle}
+                            >
                               {item.type.includes('like') && <span title="Liked">❤️</span>}
                               {item.type.includes('star') && <span title="Inquiry">⭐</span>}
                               {' '}
-                              {topicTitle}
+                              {displayTitle}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 flex-shrink-0">
