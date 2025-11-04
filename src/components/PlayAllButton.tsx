@@ -104,8 +104,8 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
   const playMessage = async (
     message: Message,
     modelName: AvailableModel,
-    personaId?: string,
-    onComplete: () => void
+    onComplete: () => void,
+    personaId?: string
   ): Promise<void> => {
     setPlayingMessageId(message.id);
 
@@ -169,13 +169,13 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
         playMessage(
           messages[i].message,
           messages[i].modelName,
-          messages[i].personaId,
           () => {
             // Wait 0.5 seconds between messages
             setTimeout(() => {
               resolve();
             }, 500);
-          }
+          },
+          messages[i].personaId
         );
       });
 
@@ -217,12 +217,13 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
 
   // Cleanup on unmount
   useEffect(() => {
+    const audioRefsMap = audioRefs.current;
     return () => {
-      audioRefs.current.forEach((audio) => {
+      audioRefsMap.forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
       });
-      audioRefs.current.clear();
+      audioRefsMap.clear();
     };
   }, []);
 
