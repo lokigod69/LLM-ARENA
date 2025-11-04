@@ -1,13 +1,16 @@
 // Task 3.3 Complete + Matrix UI: Matrix-styled chat column with cyberpunk aesthetics
 // Updated with dynamic model colors for consistent UI experience
 // MarkButton integration: Added MarkButton after each message for marking (heart/star) debate messages
+// PROMPT 4: Display persona name instead of model name when message has personaId
+// PROMPT 5: Color-code persona icons by model type (GPT: Green, Claude: Orange, Gemini: Blue, DeepSeek: Purple)
+// PROMPT 3: Removed timestamp display to prevent overlap with audio controls
 'use client';
 
 import { forwardRef } from 'react';
 import { Message } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import TypewriterText from './TypewriterText';
-import { getModelColor } from '@/lib/modelConfigs';
+import { getModelColor, getModelDisplayName } from '@/lib/modelConfigs';
 import type { AvailableModel } from '@/types';
 import AudioPlayer from './AudioPlayer';
 import { usePlayback } from '@/contexts/PlaybackContext';
@@ -62,6 +65,16 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
       };
     };
 
+    // PROMPT 5: Get model-specific color for icons
+    const getModelColorForIcons = (modelName: string): string => {
+      const name = modelName.toLowerCase();
+      if (name.includes('gpt')) return '#00ff41'; // Green
+      if (name.includes('claude')) return '#ff6b35'; // Orange
+      if (name.includes('gemini')) return '#4a9eff'; // Blue
+      if (name.includes('deepseek')) return '#9d4edd'; // Purple
+      return '#00ff41'; // Default green
+    };
+
     // Use the new dynamic color system
     const dynamicColor = modelColor || (actualModelName ? getModelColor(actualModelName) : '#10B981');
     const colors = getDynamicColors(dynamicColor);
@@ -91,14 +104,22 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                 ? `${displayName} (${modelName.toUpperCase()})`  // "NIETZSCHE (GPT-4O)"
                 : modelName.toUpperCase();  // Just "GPT-4O"
               
+              // PROMPT 5: Get model-specific color for persona icon
+              const iconModelName = actualModelName || modelName;
+              const iconColor = getModelColorForIcons(iconModelName);
+              
               return (
                 <div className="flex items-center justify-center gap-3">
                   {persona && (
                     <img 
                       src={persona.portrait} 
                       alt={persona.name}
-                      className="w-16 h-16 border-2 border-matrix-green shadow-[0_0_15px_rgba(0,255,0,0.6)]"
-                      style={{ imageRendering: 'crisp-edges' }}
+                      className="w-16 h-16 border-2"
+                      style={{ 
+                        imageRendering: 'crisp-edges',
+                        borderColor: iconColor,
+                        boxShadow: `0 0 20px ${iconColor}40` // 40 = 25% opacity in hex
+                      }}
                     />
                   )}
                   <h2 
@@ -232,7 +253,19 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                         className="text-xs font-matrix font-bold tracking-wider"
                         style={{ color: colors.primary }}
                       >
-                        {(message.sender || 'UNKNOWN').toUpperCase()}
+                        {(() => {
+                          // PROMPT 4: Show persona name if message has persona, otherwise model name
+                          if (message.personaId) {
+                            const persona = PERSONAS[message.personaId];
+                            if (persona) {
+                              const modelDisplayName = actualModelName 
+                                ? getModelDisplayName(actualModelName)
+                                : modelName;
+                              return `${persona.name.toUpperCase()} (${modelDisplayName})`;
+                            }
+                          }
+                          return (message.sender || modelName || 'UNKNOWN').toUpperCase();
+                        })()}
                       </span>
                       <motion.div
                         className="w-1 h-1 rounded-full"
@@ -241,12 +274,7 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                         transition={{ duration: 2, repeat: Infinity }}
                       />
                     </div>
-                    <span 
-                      className="text-xs font-matrix"
-                      style={{ color: colors.secondary }}
-                    >
-                      {new Date(message.timestamp).toLocaleTimeString()}
-                    </span>
+                    {/* PROMPT 3: Timestamp removed - no overlap with audio controls */}
                   </div>
 
                   {/* Message Content */}

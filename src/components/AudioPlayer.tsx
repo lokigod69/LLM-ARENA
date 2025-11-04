@@ -1,13 +1,14 @@
 // ElevenLabs TTS Audio Player Component
 // - Supports both persona voices (unique per persona) and model voices (shared per model)
-// - Includes localStorage caching to avoid regenerating audio
-// - Handles play/pause, loading states, and error handling
+// - Includes IndexedDB caching to avoid regenerating audio (persistent storage)
+// - Handles play/pause/restart, loading states, and error handling
 // - Fetches audio from /api/tts endpoint with ElevenLabs integration
+// - PROMPT 3: Added restart button to reset audio to beginning
 
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Loader } from 'lucide-react';
+import { Play, Pause, Loader, RotateCcw } from 'lucide-react';
 
 interface AudioPlayerProps {
   text: string;
@@ -458,6 +459,15 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     }
   };
 
+  // PROMPT 3: Restart audio from beginning
+  const handleRestart = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
   // Cleanup on unmount - revoke any active blob URLs
   useEffect(() => {
     return () => {
@@ -484,21 +494,35 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   }, []);
 
   return (
-    <button
-      onClick={isPlaying ? handlePause : handlePlay}
-      className="ml-2 p-1 text-green-500 hover:text-green-300 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-      aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
-      disabled={isLoading}
-      title={error || (isPlaying ? 'Pause audio' : 'Play audio')}
-    >
-      {isLoading ? (
-        <Loader className="animate-spin" size={16} />
-      ) : isPlaying ? (
-        <Pause size={16} />
-      ) : (
-        <Play size={16} />
+    <div className="flex items-center gap-1 ml-2">
+      {/* PROMPT 3: Play/Pause Button */}
+      <button
+        onClick={isPlaying ? handlePause : handlePlay}
+        className="p-1 text-green-500 hover:text-green-300 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:drop-shadow-[0_0_8px_rgba(0,255,65,0.6)]"
+        aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+        disabled={isLoading}
+        title={error || (isPlaying ? 'Pause audio' : 'Play audio')}
+      >
+        {isLoading ? (
+          <Loader className="animate-spin" size={16} />
+        ) : isPlaying ? (
+          <Pause size={16} />
+        ) : (
+          <Play size={16} />
+        )}
+      </button>
+      {/* PROMPT 3: Restart Button */}
+      {audioRef.current && (
+        <button
+          onClick={handleRestart}
+          className="p-1 text-green-500 hover:text-green-300 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:drop-shadow-[0_0_8px_rgba(0,255,65,0.6)]"
+          aria-label="Restart from beginning"
+          title="Restart from beginning"
+        >
+          <RotateCcw size={16} />
+        </button>
       )}
-    </button>
+    </div>
   );
 };
 
