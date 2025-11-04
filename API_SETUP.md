@@ -40,8 +40,11 @@ Plan A has been implemented! The LLM Arena now uses **real API calls** to OpenAI
    SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
    SUPABASE_ANON_KEY=your-supabase-anon-key-here
    
-   # Supabase Configuration (client-side)
-   NEXT_PUBLIC_SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
+# Supabase Configuration (client-side)
+NEXT_PUBLIC_SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
+
+# ElevenLabs API Key (optional - for text-to-speech)
+ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
    ```
 
 3. **Restart the development server:**

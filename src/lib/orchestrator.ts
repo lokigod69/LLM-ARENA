@@ -105,7 +105,8 @@ export const MODEL_CONFIGS = {
     modelName: 'gpt-4o',
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
-    costPer1kTokens: { input: 0.03, output: 0.06 } // GPT-4o pricing
+    costPer1kTokens: { input: 0.03, output: 0.06 }, // GPT-4o pricing
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' // Adam - Professional male voice
   },
   'gpt-4o-mini': {
     provider: 'openai', 
@@ -113,7 +114,8 @@ export const MODEL_CONFIGS = {
     modelName: 'gpt-4o-mini',
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
-    costPer1kTokens: { input: 0.00015, output: 0.0006 } // GPT-4o mini pricing
+    costPer1kTokens: { input: 0.00015, output: 0.0006 }, // GPT-4o mini pricing
+    elevenLabsVoiceId: 'TxGEqnHWrfWFTfGW9XjX' // Josh - Deep, thoughtful male voice
   },
   'claude-3-5-sonnet-20241022': {
     provider: 'anthropic',
@@ -121,7 +123,8 @@ export const MODEL_CONFIGS = {
     modelName: 'claude-3-5-sonnet-20241022',
     maxTokens: 200,
     apiKeyEnv: 'ANTHROPIC_API_KEY',
-    costPer1kTokens: { input: 0.003, output: 0.015 } // Claude pricing
+    costPer1kTokens: { input: 0.003, output: 0.015 }, // Claude pricing
+    elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG' // Arnold - Strong, authoritative male voice
   },
   'deepseek-r1': {
     provider: 'deepseek',
@@ -129,7 +132,8 @@ export const MODEL_CONFIGS = {
     modelName: 'deepseek-reasoner',
     maxTokens: 200,
     apiKeyEnv: 'DEEPSEEK_API_KEY',
-    costPer1kTokens: { input: 0.0014, output: 0.0028 } // DeepSeek R1 pricing
+    costPer1kTokens: { input: 0.0014, output: 0.0028 }, // DeepSeek R1 pricing
+    elevenLabsVoiceId: '2EiwWnXFnvU5JabPnv8n' // Clyde - Technical, wise male voice
   },
   'deepseek-v3': {
     provider: 'deepseek',
@@ -137,7 +141,8 @@ export const MODEL_CONFIGS = {
     modelName: 'deepseek-chat',
     maxTokens: 200, 
     apiKeyEnv: 'DEEPSEEK_API_KEY',
-    costPer1kTokens: { input: 0.00014, output: 0.00028 } // DeepSeek v3 pricing
+    costPer1kTokens: { input: 0.00014, output: 0.00028 }, // DeepSeek v3 pricing
+    elevenLabsVoiceId: 'IKne3meq5aSn9XLyUdCD' // Charlie - Young, casual male voice
   },
   // PHASE A: Google Gemini models integration - Updated with exact API names
   'gemini-2.5-flash-preview-05-06': {
@@ -146,7 +151,8 @@ export const MODEL_CONFIGS = {
     modelName: 'gemini-2.5-flash-preview-05-06',
     maxTokens: 200,
     apiKeyEnv: 'GOOGLE_AI_API_KEY',
-    costPer1kTokens: { input: 0.00015, output: 0.0006 } // Gemini Flash pricing (similar to GPT-4 mini)
+    costPer1kTokens: { input: 0.00015, output: 0.0006 }, // Gemini Flash pricing (similar to GPT-4 mini)
+    elevenLabsVoiceId: 'N2lVS1w4EtoT3dr4eOWO' // Callum - British, energetic male voice
   },
   'gemini-2.5-pro-preview-05-06': {
     provider: 'google',
@@ -154,7 +160,8 @@ export const MODEL_CONFIGS = {
     modelName: 'gemini-2.5-pro-preview-05-06',
     maxTokens: 200,
     apiKeyEnv: 'GOOGLE_AI_API_KEY',
-    costPer1kTokens: { input: 0.00125, output: 0.005 } // Gemini Pro pricing
+    costPer1kTokens: { input: 0.00125, output: 0.005 }, // Gemini Pro pricing
+    elevenLabsVoiceId: 'ErXwobaYiN019PkySvjV' // Antoni - Warm, articulate male voice
   }
 } as const;
 

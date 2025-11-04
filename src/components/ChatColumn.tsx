@@ -275,12 +275,14 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                     )}
                   </div>
 
-                  {/* Audio Player Integration */}
-                  {message.personaId && (
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <AudioPlayer text={message.text} personaId={message.personaId} />
-                    </div>
-                  )}
+                  {/* Audio Player Integration - Shows for all messages (persona or model) */}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <AudioPlayer 
+                      text={message.text} 
+                      personaId={message.personaId}
+                      modelName={actualModelName}
+                    />
+                  </div>
                   
                   {/* Decorative Border */}
                   <div 
