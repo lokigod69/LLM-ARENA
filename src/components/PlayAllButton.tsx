@@ -56,34 +56,145 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
   };
 
   // Generate cache key (same as AudioPlayer)
-  const getCacheKey = (text: string, voiceId: string) => {
+  const getCacheKey = (text: string, voiceId: string): string => {
     const textHash = text.substring(0, 100);
-    return `tts_${voiceId}_${textHash}`;
+    const cacheKey = `tts_${voiceId}_${textHash}`;
+    
+    console.log('🔑 PlayAllButton: Cache key generated:', {
+      cacheKey,
+      voiceId,
+      textHash: textHash.substring(0, 20) + '...',
+    });
+    
+    return cacheKey;
   };
 
-  // Get cached audio URL from localStorage
-  const getCachedAudio = (text: string, personaId?: string, modelName?: AvailableModel): string | null => {
+  // IndexedDB helpers (same as AudioPlayer)
+  const openIndexedDB = (): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('TTSAudioCache', 1);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains('audioBlobs')) {
+          db.createObjectStore('audioBlobs', { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains('metadata')) {
+          db.createObjectStore('metadata', { keyPath: 'key' });
+        }
+      };
+    });
+  };
+
+  const getBlobFromIndexedDB = async (db: IDBDatabase, key: string): Promise<Blob | null> => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['audioBlobs'], 'readonly');
+      const store = transaction.objectStore('audioBlobs');
+      const request = store.get(key);
+      
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(result ? result.blob : null);
+      };
+      
+      request.onerror = () => reject(request.error);
+    });
+  };
+
+  const getCacheMetadata = async (db: IDBDatabase, key: string): Promise<{ timestamp: number } | null> => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['metadata'], 'readonly');
+      const store = transaction.objectStore('metadata');
+      const request = store.get(key);
+      
+      request.onsuccess = () => {
+        const result = request.result;
+        resolve(result ? { timestamp: result.timestamp } : null);
+      };
+      
+      request.onerror = () => reject(request.error);
+    });
+  };
+
+  const saveBlobToIndexedDB = async (db: IDBDatabase, key: string, blob: Blob): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['audioBlobs', 'metadata'], 'readwrite');
+      
+      const blobStore = transaction.objectStore('audioBlobs');
+      const blobRequest = blobStore.put({ key, blob });
+      
+      const metadataStore = transaction.objectStore('metadata');
+      const metadataRequest = metadataStore.put({ 
+        key, 
+        timestamp: Date.now() 
+      });
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      
+      blobRequest.onerror = () => reject(blobRequest.error);
+      metadataRequest.onerror = () => reject(metadataRequest.error);
+    });
+  };
+
+  // Get cached audio URL from IndexedDB
+  const getCachedAudio = async (text: string, personaId?: string, modelName?: AvailableModel): Promise<string | null> => {
     if (typeof window === 'undefined') return null;
+    
+    const voiceId = personaId || modelName || 'default';
+    const cacheKey = getCacheKey(text, voiceId);
+    
+    console.log('🔍 PlayAllButton: Looking up cache:', cacheKey);
+    
     try {
-      const voiceId = personaId || modelName || 'default';
-      const cacheKey = getCacheKey(text, voiceId);
+      // Try IndexedDB first (persistent storage)
+      const db = await openIndexedDB();
+      const blob = await getBlobFromIndexedDB(db, cacheKey);
+      
+      if (blob) {
+        // Check if cache is still valid (24 hours)
+        const metadata = await getCacheMetadata(db, cacheKey);
+        if (metadata && Date.now() - metadata.timestamp < 24 * 60 * 60 * 1000) {
+          const url = URL.createObjectURL(blob);
+          console.log('✅ PlayAllButton: CACHE HIT (IndexedDB):', cacheKey);
+          return url;
+        } else {
+          console.log('⏰ PlayAllButton: Cache expired, removing:', cacheKey);
+        }
+      }
+      
+      // Fallback: Check localStorage (for backward compatibility)
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const data = JSON.parse(cached);
         if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+          console.log('✅ PlayAllButton: CACHE HIT (localStorage):', cacheKey);
           return data.url;
         } else {
+          console.log('⏰ PlayAllButton: Cache expired (localStorage), removing:', cacheKey);
           localStorage.removeItem(cacheKey);
         }
       }
+      
+      console.log('❌ PlayAllButton: CACHE MISS:', cacheKey);
+      return null;
     } catch (error) {
-      console.error('Error reading cache:', error);
+      console.error('❌ PlayAllButton: Error reading cache:', error);
+      return null;
     }
-    return null;
   };
 
-  // Fetch audio from API
+  // Fetch audio from API and cache it
   const fetchAudio = async (text: string, personaId?: string, modelName?: AvailableModel): Promise<string> => {
+    console.log('📡 PlayAllButton: Fetching audio from API:', {
+      personaId: personaId || 'NONE',
+      modelName: modelName || 'NONE',
+      textPreview: text.substring(0, 50) + '...',
+    });
+    
     const response = await fetch('/api/tts', {
       method: 'POST',
       headers: {
@@ -97,6 +208,20 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
     }
 
     const blob = await response.blob();
+    console.log('📦 PlayAllButton: Received blob from API, size:', blob.size, 'bytes');
+    
+    // Cache the blob itself (persistent storage)
+    const voiceId = personaId || modelName || 'default';
+    const cacheKey = getCacheKey(text, voiceId);
+    
+    try {
+      const db = await openIndexedDB();
+      await saveBlobToIndexedDB(db, cacheKey, blob);
+      console.log('✅ PlayAllButton: Saved to IndexedDB:', cacheKey);
+    } catch (error) {
+      console.error('❌ PlayAllButton: Error saving to cache:', error);
+    }
+    
     return URL.createObjectURL(blob);
   };
 
@@ -124,15 +249,15 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
     setPlayingMessageId(message.id);
 
     try {
-      // Check cache first - use effectivePersonaId
-      let audioUrl = getCachedAudio(message.text, effectivePersonaId, modelName);
+      // Check cache first - use effectivePersonaId (async)
+      let audioUrl = await getCachedAudio(message.text, effectivePersonaId, modelName);
 
       if (!audioUrl) {
         console.log('📡 PlayAllButton: Fetching audio from API');
         // Fetch from API - use effectivePersonaId
         audioUrl = await fetchAudio(message.text, effectivePersonaId, modelName);
       } else {
-        console.log('✅ PlayAllButton: Using cached audio');
+        console.log('✅ PlayAllButton: Using cached audio from IndexedDB');
       }
 
       const audio = new Audio(audioUrl);

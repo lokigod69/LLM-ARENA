@@ -71,6 +71,15 @@ export async function POST(request: Request) {
       personaId: personaId || 'NONE',
       modelName: modelName || 'NONE',
     });
+    
+    // CRITICAL: Log to console for Vercel logs visibility
+    console.log(`🎤 VOICE SELECTED: ${voiceSource.toUpperCase()} - Voice ID: ${voiceId}`);
+    if (personaId) {
+      console.log(`   Persona: ${personaId}`);
+    }
+    if (modelName) {
+      console.log(`   Model: ${modelName}`);
+    }
 
     // Get ElevenLabs API key from environment
     const apiKey = process.env.ELEVENLABS_API_KEY;
