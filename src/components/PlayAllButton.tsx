@@ -3,6 +3,7 @@
 // - Uses existing AudioPlayer caching to minimize API calls
 // - Shows visual feedback for currently playing message
 // - Matrix-themed styling matching the app
+// - INVESTIGATION: Added detailed cache hit/miss logging to verify caching behavior
 
 'use client';
 
@@ -323,6 +324,9 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
       textPreview: message.text.substring(0, 50) + '...',
     });
 
+    // INVESTIGATION: Explicit cache check logging
+    console.log('🔍 PlayAllButton: Checking cache for message:', message.id);
+
     setPlayingMessageId(message.id);
 
     try {
@@ -330,11 +334,11 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
       let audioUrl = await getCachedAudio(message.text, effectivePersonaId, modelName);
 
       if (!audioUrl) {
-        console.log('📡 PlayAllButton: Fetching audio from API');
+        console.log('❌ PlayAllButton: CACHE MISS - Fetching audio from API (will save to cache)');
         // Fetch from API - use effectivePersonaId
         audioUrl = await fetchAudio(message.text, effectivePersonaId, modelName);
       } else {
-        console.log('✅ PlayAllButton: Using cached audio from IndexedDB');
+        console.log('✅ PlayAllButton: CACHE HIT - Using cached audio (no API call, saves tokens!)');
       }
 
       // Create fresh Audio element with the blob URL

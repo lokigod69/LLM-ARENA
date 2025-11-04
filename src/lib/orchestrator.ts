@@ -10,6 +10,8 @@
 // ORACLE INTEGRATION: Added DeepSeek-Reasoner Chain of Thought analysis for Oracle functionality
 // PHASE A COMPLETE: Google Gemini 2.5 Flash and Pro integration with unified API architecture
 // PHASE B: Added flexible Oracle model selection for modular analysis
+// INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
+// INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
 
 import type { AvailableModel } from '@/types';
 import { PERSONAS, PersonaDefinition } from './personas';
@@ -309,11 +311,15 @@ DO NOT include position labels like "PRO:" or "CON:" in your response - just mak
       case 4:
         return `• Aim for approximately 4-6 sentences - detailed analysis
 • Provide comprehensive reasoning and examples
-• Develop your arguments with supporting evidence and context`;
+• Develop your arguments with supporting evidence and context
+• CRITICAL: Complete your full argument - do not stop mid-sentence or mid-thought
+• Ensure your response ends with proper punctuation and a complete idea`;
       case 5:
         return `• Aim for roughly 5-8 sentences - academic depth
 • Provide thorough exploration with nuanced analysis
-• Include detailed reasoning, examples, and implications as appropriate`;
+• Include detailed reasoning, examples, and implications as appropriate
+• CRITICAL: Complete your full argument - do not stop mid-sentence or mid-thought
+• Ensure your response ends with proper punctuation and a complete idea`;
       default:
         return `• Aim for around 3-4 sentences - balanced length
 • Provide key arguments with some supporting context
@@ -717,6 +723,14 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
+  // INVESTIGATION: Log extensiveness and token configuration
+  console.log(`🔍 Gemini API Call (${modelType}):`, {
+    extensivenessLevel: extensivenessLevel || 'NOT PROVIDED',
+    baseMaxTokens: config.maxTokens,
+    effectiveMaxTokens: maxTokens,
+    tokenMultiplier: extensivenessLevel ? (maxTokens / config.maxTokens).toFixed(2) + 'x' : '1.0x'
+  });
+
   // Gemini uses a different API format. We combine messages into a single text block.
   const combinedText = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
 
@@ -779,9 +793,26 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-p
   
   // Check if response was truncated at token limit
   const finishReason = data.candidates?.[0]?.finishReason;
+  
+  // INVESTIGATION: Log ALL finish reasons to diagnose cut-offs
+  console.log(`🔍 Gemini API Response (${modelType}):`, {
+    finishReason: finishReason || 'UNKNOWN',
+    maxOutputTokens: maxTokens,
+    replyLength: reply.length,
+    replyPreview: reply.substring(0, 100) + '...',
+    wasTruncated: finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH'
+  });
+  
   if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
-    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finishReason: ${finishReason})`);
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finishReason: ${finishReason}, maxTokens: ${maxTokens})`);
     reply = reply.trimEnd() + '...';
+  } else if (finishReason === 'STOP') {
+    // Model chose to stop naturally - check if response seems complete
+    const lastChar = reply.trim().slice(-1);
+    const endsWithPunctuation = ['.', '!', '?'].includes(lastChar);
+    if (!endsWithPunctuation && reply.length > 50) {
+      console.warn(`⚠️ Gemini response ends without punctuation (finishReason: STOP, length: ${reply.length}) - may be incomplete`);
+    }
   }
   
   // Calculate token usage and cost (Gemini format)
