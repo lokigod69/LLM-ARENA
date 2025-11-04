@@ -337,19 +337,28 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
         console.log('✅ PlayAllButton: Using cached audio from IndexedDB');
       }
 
+      // Create fresh Audio element with the blob URL
       const audio = new Audio(audioUrl);
       audioRefs.current.set(message.id, audio);
 
       audio.onended = () => {
         setPlayingMessageId(null);
         audioRefs.current.delete(message.id);
+        // Clean up blob URL when done
+        if (audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioUrl);
+        }
         onComplete();
       };
 
       audio.onerror = () => {
-        console.error('Audio playback error for message:', message.id);
+        console.error('❌ PlayAllButton: Audio playback error for message:', message.id);
         setPlayingMessageId(null);
         audioRefs.current.delete(message.id);
+        // Clean up blob URL on error
+        if (audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioUrl);
+        }
         onComplete();
       };
 
@@ -419,10 +428,19 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
     setCurrentIndex(0);
     setPlayingMessageId(null);
     
-    // Stop all currently playing audio
+    // Stop all currently playing audio and revoke blob URLs
     audioRefs.current.forEach((audio) => {
+      const audioSrc = audio.src;
       audio.pause();
       audio.currentTime = 0;
+      // Clean up blob URL
+      if (audioSrc.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(audioSrc);
+        } catch (error) {
+          console.error('❌ PlayAllButton: Error revoking blob URL:', error);
+        }
+      }
     });
     audioRefs.current.clear();
     
@@ -434,13 +452,23 @@ const PlayAllButton = ({ modelAMessages, modelBMessages, modelA, modelB }: PlayA
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - revoke all blob URLs
   useEffect(() => {
     const audioRefsMap = audioRefs.current;
     return () => {
       audioRefsMap.forEach((audio) => {
+        const audioSrc = audio.src;
         audio.pause();
         audio.currentTime = 0;
+        // Clean up blob URL
+        if (audioSrc.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(audioSrc);
+            console.log('🧹 PlayAllButton: Cleaned up blob URL on unmount');
+          } catch (error) {
+            console.error('❌ PlayAllButton: Error revoking blob URL:', error);
+          }
+        }
       });
       audioRefsMap.clear();
     };

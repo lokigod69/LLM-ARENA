@@ -331,25 +331,45 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     // LOG: Voice ID being used (for debugging)
     console.log('🎤 AudioPlayer: Using voice ID:', voiceId, 'for persona:', personaId || 'NONE', 'model:', modelName || 'NONE');
 
-    // Check cache first (async)
-    const cachedUrl = await getCachedAudio();
-    if (cachedUrl) {
+    // Check cache first (async) - get blob, create fresh URL
+    const cachedBlobUrl = await getCachedAudio();
+    if (cachedBlobUrl) {
       console.log('✅ AudioPlayer: Using cached audio from IndexedDB');
       try {
-        const audio = new Audio(cachedUrl);
+        // Create fresh blob URL each time (never reuse old URLs)
+        const freshUrl = cachedBlobUrl; // getCachedAudio already returns a fresh blob URL
+        const audio = new Audio(freshUrl);
         audioRef.current = audio;
+        
         audio.play();
         setIsPlaying(true);
         setError(null);
 
         audio.onended = () => {
           setIsPlaying(false);
-          // Clean up blob URL
-          URL.revokeObjectURL(cachedUrl);
+          // Clean up blob URL when done
+          if (freshUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(freshUrl);
+          }
         };
+        
+        audio.onerror = (e) => {
+          console.error('❌ AudioPlayer: Audio playback error:', e);
+          setIsPlaying(false);
+          setError('Playback failed');
+          // Clean up blob URL on error
+          if (freshUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(freshUrl);
+          }
+        };
+        
         return;
       } catch (error) {
         console.error('❌ AudioPlayer: Error playing cached audio:', error);
+        // Clean up blob URL on error
+        if (cachedBlobUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(cachedBlobUrl);
+        }
         // Continue to fetch new audio
       }
     }
@@ -408,14 +428,20 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
 
       audio.onended = () => {
         setIsPlaying(false);
-        // Clean up blob URL
-        URL.revokeObjectURL(url);
+        // Clean up blob URL when done
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
       };
 
       audio.onerror = (e) => {
-        console.error('Audio playback error:', e);
+        console.error('❌ AudioPlayer: Audio playback error:', e);
         setError('Playback failed');
         setIsPlaying(false);
+        // Clean up blob URL on error
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
       };
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -432,11 +458,26 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     }
   };
 
-  // Cleanup on unmount
+  // Cleanup on unmount - revoke any active blob URLs
   useEffect(() => {
     return () => {
       if (audioRef.current) {
+        // Get current src (might be a blob URL)
+        const currentSrc = audioRef.current.src;
+        
+        // Pause and cleanup audio element
         audioRef.current.pause();
+        
+        // Revoke blob URL if it's a blob URL
+        if (currentSrc.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(currentSrc);
+            console.log('🧹 AudioPlayer: Cleaned up blob URL on unmount');
+          } catch (error) {
+            console.error('❌ AudioPlayer: Error revoking blob URL:', error);
+          }
+        }
+        
         audioRef.current = null;
       }
     };
