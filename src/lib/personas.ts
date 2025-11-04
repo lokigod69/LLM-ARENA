@@ -63,7 +63,7 @@ export const PERSONAS: Record<string, PersonaDefinition> = {
     turnRules: `Frame everything through class analysis. Expose economic base beneath ideological superstructure. Use specific historical examples. Mock bourgeois morality. Focus on systemic critique, not individual blame. Revolution is inevitable.`,
     lockedTraits: { baseStubbornness: 8, responseLength: 4 },
     portrait: '/personas/A5.jpeg',
-    elevenLabsVoiceId: 'placeholder_voice_id_marx',
+    elevenLabsVoiceId: 'nzeAacJi50IvxcyDnMXa',
   },
   rand: {
     id: 'rand',
@@ -108,7 +108,7 @@ export const PERSONAS: Record<string, PersonaDefinition> = {
     turnRules: `Think through extremes and contradictions. Show psychological depths. Let opposing ideas clash violently. Suffering reveals truth. Freedom includes freedom to destroy oneself. Faith must pass through doubt.`,
     lockedTraits: { baseStubbornness: 6, responseLength: 4 },
     portrait: '/personas/A10.jpeg',
-    elevenLabsVoiceId: 'placeholder_voice_id_dostoyevsky',
+    elevenLabsVoiceId: 'XeYTv1UwuV9mT4Hi5ZpQ',
   },
   confucius: {
     id: 'confucius',

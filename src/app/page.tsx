@@ -31,9 +31,11 @@ import AgreeabilitySlider from '@/components/AgreeabilitySlider';
 import PositionSelector from '@/components/PositionSelector';
 import AccessCodeModal from '@/components/AccessCodeModal';
 import { AdminPanel } from '@/components/AdminPanel';
+import PlayAllButton from '@/components/PlayAllButton';
+import { PlaybackProvider } from '@/contexts/PlaybackContext';
 import Link from 'next/link';
 
-export default function Home() {
+function HomeContent() {
   
   // NEW: State for access control
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -549,10 +551,13 @@ export default function Home() {
               </div>
             </motion.div>
             
-            {/* 4. Audio Player (Framed) */}
-            <div className="w-full p-3 border border-matrix-green/50 rounded-lg bg-matrix-dark/30">
-              {/* Audio player removed */}
-            </div>
+            {/* 4. Play All Button */}
+            <PlayAllButton
+              modelAMessages={modelAMessages}
+              modelBMessages={modelBMessages}
+              modelA={{ name: modelA.name, personaId: modelA.personaId }}
+              modelB={{ name: modelB.name, personaId: modelB.personaId }}
+            />
           </motion.div>
 
           {/* Model B Arena */}
@@ -625,5 +630,13 @@ export default function Home() {
         </motion.footer>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <PlaybackProvider>
+      <HomeContent />
+    </PlaybackProvider>
   );
 }

@@ -10,6 +10,7 @@ import TypewriterText from './TypewriterText';
 import { getModelColor } from '@/lib/modelConfigs';
 import type { AvailableModel } from '@/types';
 import AudioPlayer from './AudioPlayer';
+import { usePlayback } from '@/contexts/PlaybackContext';
 
 import { PERSONAS } from '@/lib/personas';
 
@@ -24,6 +25,7 @@ interface ChatColumnProps {
 
 const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
   ({ messages, modelName, isLoading, modelColor, actualModelName, personaId }, ref) => {
+    const { playingMessageId } = usePlayback();
     
     console.log('🎨 ChatColumn render:', {
       propModelName: modelName,
@@ -201,12 +203,20 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                 </div>
               </motion.div>
             ) : (
-              messages.map((message, index) => (
+              messages.map((message, index) => {
+                const isCurrentlyPlaying = playingMessageId === message.id;
+                
+                return (
                 <motion.div
                   key={message.id}
-                  className="matrix-message relative group"
+                  className={`matrix-message relative group ${isCurrentlyPlaying ? 'ring-2 ring-matrix-green ring-opacity-75' : ''}`}
                   initial={{ opacity: 0, x: message.sender === modelName ? -50 : 50, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  animate={{ 
+                    opacity: 1, 
+                    x: 0, 
+                    scale: isCurrentlyPlaying ? 1.02 : 1,
+                    boxShadow: isCurrentlyPlaying ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none'
+                  }}
                   transition={{ 
                     duration: 0.5, 
                     delay: index * 0.1,
@@ -286,11 +296,14 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                   
                   {/* Decorative Border */}
                   <div 
-                    className="absolute inset-0 rounded-lg border opacity-0 group-hover:opacity-50 transition-opacity duration-300 pointer-events-none"
+                    className={`absolute inset-0 rounded-lg border transition-opacity duration-300 pointer-events-none ${
+                      isCurrentlyPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
+                    }`}
                     style={{ borderColor: colors.border, boxShadow: colors.glow }}
                   ></div>
                 </motion.div>
-              ))
+              );
+              })
             )}
           </AnimatePresence>
         </div>
