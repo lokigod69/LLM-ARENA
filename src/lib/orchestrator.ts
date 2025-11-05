@@ -598,7 +598,15 @@ async function timedFetch(
 
 /**
  * GPT-5 Responses API caller - GPT-5 models use /v1/responses endpoint (not /v1/chat/completions)
- * Uses different parameter format: input (string), max_output_tokens, reasoning.effort
+ * 
+ * Per OpenAI Official Documentation:
+ * - Endpoint: POST /v1/responses (not /v1/chat/completions)
+ * - Input: Can be messages array OR string (we use messages array)
+ * - Parameters: max_output_tokens (not max_tokens), reasoning.effort (not temperature)
+ * - Response: output array with type="message" items (skip type="reasoning")
+ * - Content: Extract text from content[].text where type === "output_text"
+ * 
+ * UNSUPPORTED parameters (will cause errors): temperature, top_p, logprobs
  */
 async function callOpenAIResponses(
   messages: any[], 
@@ -612,29 +620,21 @@ async function callOpenAIResponses(
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
 
-  // Convert messages array to input string format for Responses API
-  const systemPrompt = messages.find(m => m.role === 'system')?.content || '';
-  const conversationMessages = messages.filter(m => m.role !== 'system');
-  
-  // Build input string: system prompt first, then conversation
-  let input = '';
-  if (systemPrompt) {
-    input += `System: ${systemPrompt}\n\n`;
-  }
-  input += conversationMessages.map(m => {
-    const role = m.role === 'assistant' ? 'Assistant' : 'User';
-    return `${role}: ${m.content}`;
-  }).join('\n\n');
+  // GPT-5 Responses API accepts EITHER messages array OR string as input
+  // Per official docs: input can be messages array directly (recommended)
+  // We'll use messages array format for better structure preservation
+  const input = messages;  // Pass messages array directly per Responses API spec
 
-  // GPT-5 Responses API request body
+  // GPT-5 Responses API request body (per official documentation)
   const requestBody = {
     model: config.modelName,
-    input: input,
-    max_output_tokens: maxTokens,
+    input: input,  // ✅ Can be messages array or string
+    max_output_tokens: maxTokens,  // ✅ "max_output_tokens" not "max_tokens"
     reasoning: {
-      effort: 'minimal' as const  // Can be: minimal, low, medium, high
-    }
-    // NO temperature, top_p, logprobs - these cause errors!
+      effort: 'minimal' as const  // ✅ minimal | low | medium | high (replaces temperature)
+    },
+    store: false  // ✅ Disable storage for privacy (optional but recommended)
+    // ❌ DO NOT include: temperature, top_p, logprobs - these cause errors!
   };
 
   console.log('🔵 GPT-5 Responses API Request:', {
@@ -699,21 +699,99 @@ async function callOpenAIResponses(
     throw new Error(`GPT-5 Responses API error: ${data.error.message || JSON.stringify(data.error)}`);
   }
 
-  // Parse GPT-5 Responses API format - response structure may vary
+  // Parse GPT-5 Responses API format - filter for MESSAGE items only (skip reasoning)
   let reply: string | undefined;
   
-  // Try different possible response paths for Responses API
-  if (data.output) {
+  // CRITICAL: GPT-5 Responses API returns output array with different item types:
+  // - type: "reasoning" - Internal chain of thought (skip this!)
+  // - type: "message" - The actual response content (this is what we want!)
+  
+  // Helper field: For non-streaming responses, OpenAI provides output_text helper
+  if (data.output_text) {
+    reply = data.output_text;
+    console.log('✅ GPT-5 Reply found via: data.output_text (helper field)');
+  } else if (data.output) {
     // Responses API format: data.output (string or array)
     if (typeof data.output === 'string') {
       reply = data.output;
-    } else if (Array.isArray(data.output) && data.output.length > 0) {
-      // If output is an array, try to extract text
-      reply = data.output[0].content || data.output[0].text || JSON.stringify(data.output[0]);
+      console.log('✅ GPT-5 Reply found via: data.output (string)');
+    } else if (Array.isArray(data.output)) {
+      // Filter for MESSAGE items only, skip reasoning items
+      console.log(`🟣 GPT-5 Output Array: ${data.output.length} items`);
+      
+      // Log all item types for debugging
+      const itemTypes = data.output.map((item: any, index: number) => ({
+        index,
+        type: item.type,
+        hasContent: !!item.content,
+        hasText: !!item.text,
+        contentPreview: item.content?.substring(0, 50) || item.text?.substring(0, 50) || 'N/A'
+      }));
+      console.log('🟣 GPT-5 Output Item Types:', itemTypes);
+      
+      // Find message items (skip reasoning items)
+      const messageItems = data.output.filter((item: any) => item.type === 'message');
+      const reasoningItems = data.output.filter((item: any) => item.type === 'reasoning');
+      
+      console.log(`🟣 GPT-5 Filtered: ${messageItems.length} message items, ${reasoningItems.length} reasoning items`);
+      
+      if (messageItems.length > 0) {
+        // CRITICAL: Extract text from content array structure
+        // Per official docs: content is an array of content blocks
+        // Each block has: { type: "output_text", text: "..." }
+        const messageTexts: string[] = [];
+        
+        for (const messageItem of messageItems) {
+          if (messageItem.content && Array.isArray(messageItem.content)) {
+            // Process content array - look for output_text blocks
+            for (const contentBlock of messageItem.content) {
+              if (contentBlock.type === 'output_text' && contentBlock.text) {
+                messageTexts.push(contentBlock.text);
+                console.log(`🟣 GPT-5 Found output_text block: ${contentBlock.text.substring(0, 50)}...`);
+              } else if (contentBlock.type && contentBlock.type !== 'output_text') {
+                console.log(`🟣 GPT-5 Skipping content block type: ${contentBlock.type}`);
+              }
+            }
+          } else if (messageItem.content && typeof messageItem.content === 'string') {
+            // Fallback: content might be a string directly
+            messageTexts.push(messageItem.content);
+            console.log('🟣 GPT-5 Content is string (fallback)');
+          } else if (messageItem.text) {
+            // Fallback: text field might exist directly
+            messageTexts.push(messageItem.text);
+            console.log('🟣 GPT-5 Text field exists (fallback)');
+          }
+        }
+        
+        if (messageTexts.length > 0) {
+          // Combine all message texts (in case there are multiple)
+          reply = messageTexts.join('\n\n');
+          console.log(`✅ GPT-5 Reply found via: data.output[type="message"].content[type="output_text"] (${messageTexts.length} text block(s))`);
+        } else {
+          console.warn('⚠️ GPT-5 Message items found but no output_text blocks in content array');
+          console.warn('⚠️ Message item structure:', JSON.stringify(messageItems[0], null, 2));
+        }
+      } else {
+        console.warn('⚠️ GPT-5 No message items found in output array, only reasoning items');
+        // Fallback: try to extract from first item if no type field
+        if (data.output.length > 0 && !data.output[0].type) {
+          reply = data.output[0].content || data.output[0].text || JSON.stringify(data.output[0]);
+          console.log('⚠️ GPT-5 Fallback: Using first item without type field');
+        }
+      }
+      
+      // If still no reply, log what we have
+      if (!reply) {
+        console.error('🔴 GPT-5 No message content found. Available items:', data.output.map((item: any) => ({
+          type: item.type,
+          keys: Object.keys(item),
+          preview: JSON.stringify(item).substring(0, 200)
+        })));
+      }
     } else {
       reply = JSON.stringify(data.output);
+      console.log('✅ GPT-5 Reply found via: data.output (non-string, non-array)');
     }
-    console.log('✅ GPT-5 Reply found via: data.output');
   } else if (data.choices?.[0]?.message?.content) {
     // Standard OpenAI format (fallback)
     reply = data.choices[0].message.content;
@@ -733,6 +811,9 @@ async function callOpenAIResponses(
     console.error('🔴 GPT-5 Responses API Parsing Failed:', {
       modelType,
       availableKeys: Object.keys(data),
+      hasOutput: !!data.output,
+      outputType: Array.isArray(data.output) ? 'array' : typeof data.output,
+      outputLength: Array.isArray(data.output) ? data.output.length : 'N/A',
       fullResponse: JSON.stringify(data, null, 2)
     });
     reply = 'No response generated - check console logs for response structure';
