@@ -1,6 +1,7 @@
 // PHASE B: Model Display Configuration for UI Components - Updated with exact API names
 // Defines visual properties and metadata for all available models
 // Updated to use exact API model names for proper API calls
+// COLOR UPDATE: Updated Gemini models to dark blue (#0B57D0) and Qwen models to red-orange (#E8420A) for better visual distinction
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
@@ -51,21 +52,21 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     name: 'gemini-2.5-flash-preview-05-06',
     displayName: 'Gemini 2.5 Flash',
     shortName: 'Flash',
-    color: '#3B82F6', // blue-500 - Google blue
+    color: '#0B57D0', // Google dark blue - distinct from Grok light blue
     description: 'Google Gemini 2.5 Flash - Lightning fast responses'
   },
   'gemini-2.5-pro-preview-05-06': {
     name: 'gemini-2.5-pro-preview-05-06',
     displayName: 'Gemini 2.5 Pro',
     shortName: 'Pro',
-    color: '#1D4ED8', // blue-700 - Darker blue for Pro
+    color: '#0B57D0', // Google dark blue - distinct from Grok light blue
     description: 'Google Gemini 2.5 Pro - Advanced thinking model'
   },
   'gemini-2.5-flash-lite': {
     name: 'gemini-2.5-flash-lite',
     displayName: 'Gemini 2.5 Flash-Lite',
     shortName: 'Flash-Lite',
-    color: '#4285f4', // Google blue
+    color: '#0B57D0', // Google dark blue - distinct from Grok light blue
     description: 'Google\'s ultra-efficient model - excellent for high-volume debates at minimal cost'
   },
   'grok-4-fast-reasoning': {
@@ -86,14 +87,14 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     name: 'qwen3-max',
     displayName: 'Qwen 3 Max',
     shortName: 'Qwen Max',
-    color: '#FF6B00', // Alibaba orange
+    color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
     description: 'Alibaba\'s 1T parameter flagship with exceptional multilingual and reasoning capabilities'
   },
   'qwen3-30b-a3b': {
     name: 'qwen3-30b-a3b',
     displayName: 'Qwen 3 30B',
     shortName: 'Qwen 30B',
-    color: '#FF6B00', // Alibaba orange
+    color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
     description: 'Cost-effective MoE model with optional reasoning - excellent for scaled debates'
   }
 };
