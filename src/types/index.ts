@@ -20,7 +20,11 @@ export type AvailableModel =
   | 'deepseek-v3' 
   | 'gemini-2.5-flash-preview-05-06' 
   | 'gemini-2.5-pro-preview-05-06'
-  | 'gemini-2.5-flash-lite';
+  | 'gemini-2.5-flash-lite'
+  | 'grok-4-fast-reasoning'
+  | 'grok-4-fast'
+  | 'qwen3-max'
+  | 'qwen3-30b-a3b';
 
 export type ModelPosition = 'pro' | 'con';
 

@@ -67,6 +67,34 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     shortName: 'Flash-Lite',
     color: '#4285f4', // Google blue
     description: 'Google\'s ultra-efficient model - excellent for high-volume debates at minimal cost'
+  },
+  'grok-4-fast-reasoning': {
+    name: 'grok-4-fast-reasoning',
+    displayName: 'Grok 4 Fast Reasoning',
+    shortName: 'Grok Reasoning',
+    color: '#1DA1F2', // X/Twitter blue
+    description: 'xAI\'s fastest model with transparent reasoning and real-time data access'
+  },
+  'grok-4-fast': {
+    name: 'grok-4-fast',
+    displayName: 'Grok 4 Fast',
+    shortName: 'Grok Fast',
+    color: '#1DA1F2', // X/Twitter blue
+    description: 'xAI\'s ultra-fast conversational model for rapid debates'
+  },
+  'qwen3-max': {
+    name: 'qwen3-max',
+    displayName: 'Qwen 3 Max',
+    shortName: 'Qwen Max',
+    color: '#FF6B00', // Alibaba orange
+    description: 'Alibaba\'s 1T parameter flagship with exceptional multilingual and reasoning capabilities'
+  },
+  'qwen3-30b-a3b': {
+    name: 'qwen3-30b-a3b',
+    displayName: 'Qwen 3 30B',
+    shortName: 'Qwen 30B',
+    color: '#FF6B00', // Alibaba orange
+    description: 'Cost-effective MoE model with optional reasoning - excellent for scaled debates'
   }
 };
 

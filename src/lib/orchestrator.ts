@@ -10,6 +10,8 @@
 // ORACLE INTEGRATION: Added DeepSeek-Reasoner Chain of Thought analysis for Oracle functionality
 // PHASE A COMPLETE: Google Gemini 2.5 Flash and Pro integration with unified API architecture
 // PHASE B: Added flexible Oracle model selection for modular analysis
+// PHASE 2 COMPLETE: Added Claude Haiku 4.5 and Gemini 2.5 Flash-Lite with existing API keys
+// PHASE 3 COMPLETE: Added Grok (xAI direct) and Qwen (via OpenRouter) models with new providers
 // INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
 // INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
 
@@ -182,6 +184,44 @@ export const MODEL_CONFIGS = {
     apiKeyEnv: 'GOOGLE_AI_API_KEY',  // ← SAME KEY as other Gemini models!
     costPer1kTokens: { input: 0.0001, output: 0.0004 }, // $0.10/$0.40 per million tokens = $0.0001/$0.0004 per 1k tokens (cheapest!)
     elevenLabsVoiceId: 'QPBKI85w0cdXVqMSJ6WB' // Bella - Warm, engaging female voice
+  },
+  // PHASE 3: Grok models (xAI - Direct API)
+  'grok-4-fast-reasoning': {
+    provider: 'grok',
+    endpoint: 'https://api.x.ai/v1/chat/completions',
+    modelName: 'grok-4-fast-reasoning',
+    maxTokens: 200,
+    apiKeyEnv: 'GROK_API_KEY',
+    costPer1kTokens: { input: 0.0002, output: 0.0005 }, // $0.20/$0.50 per million tokens = $0.0002/$0.0005 per 1k tokens
+    elevenLabsVoiceId: 'BpjGufoPiobT79j2vtj4' // Grok voice
+  },
+  'grok-4-fast': {
+    provider: 'grok',
+    endpoint: 'https://api.x.ai/v1/chat/completions',
+    modelName: 'grok-4-fast-non-reasoning',  // API model ID (different from internal key)
+    maxTokens: 200,
+    apiKeyEnv: 'GROK_API_KEY',
+    costPer1kTokens: { input: 0.0002, output: 0.0005 }, // $0.20/$0.50 per million tokens = $0.0002/$0.0005 per 1k tokens
+    elevenLabsVoiceId: 'BpjGufoPiobT79j2vtj4' // Grok voice
+  },
+  // PHASE 3: Qwen models (via OpenRouter)
+  'qwen3-max': {
+    provider: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    modelName: 'qwen/qwen3-max',  // OpenRouter format with provider prefix
+    maxTokens: 200,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    costPer1kTokens: { input: 0.0012, output: 0.006 }, // $1.20/$6.00 per million tokens = $0.0012/$0.006 per 1k tokens
+    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
+  },
+  'qwen3-30b-a3b': {
+    provider: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    modelName: 'qwen/qwen3-30b-a3b-instruct',  // OpenRouter format with provider prefix
+    maxTokens: 200,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    costPer1kTokens: { input: 0.00015, output: 0.0006 }, // $0.15/$0.60 per million tokens = $0.00015/$0.0006 per 1k tokens
+    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
   }
 } as const;
 
@@ -240,6 +280,8 @@ function getModelKey(model: string): SupportedModel {
 }
 
 // MOCK MODE: Configuration flag - defaults to true when API keys are missing/invalid
+// Note: MOCK_MODE is OR'd - if any key is missing, mock mode is enabled
+// Grok and OpenRouter keys are optional (not checked here) to avoid forcing mock mode
 const MOCK_MODE = process.env.MOCK_MODE === 'true' || 
                   !process.env.OPENAI_API_KEY || 
                   !process.env.ANTHROPIC_API_KEY ||
@@ -728,6 +770,138 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
 }
 
 /**
+ * Unified Grok API caller (xAI - OpenAI-compatible)
+ */
+async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+  
+  if (!apiKey || apiKey === 'YOUR_GROK_API_KEY_PLACEHOLDER') {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+  }
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: config.modelName,
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    }),
+  }, 60000);
+
+  if (!response.ok) {
+    let errorMessage = `${modelType} API error: ${response.status}`;
+    
+    try {
+      const errorData = await response.json();
+      errorMessage += ` - ${errorData.error?.message || 'Unknown error'}`;
+    } catch (jsonError) {
+      const textResponse = await response.text();
+      errorMessage += ` - ${textResponse.substring(0, 100)}...`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  let reply = data.choices[0]?.message?.content || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'length' || finishReason === 'max_tokens') {
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
+  
+  // Calculate token usage and cost (OpenAI-compatible format)
+  const usage = data.usage;
+  const tokenUsage = usage ? {
+    inputTokens: usage.prompt_tokens || 0,
+    outputTokens: usage.completion_tokens || 0,
+    totalTokens: usage.total_tokens || 0,
+    estimatedCost: ((usage.prompt_tokens || 0) * config.costPer1kTokens.input + 
+                   (usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
+  } : undefined;
+  
+  return { reply, tokenUsage };
+}
+
+/**
+ * Unified OpenRouter API caller (for Qwen and future models)
+ */
+async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen3-max' | 'qwen3-30b-a3b', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+  
+  if (!apiKey || apiKey === 'YOUR_OPENROUTER_API_KEY_PLACEHOLDER') {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+  }
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://matrix-arena.pro',  // OpenRouter requirement
+      'X-Title': 'LLM Arena Matrix',  // OpenRouter requirement
+    },
+    body: JSON.stringify({
+      model: config.modelName,  // Includes provider prefix (e.g., 'qwen/qwen3-max')
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    }),
+  }, 60000);
+
+  if (!response.ok) {
+    let errorMessage = `${modelType} API error: ${response.status}`;
+    
+    try {
+      const errorData = await response.json();
+      errorMessage += ` - ${errorData.error?.message || 'Unknown error'}`;
+    } catch (jsonError) {
+      const textResponse = await response.text();
+      errorMessage += ` - ${textResponse.substring(0, 100)}...`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  let reply = data.choices[0]?.message?.content || 'No response generated';
+  
+  // Check if response was truncated at token limit
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'length' || finishReason === 'max_tokens') {
+    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
+    reply = reply.trimEnd() + '...';
+  }
+  
+  // Calculate token usage and cost (OpenAI-compatible format)
+  const usage = data.usage;
+  const tokenUsage = usage ? {
+    inputTokens: usage.prompt_tokens || 0,
+    outputTokens: usage.completion_tokens || 0,
+    totalTokens: usage.total_tokens || 0,
+    estimatedCost: ((usage.prompt_tokens || 0) * config.costPer1kTokens.input + 
+                   (usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
+  } : undefined;
+  
+  return { reply, tokenUsage };
+}
+
+/**
  * Unified Google Gemini API caller supporting multiple Gemini models
  */
 async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
@@ -966,6 +1140,12 @@ export async function callFlexibleOracle(
       case 'google':
         analysis = await callGeminiOracle(oraclePrompt, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', oracleConfigs);
         break;
+      case 'grok':
+        analysis = await callGrokOracle(oraclePrompt, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', oracleConfigs);
+        break;
+      case 'openrouter':
+        analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', oracleConfigs);
+        break;
       default:
         throw new Error(`Unsupported Oracle model provider: ${(config as any).provider}`);
     }
@@ -997,7 +1177,11 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'deepseek-v3': { maxTokens: 16000, temperature: 0.1 },
     'gemini-2.5-flash-preview-05-06': { maxTokens: 8000, temperature: 0.1 },
     'gemini-2.5-pro-preview-05-06': { maxTokens: 30000, temperature: 0.1 },
-    'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 }
+    'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 },
+    'grok-4-fast-reasoning': { maxTokens: 8000, temperature: 0.1 },
+    'grok-4-fast': { maxTokens: 8000, temperature: 0.1 },
+    'qwen3-max': { maxTokens: 8000, temperature: 0.1 },
+    'qwen3-30b-a3b': { maxTokens: 8000, temperature: 0.1 }
   };
   
   return oracleConfigs[modelName] || { maxTokens: 8000, temperature: 0.1 };
@@ -1161,6 +1345,104 @@ async function callDeepSeekOracleFlexible(
 }
 
 /**
+ * Grok Oracle caller - optimized for analysis (xAI - OpenAI-compatible)
+ */
+async function callGrokOracle(
+  oraclePrompt: string,
+  modelType: 'grok-4-fast-reasoning' | 'grok-4-fast',
+  oracleConfig: { maxTokens: number; temperature: number }
+): Promise<string> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+  
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your environment variables.`);
+  }
+  
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: config.modelName,
+      messages: [
+        {
+          role: 'system',
+          content: buildFlexibleOracleSystemPrompt(modelType)
+        },
+        {
+          role: 'user',
+          content: oraclePrompt
+        }
+      ],
+      max_tokens: oracleConfig.maxTokens,
+      temperature: oracleConfig.temperature,
+      stream: false
+    }),
+  }, 90000);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    throw new Error(`Grok Oracle API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || 'No analysis generated';
+}
+
+/**
+ * OpenRouter Oracle caller - optimized for analysis (for Qwen and future models)
+ */
+async function callOpenRouterOracle(
+  oraclePrompt: string,
+  modelType: 'qwen3-max' | 'qwen3-30b-a3b',
+  oracleConfig: { maxTokens: number; temperature: number }
+): Promise<string> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+  
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your environment variables.`);
+  }
+  
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://matrix-arena.pro',  // OpenRouter requirement
+      'X-Title': 'LLM Arena Matrix',  // OpenRouter requirement
+    },
+    body: JSON.stringify({
+      model: config.modelName,  // Includes provider prefix (e.g., 'qwen/qwen3-max')
+      messages: [
+        {
+          role: 'system',
+          content: buildFlexibleOracleSystemPrompt(modelType)
+        },
+        {
+          role: 'user',
+          content: oraclePrompt
+        }
+      ],
+      max_tokens: oracleConfig.maxTokens,
+      temperature: oracleConfig.temperature,
+      stream: false
+    }),
+  }, 90000);
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    throw new Error(`OpenRouter Oracle API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || 'No analysis generated';
+}
+
+/**
  * Gemini Oracle caller - optimized for analysis
  */
 async function callGeminiOracle(
@@ -1246,7 +1528,11 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'deepseek-v3': 'logical and analytical',
     'gemini-2.5-flash-preview-05-06': 'rapid pattern recognition',
     'gemini-2.5-pro-preview-05-06': 'comprehensive synthesis',
-    'gemini-2.5-flash-lite': 'ultra-efficient and focused'
+    'gemini-2.5-flash-lite': 'ultra-efficient and focused',
+    'grok-4-fast-reasoning': 'real-time data access with transparent reasoning',
+    'grok-4-fast': 'ultra-fast analysis with conversational insights',
+    'qwen3-max': 'exceptional multilingual analysis with 1T parameter depth',
+    'qwen3-30b-a3b': 'cost-effective reasoning with efficient analysis'
   };
 
   const strength = modelStrengths[modelName] || 'balanced analytical';
@@ -1321,6 +1607,10 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'gemini-2.5-flash-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-pro-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-flash-lite': '\n\nProvide ultra-efficient analysis with focused pattern recognition.',
+    'grok-4-fast-reasoning': '\n\nUse real-time data access and transparent reasoning chains for analysis.',
+    'grok-4-fast': '\n\nProvide ultra-fast analysis with conversational insights and real-time context.',
+    'qwen3-max': '\n\nLeverage exceptional multilingual capabilities and 1T parameter depth for comprehensive analysis.',
+    'qwen3-30b-a3b': '\n\nApply cost-effective reasoning with efficient multilingual analysis.',
   };
 
   const addition = modelSpecificAdditions[modelType] || modelSpecificAdditions['gpt-4o'];
@@ -1892,6 +2182,12 @@ export async function processDebateTurn(params: {
       break;
     case 'google':
       result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', params.extensivenessLevel);
+      break;
+    case 'grok':
+      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', params.extensivenessLevel);
+      break;
+    case 'openrouter':
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', params.extensivenessLevel);
       break;
     default:
       throw new Error(`Unsupported model provider`);

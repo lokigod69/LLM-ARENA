@@ -125,6 +125,10 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
   'gemini-2.5-flash-preview-05-06', // Gemini Flash
   'gemini-2.5-pro-preview-05-06',   // Gemini Pro
   'gemini-2.5-flash-lite',          // Gemini Flash-Lite
+  'grok-4-fast-reasoning',          // Grok Fast Reasoning
+  'grok-4-fast',                    // Grok Fast
+  'qwen3-max',                      // Qwen 3 Max
+  'qwen3-30b-a3b',                  // Qwen 3 30B
 ];
 
 // Oracle Model Strengths - What each model excels at for analysis
@@ -137,7 +141,11 @@ export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
   'deepseek-v3': 'Fast logical analysis, efficient insights',
   'gemini-2.5-flash-preview-05-06': 'Rapid analysis, quick patterns',
   'gemini-2.5-pro-preview-05-06': 'Large context, comprehensive synthesis',
-  'gemini-2.5-flash-lite': 'Quick insights, cost-effective judgments'
+  'gemini-2.5-flash-lite': 'Quick insights, cost-effective judgments',
+  'grok-4-fast-reasoning': 'Real-time data access, transparent reasoning chains',
+  'grok-4-fast': 'Ultra-fast analysis, conversational insights',
+  'qwen3-max': 'Exceptional multilingual analysis, 1T parameter depth',
+  'qwen3-30b-a3b': 'Cost-effective reasoning, efficient analysis'
 };
 
 // Default Oracle model preference (best reasoning capabilities)
