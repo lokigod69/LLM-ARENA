@@ -60,20 +60,30 @@ interface StepRequest {
  * Execute a single turn in the debate - Enhanced for flexible model system
  */
 export async function POST(request: NextRequest) {
+  // Declare variables outside try block so they're accessible in catch
+  let prevMessage: string | undefined;
+  let model: string | undefined;
+  let originalModel: AvailableModel | undefined;
+  let agreeabilityLevel: number | undefined;
+  let position: 'pro' | 'con' | undefined;
+  let topic: string | undefined;
+  let maxTurns: number | undefined;
+  let extensivenessLevel: number = 3;
+  let personaId: string | undefined;
+  let conversationHistory: Message[] | undefined;
+  
   try {
     const body: StepRequest = await request.json();
-    const { 
-      prevMessage, 
-      model, 
-      originalModel,
-      agreeabilityLevel,
-      position,
-      topic,
-      maxTurns,
-      extensivenessLevel = 3, // Default to balanced if not provided
-      personaId,
-      conversationHistory, // <-- ADDED
-    } = body;
+    prevMessage = body.prevMessage;
+    model = body.model;
+    originalModel = body.originalModel;
+    agreeabilityLevel = body.agreeabilityLevel;
+    position = body.position;
+    topic = body.topic;
+    maxTurns = body.maxTurns;
+    extensivenessLevel = body.extensivenessLevel ?? 3;
+    personaId = body.personaId ?? undefined;
+    conversationHistory = body.conversationHistory;
 
     // Check authentication via cookies
     const c = await cookies();
@@ -180,11 +190,11 @@ export async function POST(request: NextRequest) {
     console.error('💥 Error Stack:', error?.stack);
     console.error('💥 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
     console.error('💥 Request Parameters:', {
-      model,
-      topic,
-      position,
-      agreeabilityLevel,
-      extensivenessLevel,
+      model: model || 'UNKNOWN',
+      topic: topic || 'UNKNOWN',
+      position: position || 'UNKNOWN',
+      agreeabilityLevel: agreeabilityLevel ?? 'UNKNOWN',
+      extensivenessLevel: extensivenessLevel ?? 'UNKNOWN',
       turnNumber: conversationHistory?.length || 0
     });
     
