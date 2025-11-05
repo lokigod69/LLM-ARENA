@@ -183,7 +183,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     
     // NEW: Default flexible model configuration - Updated with exact API names
     modelA: savedState?.modelA ?? { 
-      name: 'gpt-4o' as AvailableModel, 
+      name: 'gpt-5' as AvailableModel, 
       position: 'pro' as ModelPosition, 
       agreeabilityLevel: 7,
       extensivenessLevel: 3 // Default: Balanced response
@@ -315,9 +315,9 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   const syncLegacyState = useCallback(() => {
     setState(prev => {
       // Determine which model is GPT and which is Claude for legacy compatibility
-      const gptIsModelA = prev.modelA.name === 'gpt-4o' || prev.modelA.name === 'gpt-4o-mini';
+      const gptIsModelA = prev.modelA.name === 'gpt-5' || prev.modelA.name === 'gpt-5-mini' || prev.modelA.name === 'gpt-5-nano' || prev.modelA.name === 'gpt-4o-mini';
       const claudeIsModelA = prev.modelA.name === 'claude-3-5-sonnet-20241022';
-      const gptIsModelB = prev.modelB.name === 'gpt-4o' || prev.modelB.name === 'gpt-4o-mini';
+      const gptIsModelB = prev.modelB.name === 'gpt-5' || prev.modelB.name === 'gpt-5-mini' || prev.modelB.name === 'gpt-5-nano' || prev.modelB.name === 'gpt-4o-mini';
       const claudeIsModelB = prev.modelB.name === 'claude-3-5-sonnet-20241022';
       
       let gptMessages = prev.gptMessages;
@@ -461,21 +461,29 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       // PHASE B: Map flexible model names to API-compatible format - Updated for exact API names
       let apiModel: string;
       switch (targetModel) {
-        case 'gpt-4o':
+        case 'gpt-5':
+        case 'gpt-5-mini':
+        case 'gpt-5-nano':
         case 'gpt-4o-mini':
           apiModel = targetModel; // Use exact API model name
           break;
         case 'claude-3-5-sonnet-20241022':
+        case 'claude-haiku-4-5-20251001':
           apiModel = targetModel; // Use exact API model name
           break;
         case 'deepseek-r1':
         case 'deepseek-v3':
         case 'gemini-2.5-flash-preview-05-06':
         case 'gemini-2.5-pro-preview-05-06':
+        case 'gemini-2.5-flash-lite':
+        case 'grok-4-fast-reasoning':
+        case 'grok-4-fast':
+        case 'qwen3-max':
+        case 'qwen3-30b-a3b':
           apiModel = targetModel; // Use exact API model name
           break;
         default:
-          apiModel = 'gpt-4o'; // Default fallback to gpt-4o
+          apiModel = 'gpt-5'; // Default fallback to gpt-5
       }
       
       // --- CHANGE 5 PART A: ADD ACCESS CODE TO REQUEST BODY ---
@@ -1427,7 +1435,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     console.warn('⚠️ setModelPersonality is deprecated. Use setModelA/setModelB instead.');
     // Map legacy calls to new flexible system with updated model names
     setState(prev => {
-      if (model === 'gpt' && (prev.modelA.name === 'gpt-4o' || prev.modelA.name === 'gpt-4o-mini')) {
+      if (model === 'gpt' && (prev.modelA.name === 'gpt-5' || prev.modelA.name === 'gpt-5-mini' || prev.modelA.name === 'gpt-5-nano' || prev.modelA.name === 'gpt-4o-mini')) {
         return {
           ...prev,
           modelA: {
