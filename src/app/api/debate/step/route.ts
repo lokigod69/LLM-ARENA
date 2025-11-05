@@ -173,19 +173,32 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ ...response, remaining: remainingQueries });
-  } catch (error) {
-    console.error('💥 STEP API ERROR (FLEXIBLE):', error);
-    console.error('💥 Error details:', {
-      message: (error as Error).message,
-      stack: (error as Error).stack?.substring(0, 500)
+  } catch (error: any) {
+    console.error('💥 STEP API ERROR (FLEXIBLE):');
+    console.error('💥 Error Type:', error?.constructor?.name || typeof error);
+    console.error('💥 Error Message:', error?.message);
+    console.error('💥 Error Stack:', error?.stack);
+    console.error('💥 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('💥 Request Parameters:', {
+      model,
+      topic,
+      position,
+      agreeabilityLevel,
+      extensivenessLevel,
+      turnNumber: conversationHistory?.length || 0
     });
     
+    // Return detailed error message to client (includes actual error message)
+    const errorMessage = error?.message || 'Failed to execute debate step';
     return NextResponse.json(
       { 
-        error: 'Failed to execute debate step', 
-        details: (error as Error).message,
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? {
+          type: error?.constructor?.name || typeof error,
+          stack: error?.stack?.substring(0, 1000)
+        } : undefined,
         model: 'error',
-        remaining: 'Error' // Add remaining to error response
+        remaining: 'Error'
       },
       { status: 500 }
     );

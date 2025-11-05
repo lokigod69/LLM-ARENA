@@ -613,12 +613,15 @@ async function callOpenAIResponses(
   modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano',
   maxTokens: number
 ): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
-  const config = MODEL_CONFIGS[modelType];
-  const apiKey = process.env[config.apiKeyEnv];
-  
-  if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY_PLACEHOLDER') {
-    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
-  }
+  try {
+    console.log('🔵 callOpenAIResponses: Starting function', { modelType, maxTokens, messageCount: messages.length });
+    
+    const config = MODEL_CONFIGS[modelType];
+    const apiKey = process.env[config.apiKeyEnv];
+    
+    if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY_PLACEHOLDER') {
+      throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+    }
 
   // GPT-5 Responses API accepts EITHER messages array OR string as input
   // Per official docs: input can be messages array directly (recommended)
@@ -646,48 +649,95 @@ async function callOpenAIResponses(
     requestBody: JSON.stringify(requestBody, null, 2)
   });
 
-  const response = await timedFetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  }, 60000);
+  let response: Response;
+  try {
+    response = await timedFetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    }, 60000);
+  } catch (fetchError: any) {
+    console.error('🔴 GPT-5 Fetch Error (network/timeout):', fetchError);
+    console.error('🔴 Fetch Error Details:', {
+      message: fetchError?.message,
+      stack: fetchError?.stack,
+      name: fetchError?.name
+    });
+    throw new Error(`GPT-5 Responses API network error: ${fetchError?.message || 'Unknown fetch error'}`);
+  }
 
-  console.log('🔵 GPT-5 Responses API Response Status:', {
-    modelType,
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok
-  });
+  console.log('🔵 GPT-5 Response Status:', response.status);
+  console.log('🔵 GPT-5 Response OK:', response.ok);
+  console.log('🔵 GPT-5 Response Headers:', Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
-    let errorMessage = `${modelType} Responses API error: ${response.status}`;
+    console.error('🔴 GPT-5 API Error - Response NOT OK');
+    console.error('🔴 GPT-5 Status Code:', response.status);
+    console.error('🔴 GPT-5 Status Text:', response.statusText);
+    console.error('🔴 GPT-5 Request Body:', JSON.stringify(requestBody, null, 2));
+    
+    let errorText = '';
+    let errorData: any = null;
     
     try {
-      const errorData = await response.json();
-      console.error('🔴 GPT-5 Responses API Error:', JSON.stringify(errorData, null, 2));
-      errorMessage += ` - ${errorData.error?.message || JSON.stringify(errorData)}`;
-    } catch (jsonError) {
-      const textResponse = await response.text();
-      console.error('🔴 GPT-5 Responses API Error Text:', textResponse);
-      errorMessage += ` - ${textResponse.substring(0, 200)}`;
+      // Try to get error as text first (might be plain text)
+      errorText = await response.text();
+      console.error('🔴 GPT-5 API Error Response (raw text):', errorText);
+      
+      // Try to parse as JSON
+      try {
+        errorData = JSON.parse(errorText);
+        console.error('🔴 GPT-5 API Error Response (parsed JSON):', JSON.stringify(errorData, null, 2));
+      } catch (parseError) {
+        console.error('🔴 GPT-5 Error is not JSON, using raw text');
+      }
+    } catch (textError) {
+      console.error('🔴 GPT-5 Failed to read error response:', textError);
     }
     
-    throw new Error(errorMessage);
+    // Build detailed error message
+    const errorMessage = errorData?.error?.message || 
+                        errorData?.message || 
+                        errorText || 
+                        `HTTP ${response.status}: ${response.statusText}`;
+    
+    const fullError = `GPT-5 Responses API error (${response.status}): ${errorMessage}`;
+    console.error('🔴 GPT-5 Full Error Message:', fullError);
+    
+    throw new Error(fullError);
   }
 
   // Get and parse response
-  const responseText = await response.text();
-  console.log('🔵 GPT-5 Responses API Raw Response:', responseText.substring(0, 1000));
-  
+  let responseText: string;
   let data: any;
+  
   try {
-    data = JSON.parse(responseText);
-  } catch (parseError) {
-    console.error('🔴 GPT-5 Responses API Parse Error:', parseError);
-    throw new Error(`Failed to parse GPT-5 Responses API response: ${parseError}`);
+    responseText = await response.text();
+    console.log('🔵 GPT-5 Responses API Raw Response (first 1000 chars):', responseText.substring(0, 1000));
+    console.log('🔵 GPT-5 Response Text Length:', responseText.length);
+    
+    try {
+      data = JSON.parse(responseText);
+      console.log('🔵 GPT-5 Response parsed successfully as JSON');
+    } catch (parseError: any) {
+      console.error('🔴 GPT-5 Responses API Parse Error:', parseError);
+      console.error('🔴 Parse Error Details:', {
+        message: parseError?.message,
+        stack: parseError?.stack,
+        responsePreview: responseText.substring(0, 500)
+      });
+      throw new Error(`Failed to parse GPT-5 Responses API response: ${parseError?.message || parseError}`);
+    }
+  } catch (readError: any) {
+    console.error('🔴 GPT-5 Failed to read response text:', readError);
+    console.error('🔴 Read Error Details:', {
+      message: readError?.message,
+      stack: readError?.stack
+    });
+    throw new Error(`Failed to read GPT-5 Responses API response: ${readError?.message || readError}`);
   }
 
   console.log('🔵 GPT-5 Responses API Full Response:', JSON.stringify(data, null, 2));
@@ -829,7 +879,18 @@ async function callOpenAIResponses(
                    (usage.output_tokens || usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
   } : undefined;
 
+  console.log('✅ callOpenAIResponses: Successfully completed', { replyLength: reply.length, hasTokenUsage: !!tokenUsage });
   return { reply, tokenUsage };
+  
+  } catch (error: any) {
+    console.error('🔴 callOpenAIResponses: Unhandled Error in function:');
+    console.error('🔴 Error Type:', error?.constructor?.name || typeof error);
+    console.error('🔴 Error Message:', error?.message);
+    console.error('🔴 Error Stack:', error?.stack);
+    console.error('🔴 Function Parameters:', { modelType, maxTokens, messageCount: messages.length });
+    console.error('🔴 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    throw error; // Re-throw to preserve original error
+  }
 }
 
 /**
@@ -854,7 +915,19 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
 
   // Route GPT-5 models to Responses API
   if (isGPT5) {
-    return callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', maxTokens);
+    try {
+      console.log('🔵 Routing GPT-5 model to Responses API:', modelType);
+      const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', maxTokens);
+      console.log('✅ GPT-5 Responses API call successful');
+      return result;
+    } catch (error: any) {
+      console.error('🔴 Debate Step Failed - GPT-5 Responses API Error:');
+      console.error('🔴 Error Type:', error?.constructor?.name || typeof error);
+      console.error('🔴 Error Message:', error?.message);
+      console.error('🔴 Error Stack:', error?.stack);
+      console.error('🔴 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      throw error; // Re-throw to preserve original error
+    }
   }
 
   // GPT-4o Mini uses standard Chat Completions API
