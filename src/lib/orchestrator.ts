@@ -103,14 +103,32 @@ function trackTokenUsage(
 
 // PLAN B: Model configuration registry for easy extension - Updated with exact API names
 export const MODEL_CONFIGS = {
-  'gpt-4o': {
+  'gpt-5': {
     provider: 'openai',
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    modelName: 'gpt-4o',
+    modelName: 'gpt-5',
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
-    costPer1kTokens: { input: 0.03, output: 0.06 }, // GPT-4o pricing
-    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' // Adam - Professional male voice
+    costPer1kTokens: { input: 0.00125, output: 0.01 }, // GPT-5 pricing: $1.25/$10 per million = $0.00125/$0.01 per 1k
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' // Adam - Professional male voice (same for all OpenAI models)
+  },
+  'gpt-5-mini': {
+    provider: 'openai',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    modelName: 'gpt-5-mini',
+    maxTokens: 200,
+    apiKeyEnv: 'OPENAI_API_KEY',
+    costPer1kTokens: { input: 0.00025, output: 0.002 }, // GPT-5 Mini pricing: $0.25/$2.00 per million = $0.00025/$0.002 per 1k
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' // Adam - Professional male voice (same for all OpenAI models)
+  },
+  'gpt-5-nano': {
+    provider: 'openai',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    modelName: 'gpt-5-nano',
+    maxTokens: 200,
+    apiKeyEnv: 'OPENAI_API_KEY',
+    costPer1kTokens: { input: 0.00005, output: 0.0004 }, // GPT-5 Nano pricing: $0.05/$0.40 per million = $0.00005/$0.0004 per 1k
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM' // Adam - Professional male voice (same for all OpenAI models)
   },
   'gpt-4o-mini': {
     provider: 'openai', 
@@ -234,9 +252,15 @@ function getModelKey(model: string): SupportedModel {
   // Handle different input variations
   switch (normalized) {
     case 'GPT':
-    case 'GPT-4':
+    case 'GPT-5':
     case 'OPENAI':
-      return 'gpt-4o';
+      return 'gpt-5';
+    case 'GPT-5-MINI':
+    case 'GPT5MINI':
+      return 'gpt-5-mini';
+    case 'GPT-5-NANO':
+    case 'GPT5NANO':
+      return 'gpt-5-nano';
     case 'GPT-4-MINI':
     case 'GPT4MINI':
     case 'MINI':
@@ -273,9 +297,9 @@ function getModelKey(model: string): SupportedModel {
       if (normalized in MODEL_CONFIGS) {
         return normalized as SupportedModel;
       }
-      // If no match, default to GPT for backward compatibility
-      console.warn(`Unknown model "${model}", defaulting to gpt-4o`);
-      return 'gpt-4o';
+      // If no match, default to GPT-5 for backward compatibility
+      console.warn(`Unknown model "${model}", defaulting to gpt-5`);
+      return 'gpt-5';
   }
 }
 
@@ -563,7 +587,7 @@ async function timedFetch(
 /**
  * Unified OpenAI API caller supporting multiple OpenAI models
  */
-async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-mini', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -1129,7 +1153,7 @@ export async function callFlexibleOracle(
     
     switch (config.provider) {
       case 'openai':
-        analysis = await callOpenAIOracle(oraclePrompt, modelKey as 'gpt-4o' | 'gpt-4o-mini', oracleConfigs);
+        analysis = await callOpenAIOracle(oraclePrompt, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', oracleConfigs);
         break;
       case 'anthropic':
         analysis = await callAnthropicOracle(oraclePrompt, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', oracleConfigs);
@@ -1169,7 +1193,9 @@ export async function callFlexibleOracle(
  */
 function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; temperature: number } {
   const oracleConfigs: Record<AvailableModel, { maxTokens: number; temperature: number }> = {
-    'gpt-4o': { maxTokens: 16000, temperature: 0.1 },
+    'gpt-5': { maxTokens: 16000, temperature: 0.1 },
+    'gpt-5-mini': { maxTokens: 8000, temperature: 0.1 },
+    'gpt-5-nano': { maxTokens: 8000, temperature: 0.1 },
     'gpt-4o-mini': { maxTokens: 8000, temperature: 0.1 },
     'claude-3-5-sonnet-20241022': { maxTokens: 8000, temperature: 0.1 },
     'claude-haiku-4-5-20251001': { maxTokens: 8000, temperature: 0.1 },
@@ -1192,7 +1218,7 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
  */
 async function callOpenAIOracle(
   oraclePrompt: string, 
-  modelType: 'gpt-4o' | 'gpt-4o-mini',
+  modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
   const config = MODEL_CONFIGS[modelType];
@@ -1520,7 +1546,9 @@ async function callGeminiOracle(
  */
 function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableModel): string {
   const modelStrengths = {
-    'gpt-4o': 'systematic and structured',
+    'gpt-5': 'superior reasoning with advanced writing quality',
+    'gpt-5-mini': 'efficient reasoning with balanced quality and cost',
+    'gpt-5-nano': 'fast insights with ultra-cost-effective analysis',
     'gpt-4o-mini': 'efficient and focused',
     'claude-3-5-sonnet-20241022': 'nuanced and thoughtful',
     'claude-haiku-4-5-20251001': 'fast and efficient',
@@ -1596,7 +1624,9 @@ Think through each step methodically, then provide your comprehensive analysis.`
 
   // Customize for each model's strengths
   const modelSpecificAdditions: Record<string, string> = {
-    'gpt-4o': '\n\nUse systematic, structured analysis with clear logical progression.',
+    'gpt-5': '\n\nUse superior reasoning with advanced writing quality and comprehensive analysis.',
+    'gpt-5-mini': '\n\nProvide efficient reasoning with balanced quality and cost.',
+    'gpt-5-nano': '\n\nProvide fast insights with ultra-cost-effective analysis.',
     'gpt-4o-mini': '\n\nProvide focused, efficient analysis that captures key insights.',
     'claude': '\n\nEmphasize nuanced understanding and thoughtful consideration of complexities.',
     'claude-3-5-sonnet-20241022': '\n\nEmphasize nuanced understanding and thoughtful consideration of complexities.',
@@ -1613,7 +1643,7 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'qwen3-30b-a3b': '\n\nApply cost-effective reasoning with efficient multilingual analysis.',
   };
 
-  const addition = modelSpecificAdditions[modelType] || modelSpecificAdditions['gpt-4o'];
+  const addition = modelSpecificAdditions[modelType] || modelSpecificAdditions['gpt-5'];
   return basePrompt + addition;
 }
 
@@ -2172,7 +2202,7 @@ export async function processDebateTurn(params: {
   // BUG FIX: Pass extensivenessLevel to API callers for dynamic maxTokens
   switch (modelConfig.provider) {
     case 'openai':
-      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-4o' | 'gpt-4o-mini', params.extensivenessLevel);
+      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', params.extensivenessLevel);
       break;
     case 'anthropic':
       result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', params.extensivenessLevel);

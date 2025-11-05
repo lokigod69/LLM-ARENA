@@ -116,7 +116,9 @@ export const DEPTH_DESCRIPTIONS = {
 // PHASE B: Oracle Model Capabilities - Which models are recommended for Oracle analysis
 // Updated to match the debate model selector order
 export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
-  'gpt-4o',                         // OpenAI GPT-4o
+  'gpt-5',                          // OpenAI GPT-5
+  'gpt-5-mini',                     // OpenAI GPT-5 Mini
+  'gpt-5-nano',                     // OpenAI GPT-5 Nano
   'gpt-4o-mini',                    // OpenAI GPT-4o Mini  
   'claude-3-5-sonnet-20241022',     // Anthropic Claude
   'claude-haiku-4-5-20251001',      // Anthropic Claude Haiku
@@ -133,7 +135,9 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
 
 // Oracle Model Strengths - What each model excels at for analysis
 export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
-  'gpt-4o': 'Structured analysis, systematic reasoning',
+  'gpt-5': 'Superior reasoning, advanced writing quality, comprehensive analysis',
+  'gpt-5-mini': 'Efficient reasoning, balanced quality and cost',
+  'gpt-5-nano': 'Fast insights, ultra-cost-effective analysis',
   'gpt-4o-mini': 'Quick insights, cost-effective analysis',
   'claude-3-5-sonnet-20241022': 'Nuanced reasoning, philosophical depth',
   'claude-haiku-4-5-20251001': 'Fast reasoning, efficient analysis',
@@ -153,7 +157,7 @@ export const DEFAULT_ORACLE_MODEL: AvailableModel = 'deepseek-r1';
 
 // PHASE 2: UI Color Schemes using model colors for variety and visual appeal
 export const LENS_COLORS: Record<OracleLens, string> = {
-  scientific: '#10B981',    // emerald-500 (GPT-4o green)
+  scientific: '#10B981',    // emerald-500 (OpenAI GPT-5 green)
   philosophical: '#F59E0B', // amber-500 (Claude orange)  
   logical: '#8B5CF6',       // violet-500 (DeepSeek R1 purple)
   practical: '#7C3AED',     // violet-600 (DeepSeek V3 purple)
@@ -162,7 +166,7 @@ export const LENS_COLORS: Record<OracleLens, string> = {
 };
 
 export const FORMAT_COLORS: Record<OracleOutputFormat, string> = {
-  narrative: '#10B981',     // emerald-500 (GPT-4o green)
+  narrative: '#10B981',     // emerald-500 (OpenAI GPT-5 green)
   bullets: '#F59E0B',       // amber-500 (Claude orange)
   main_argument: '#8B5CF6', // violet-500 (DeepSeek R1 purple)
   puzzle_pieces: '#3B82F6', // blue-500 (Gemini Flash blue)

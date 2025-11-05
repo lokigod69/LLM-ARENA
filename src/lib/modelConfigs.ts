@@ -6,12 +6,26 @@
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
 export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> = {
-  'gpt-4o': {
-    name: 'gpt-4o',
-    displayName: 'GPT-4o',
-    shortName: 'GPT-4o',
-    color: '#10B981', // emerald-500 - Matrix green style
-    description: 'OpenAI GPT-4o - Advanced reasoning and analysis'
+  'gpt-5': {
+    name: 'gpt-5',
+    displayName: 'GPT-5',
+    shortName: 'GPT-5',
+    color: '#10a37f', // OpenAI green
+    description: 'OpenAI\'s flagship model with superior reasoning and writing quality'
+  },
+  'gpt-5-mini': {
+    name: 'gpt-5-mini',
+    displayName: 'GPT-5 Mini',
+    shortName: 'GPT-5 Mini',
+    color: '#10a37f', // OpenAI green
+    description: 'Cost-efficient GPT-5 with reasoning support for quality debates'
+  },
+  'gpt-5-nano': {
+    name: 'gpt-5-nano',
+    displayName: 'GPT-5 Nano',
+    shortName: 'GPT-5 Nano',
+    color: '#10a37f', // OpenAI green
+    description: 'Ultra-efficient GPT-5 for high-volume debates at minimal cost'
   },
   'gpt-4o-mini': {
     name: 'gpt-4o-mini',

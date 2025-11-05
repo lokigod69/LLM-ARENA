@@ -12,7 +12,9 @@ export interface Message {
 
 // PHASE B: Flexible Model Selection Types - Updated with exact API model names
 export type AvailableModel = 
-  | 'gpt-4o' 
+  | 'gpt-5' 
+  | 'gpt-5-mini' 
+  | 'gpt-5-nano'
   | 'gpt-4o-mini' 
   | 'claude-3-5-sonnet-20241022'
   | 'claude-haiku-4-5-20251001'
