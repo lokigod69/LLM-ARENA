@@ -7,6 +7,7 @@
 // FINAL REFINEMENT: Unified layout with STANCE/SCOPE sections, single dice button at bottom, matching text sizes
 // EMOJI UPDATE: Added emojis to scope sliders for concise to academic spectrum
 // PERSONA INTEGRATION: Displays effective slider ranges when a persona is active.
+// PERSONA-AWARE RANDOMIZE: Randomize button disabled when both personas selected, only randomizes non-persona sides when one persona selected, uses effective values for gradient colors to prevent color changes on persona sides.
 
 'use client';
 
@@ -327,7 +328,7 @@ export default function DualPersonalitySlider({
                     disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                   }`}
                   style={{
-                    background: getBackgroundGradient(modelA.agreeabilityLevel),
+                    background: getBackgroundGradient(getEffectiveAgreeability(modelA)),
                   }}
                 />
               </div>
@@ -444,7 +445,7 @@ export default function DualPersonalitySlider({
                     disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                   }`}
                   style={{
-                    background: getBackgroundGradient(modelB.agreeabilityLevel),
+                    background: getBackgroundGradient(getEffectiveAgreeability(modelB)),
                   }}
                 />
               </div>
@@ -716,44 +717,76 @@ export default function DualPersonalitySlider({
         </div>
       </motion.div>
 
-      {/* FINAL REFINEMENT: Single dice button at the bottom */}
+      {/* FINAL REFINEMENT: Single dice button at the bottom - PERSONA-AWARE */}
       <motion.div 
         className="flex justify-center mt-6"
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.4, duration: 0.5 }}
       >
-        <motion.button
-          onClick={() => {
-            // Randomize personalities and extensiveness
+        {(() => {
+          // Check persona states
+          const hasPersonaA = modelA.personaId !== null && modelA.personaId !== undefined;
+          const hasPersonaB = modelB.personaId !== null && modelB.personaId !== undefined;
+          const bothPersonasSelected = hasPersonaA && hasPersonaB;
+          const onePersonaSelected = (hasPersonaA && !hasPersonaB) || (!hasPersonaA && hasPersonaB);
+
+          // Persona-aware randomization handler
+          const handleRandomize = () => {
+            // Safety: Don't randomize if both personas selected
+            if (bothPersonasSelected) return;
+
+            // Generate random values
             const randomLevelA = Math.floor(Math.random() * 11);
             const randomLevelB = Math.floor(Math.random() * 11);
             const randomExtensiveA = Math.floor(Math.random() * 5) + 1;
             const randomExtensiveB = Math.floor(Math.random() * 5) + 1;
             const positionsA = Math.random() > 0.5 ? 'pro' : 'con';
             const positionsB = positionsA === 'pro' ? 'con' : 'pro';
-            
-            onModelAChange({
-              ...modelA,
-              agreeabilityLevel: randomLevelA,
-              position: positionsA as ModelPosition,
-              extensivenessLevel: randomExtensiveA
-            });
-            onModelBChange({
-              ...modelB,
-              agreeabilityLevel: randomLevelB,
-              position: positionsB as ModelPosition,
-              extensivenessLevel: randomExtensiveB
-            });
-          }}
-          disabled={disabled}
-          className="p-3 bg-matrix-dark/50 rounded-full text-5xl hover:bg-matrix-green/20 transition-colors duration-300 disabled:opacity-50"
-          whileHover={{ scale: 1.1, rotate: 360 }}
-          whileTap={{ scale: 0.9 }}
-          title="Randomize stance and scope settings"
-        >
-          🎲
-        </motion.button>
+
+            // Model A: Only randomize if NO persona
+            if (!hasPersonaA) {
+              onModelAChange({
+                ...modelA,
+                agreeabilityLevel: randomLevelA,
+                position: positionsA as ModelPosition,
+                extensivenessLevel: randomExtensiveA
+              });
+            }
+
+            // Model B: Only randomize if NO persona
+            if (!hasPersonaB) {
+              onModelBChange({
+                ...modelB,
+                agreeabilityLevel: randomLevelB,
+                position: positionsB as ModelPosition,
+                extensivenessLevel: randomExtensiveB
+              });
+            }
+          };
+
+          const isButtonDisabled = disabled || bothPersonasSelected;
+          const buttonTitle = bothPersonasSelected 
+            ? 'Cannot randomize - both personas selected' 
+            : 'Randomize agreeability, extensiveness, and positions';
+
+          return (
+            <motion.button
+              onClick={handleRandomize}
+              disabled={isButtonDisabled}
+              className={`p-3 bg-matrix-dark/50 rounded-full text-5xl transition-colors duration-300 ${
+                bothPersonasSelected 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'cursor-pointer hover:bg-matrix-green/20'
+              } ${disabled ? 'opacity-50' : ''}`}
+              whileHover={!isButtonDisabled ? { scale: 1.1, rotate: 360 } : {}}
+              whileTap={!isButtonDisabled ? { scale: 0.9 } : {}}
+              title={buttonTitle}
+            >
+              🎲
+            </motion.button>
+          );
+        })()}
       </motion.div>
 
       <style jsx>{`
