@@ -73,14 +73,14 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     name: 'grok-4-fast-reasoning',
     displayName: 'Grok 4 Fast Reasoning',
     shortName: 'Grok Reasoning',
-    color: '#1DA1F2', // X/Twitter blue
+    color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s fastest model with transparent reasoning and real-time data access'
   },
   'grok-4-fast': {
     name: 'grok-4-fast',
     displayName: 'Grok 4 Fast',
     shortName: 'Grok Fast',
-    color: '#1DA1F2', // X/Twitter blue
+    color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s ultra-fast conversational model for rapid debates'
   },
   'qwen3-max': {
