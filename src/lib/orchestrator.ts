@@ -13,7 +13,11 @@
 // PHASE 2 COMPLETE: Added Claude Haiku 4.5 and Gemini 2.5 Flash-Lite with existing API keys
 // PHASE 3 COMPLETE: Added Grok (xAI direct) and Qwen (via OpenRouter) models with new providers
 // GPT-5 UPDATE: Removed GPT-4o, added GPT-5 family (gpt-5, gpt-5-mini, gpt-5-nano) with correct model IDs
-// GPT-5 FIX: Added conditional parameter handling - GPT-5 uses 'max_completion_tokens' and only supports temperature=1 (default, omitted), GPT-4o Mini uses 'max_tokens' and custom temperature
+// GPT-5 RESPONSES API: GPT-5 models use /v1/responses endpoint (not /v1/chat/completions) with different parameters:
+//   - Uses 'input' (string) instead of 'messages' (array)
+//   - Uses 'max_output_tokens' instead of 'max_tokens'
+//   - Uses 'reasoning.effort' instead of 'temperature' (temperature not supported)
+//   - GPT-4o Mini continues using Chat Completions API with standard parameters
 // INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
 // INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
 
@@ -593,7 +597,163 @@ async function timedFetch(
 }
 
 /**
+ * GPT-5 Responses API caller - GPT-5 models use /v1/responses endpoint (not /v1/chat/completions)
+ * Uses different parameter format: input (string), max_output_tokens, reasoning.effort
+ */
+async function callOpenAIResponses(
+  messages: any[], 
+  modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano',
+  maxTokens: number
+): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+  
+  if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY_PLACEHOLDER') {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+  }
+
+  // Convert messages array to input string format for Responses API
+  const systemPrompt = messages.find(m => m.role === 'system')?.content || '';
+  const conversationMessages = messages.filter(m => m.role !== 'system');
+  
+  // Build input string: system prompt first, then conversation
+  let input = '';
+  if (systemPrompt) {
+    input += `System: ${systemPrompt}\n\n`;
+  }
+  input += conversationMessages.map(m => {
+    const role = m.role === 'assistant' ? 'Assistant' : 'User';
+    return `${role}: ${m.content}`;
+  }).join('\n\n');
+
+  // GPT-5 Responses API request body
+  const requestBody = {
+    model: config.modelName,
+    input: input,
+    max_output_tokens: maxTokens,
+    reasoning: {
+      effort: 'minimal' as const  // Can be: minimal, low, medium, high
+    }
+    // NO temperature, top_p, logprobs - these cause errors!
+  };
+
+  console.log('🔵 GPT-5 Responses API Request:', {
+    modelType,
+    modelName: config.modelName,
+    endpoint: 'https://api.openai.com/v1/responses',
+    inputLength: input.length,
+    maxOutputTokens: maxTokens,
+    requestBody: JSON.stringify(requestBody, null, 2)
+  });
+
+  const response = await timedFetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  }, 60000);
+
+  console.log('🔵 GPT-5 Responses API Response Status:', {
+    modelType,
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  });
+
+  if (!response.ok) {
+    let errorMessage = `${modelType} Responses API error: ${response.status}`;
+    
+    try {
+      const errorData = await response.json();
+      console.error('🔴 GPT-5 Responses API Error:', JSON.stringify(errorData, null, 2));
+      errorMessage += ` - ${errorData.error?.message || JSON.stringify(errorData)}`;
+    } catch (jsonError) {
+      const textResponse = await response.text();
+      console.error('🔴 GPT-5 Responses API Error Text:', textResponse);
+      errorMessage += ` - ${textResponse.substring(0, 200)}`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  // Get and parse response
+  const responseText = await response.text();
+  console.log('🔵 GPT-5 Responses API Raw Response:', responseText.substring(0, 1000));
+  
+  let data: any;
+  try {
+    data = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('🔴 GPT-5 Responses API Parse Error:', parseError);
+    throw new Error(`Failed to parse GPT-5 Responses API response: ${parseError}`);
+  }
+
+  console.log('🔵 GPT-5 Responses API Full Response:', JSON.stringify(data, null, 2));
+  console.log('🔵 GPT-5 Response Keys:', Object.keys(data));
+
+  // Check for error in response
+  if (data.error) {
+    console.error('🔴 GPT-5 Responses API Error in Response:', JSON.stringify(data.error, null, 2));
+    throw new Error(`GPT-5 Responses API error: ${data.error.message || JSON.stringify(data.error)}`);
+  }
+
+  // Parse GPT-5 Responses API format - response structure may vary
+  let reply: string | undefined;
+  
+  // Try different possible response paths for Responses API
+  if (data.output) {
+    // Responses API format: data.output (string or array)
+    if (typeof data.output === 'string') {
+      reply = data.output;
+    } else if (Array.isArray(data.output) && data.output.length > 0) {
+      // If output is an array, try to extract text
+      reply = data.output[0].content || data.output[0].text || JSON.stringify(data.output[0]);
+    } else {
+      reply = JSON.stringify(data.output);
+    }
+    console.log('✅ GPT-5 Reply found via: data.output');
+  } else if (data.choices?.[0]?.message?.content) {
+    // Standard OpenAI format (fallback)
+    reply = data.choices[0].message.content;
+    console.log('✅ GPT-5 Reply found via: data.choices[0].message.content');
+  } else if (data.content) {
+    reply = typeof data.content === 'string' ? data.content : JSON.stringify(data.content);
+    console.log('✅ GPT-5 Reply found via: data.content');
+  } else if (data.text) {
+    reply = data.text;
+    console.log('✅ GPT-5 Reply found via: data.text');
+  } else if (data.response) {
+    reply = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
+    console.log('✅ GPT-5 Reply found via: data.response');
+  }
+
+  if (!reply) {
+    console.error('🔴 GPT-5 Responses API Parsing Failed:', {
+      modelType,
+      availableKeys: Object.keys(data),
+      fullResponse: JSON.stringify(data, null, 2)
+    });
+    reply = 'No response generated - check console logs for response structure';
+  }
+
+  // Calculate token usage (Responses API may use different field names)
+  const usage = data.usage || data.token_usage;
+  const tokenUsage = usage ? {
+    inputTokens: usage.input_tokens || usage.prompt_tokens || 0,
+    outputTokens: usage.output_tokens || usage.completion_tokens || 0,
+    totalTokens: usage.total_tokens || (usage.input_tokens || 0) + (usage.output_tokens || 0),
+    estimatedCost: ((usage.input_tokens || usage.prompt_tokens || 0) * config.costPer1kTokens.input + 
+                   (usage.output_tokens || usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
+  } : undefined;
+
+  return { reply, tokenUsage };
+}
+
+/**
  * Unified OpenAI API caller supporting multiple OpenAI models
+ * GPT-5 models route to Responses API, GPT-4o Mini uses Chat Completions API
  */
 async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
@@ -606,24 +766,23 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
-  // GPT-5 models require 'max_completion_tokens' and only support temperature=1 (default)
-  // GPT-4o Mini uses 'max_tokens' and supports custom temperature
-  const isGPT5 = config.modelName.includes('gpt-5');
+  // GPT-5 models use Responses API (/v1/responses), GPT-4o Mini uses Chat Completions API
+  const isGPT5 = config.modelName.includes('gpt-5-2025-08-07') || 
+                 config.modelName.includes('gpt-5-mini-2025-08-07') || 
+                 config.modelName.includes('gpt-5-nano-2025-08-07');
 
-  // Build request body conditionally for GPT-5 vs other models
-  const requestBody: any = {
+  // Route GPT-5 models to Responses API
+  if (isGPT5) {
+    return callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', maxTokens);
+  }
+
+  // GPT-4o Mini uses standard Chat Completions API
+  const requestBody = {
     model: config.modelName,
     messages: messages,
+    max_tokens: maxTokens,
+    temperature: 0.7,
   };
-
-  if (isGPT5) {
-    // GPT-5: Use max_completion_tokens, omit temperature (uses default 1)
-    requestBody.max_completion_tokens = maxTokens;
-  } else {
-    // GPT-4o Mini: Use max_tokens, set custom temperature
-    requestBody.max_tokens = maxTokens;
-    requestBody.temperature = 0.7;
-  }
 
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -1246,12 +1405,29 @@ async function callOpenAIOracle(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
-  // GPT-5 models require 'max_completion_tokens' and only support temperature=1 (default)
-  // GPT-4o Mini uses 'max_tokens' and supports custom temperature
-  const isGPT5 = config.modelName.includes('gpt-5');
+  // GPT-5 models use Responses API (/v1/responses), GPT-4o Mini uses Chat Completions API
+  const isGPT5 = config.modelName.includes('gpt-5-2025-08-07') || 
+                 config.modelName.includes('gpt-5-mini-2025-08-07') || 
+                 config.modelName.includes('gpt-5-nano-2025-08-07');
   
-  // Build request body conditionally for GPT-5 vs other models
-  const requestBody: any = {
+  if (isGPT5) {
+    // GPT-5: Use Responses API
+    const messages = [
+      {
+        role: 'system' as const,
+        content: buildFlexibleOracleSystemPrompt(modelType)
+      },
+      {
+        role: 'user' as const,
+        content: oraclePrompt
+      }
+    ];
+    const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', oracleConfig.maxTokens);
+    return result.reply;
+  }
+  
+  // GPT-4o Mini: Use Chat Completions API
+  const requestBody = {
     model: config.modelName,
     messages: [
       {
@@ -1263,17 +1439,10 @@ async function callOpenAIOracle(
         content: oraclePrompt
       }
     ],
+    max_tokens: oracleConfig.maxTokens,
+    temperature: oracleConfig.temperature,
     stream: false
   };
-
-  if (isGPT5) {
-    // GPT-5: Use max_completion_tokens, omit temperature (uses default 1)
-    requestBody.max_completion_tokens = oracleConfig.maxTokens;
-  } else {
-    // GPT-4o Mini: Use max_tokens, set custom temperature
-    requestBody.max_tokens = oracleConfig.maxTokens;
-    requestBody.temperature = oracleConfig.temperature;
-  }
   
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
