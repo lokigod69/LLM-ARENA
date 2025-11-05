@@ -770,13 +770,30 @@ async function callOpenAIResponses(
       console.log(`🟣 GPT-5 Output Array: ${data.output.length} items`);
       
       // Log all item types for debugging
-      const itemTypes = data.output.map((item: any, index: number) => ({
-        index,
-        type: item.type,
-        hasContent: !!item.content,
-        hasText: !!item.text,
-        contentPreview: item.content?.substring(0, 50) || item.text?.substring(0, 50) || 'N/A'
-      }));
+      const itemTypes = data.output.map((item: any, index: number) => {
+        // Helper to safely extract preview text from content (handles both array and string)
+        let contentPreview = 'N/A';
+        if (item.content) {
+          if (Array.isArray(item.content)) {
+            // Content is array: extract text from first output_text block
+            const firstTextBlock = item.content.find((block: any) => block.type === 'output_text' && block.text);
+            contentPreview = firstTextBlock?.text?.substring(0, 50) || 'Array (no text)';
+          } else if (typeof item.content === 'string') {
+            // Content is string: use directly
+            contentPreview = item.content.substring(0, 50);
+          }
+        } else if (item.text && typeof item.text === 'string') {
+          contentPreview = item.text.substring(0, 50);
+        }
+        
+        return {
+          index,
+          type: item.type,
+          hasContent: !!item.content,
+          hasText: !!item.text,
+          contentPreview
+        };
+      });
       console.log('🟣 GPT-5 Output Item Types:', itemTypes);
       
       // Find message items (skip reasoning items)
@@ -2547,10 +2564,23 @@ export async function processDebateTurn(params: {
   console.log('🌐 SENDING TO API:', {
     model: params.model,
     historyCount: messages.length,
-    lastThreeMessages: messages.slice(-3).map(m => ({
-      role: m.role,
-      content: m.content.slice(0, 50)
-    }))
+    lastThreeMessages: messages.slice(-3).map(m => {
+      // Safely extract content preview (handles both string and array)
+      let contentPreview = 'N/A';
+      if (m.content) {
+        if (typeof m.content === 'string') {
+          contentPreview = m.content.slice(0, 50);
+        } else if (Array.isArray(m.content)) {
+          contentPreview = `[Array: ${m.content.length} items]`;
+        } else {
+          contentPreview = String(m.content).slice(0, 50);
+        }
+      }
+      return {
+        role: m.role,
+        content: contentPreview
+      };
+    })
   });
   
   let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
