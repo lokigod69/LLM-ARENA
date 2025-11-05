@@ -149,6 +149,9 @@ export async function POST(request: NextRequest) {
     
     console.log('🎯 STEP API: Calling orchestrator with flexible model system...');
     
+    // Calculate turnNumber from conversationHistory length
+    const turnNumber = conversationHistory?.length || 0;
+    
     const response = await processDebateTurn({ // <-- RENAMED
       prevMessage, 
       model, // Pass the model string directly - orchestrator will normalize it
@@ -158,7 +161,8 @@ export async function POST(request: NextRequest) {
       maxTurns,
       extensivenessLevel,
       personaId: personaId || undefined,
-      conversationHistory, // <-- ADDED
+      conversationHistory: conversationHistory || [], // <-- ADDED: Ensure array exists
+      turnNumber, // <-- ADDED: Calculate from conversation history
     });
     
     console.log('🎯 STEP API: Orchestrator response received (FLEXIBLE):', {

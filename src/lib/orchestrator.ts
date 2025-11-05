@@ -293,9 +293,15 @@ function getModelKey(model: string): SupportedModel {
     case 'PRO':
       return 'gemini-2.5-pro-preview-05-06';
     default:
-      // Try exact match first
-      if (normalized in MODEL_CONFIGS) {
-        return normalized as SupportedModel;
+      // Try exact match first (check original lowercase model string)
+      const modelLower = model.toLowerCase().trim();
+      if (modelLower in MODEL_CONFIGS) {
+        return modelLower as SupportedModel;
+      }
+      // Try normalized uppercase match (just in case)
+      const normalizedLower = normalized.toLowerCase();
+      if (normalizedLower in MODEL_CONFIGS) {
+        return normalizedLower as SupportedModel;
       }
       // If no match, default to GPT-5 for backward compatibility
       console.warn(`Unknown model "${model}", defaulting to gpt-5`);
@@ -2198,6 +2204,12 @@ export async function processDebateTurn(params: {
 
   const modelKey = getModelKey(params.model);
   const modelConfig = MODEL_CONFIGS[modelKey];
+
+  // Validate model config exists
+  if (!modelConfig) {
+    console.error(`❌ ORCHESTRATOR ERROR: Model config not found for key "${modelKey}" (original: "${params.model}")`);
+    throw new Error(`Model configuration not found for: ${params.model}`);
+  }
 
   // BUG FIX: Pass extensivenessLevel to API callers for dynamic maxTokens
   switch (modelConfig.provider) {
