@@ -4,13 +4,55 @@
 // - Supports both persona voices (unique per persona) and model voices (shared per model)
 // - Includes error handling, rate limiting, and caching support
 // - Returns audio blob in MP3 format
+// - ADMIN TOGGLE: Checks global TTS enabled state from KV before processing (returns 503 if disabled)
 
 import { NextResponse } from 'next/server';
 import { PERSONAS } from '@/lib/personas';
 import { MODEL_CONFIGS } from '@/lib/orchestrator';
 
+// Helper function to check TTS enabled state from KV
+async function checkTTSEnabled(): Promise<boolean> {
+  try {
+    const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
+    const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.KV_TOKEN;
+    
+    if (!KV_URL || !KV_TOKEN) {
+      // If KV not configured, default to enabled (backward compatibility)
+      console.log('⚠️ TTS API: KV not configured, defaulting to enabled');
+      return true;
+    }
+
+    const url = `${KV_URL}/GET/tts-enabled`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+    });
+
+    if (!response.ok) {
+      // If key doesn't exist or error, default to enabled (backward compatibility)
+      console.log('⚠️ TTS API: Could not check TTS status, defaulting to enabled');
+      return true;
+    }
+
+    const result = await response.json();
+    const enabled = result?.result === 'true' || result?.result === true;
+    
+    return enabled;
+  } catch (error) {
+    // On error, default to enabled (backward compatibility)
+    console.log('⚠️ TTS API: Error checking TTS status, defaulting to enabled:', error);
+    return true;
+  }
+}
+
 export async function POST(request: Request) {
   try {
+    // Check if TTS is enabled globally (admin toggle)
+    const ttsEnabled = await checkTTSEnabled();
+    if (!ttsEnabled) {
+      console.log('🚫 TTS API: TTS is disabled by admin');
+      return new NextResponse('TTS is temporarily disabled', { status: 503 });
+    }
+
     const { text, personaId, modelName } = await request.json();
 
     // LOG: What we received

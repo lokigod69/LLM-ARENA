@@ -1,11 +1,12 @@
 // Admin Panel Component
-// Matrix-themed UI for admin token generation
+// Matrix-themed UI for admin token generation and TTS control
 // Only visible when logged in with admin code
 // UI FIX: Panel now starts collapsed by default
+// TTS TOGGLE: Added TTS enable/disable toggle for global control
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function AdminPanel() {
@@ -17,6 +18,10 @@ export function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [copiedTokenIndex, setCopiedTokenIndex] = useState<number | null>(null);
   const [copyAllClicked, setCopyAllClicked] = useState(false);
+  
+  // TTS Toggle State
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const [isTogglingTts, setIsTogglingTts] = useState(false);
 
   const generateTokens = async () => {
     setIsGenerating(true);
@@ -70,6 +75,55 @@ export function AdminPanel() {
       }, 2000);
     } catch (err) {
       console.error('Failed to copy all tokens:', err);
+    }
+  };
+
+  // Load TTS status on mount
+  useEffect(() => {
+    const loadTtsStatus = async () => {
+      try {
+        const response = await fetch('/api/admin/tts-status');
+        if (response.ok) {
+          const data = await response.json();
+          setTtsEnabled(data.enabled || false);
+        }
+      } catch (err) {
+        console.error('Failed to load TTS status:', err);
+      }
+    };
+    
+    if (isOpen) {
+      loadTtsStatus();
+    }
+  }, [isOpen]);
+
+  // Toggle TTS
+  const handleTtsToggle = async () => {
+    setIsTogglingTts(true);
+    try {
+      const newState = !ttsEnabled;
+      const response = await fetch('/api/admin/toggle-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          adminCode: '6969',
+          enabled: newState 
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTtsEnabled(data.enabled);
+        alert(`TTS ${data.enabled ? 'enabled' : 'disabled'} successfully!`);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to toggle TTS: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error toggling TTS:', err);
+      alert('Error toggling TTS. Please try again.');
+    } finally {
+      setIsTogglingTts(false);
     }
   };
 
@@ -203,6 +257,35 @@ export function AdminPanel() {
                     </div>
                   </div>
                 )}
+
+                {/* TTS Toggle Section */}
+                <div className="border-t border-matrix-green/30 pt-4">
+                  <h3 className="text-matrix-green font-matrix-code text-sm mb-2">
+                    🎤 TEXT-TO-SPEECH CONTROL
+                  </h3>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ttsEnabled}
+                      onChange={handleTtsToggle}
+                      disabled={isTogglingTts}
+                      className="w-5 h-5 accent-matrix-green cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <span className="text-matrix-green font-matrix-mono">
+                      {ttsEnabled ? '✅ TTS Enabled' : '❌ TTS Disabled'}
+                    </span>
+                  </label>
+                  <p className="text-xs text-matrix-green/60 mt-1 font-matrix-mono">
+                    {ttsEnabled 
+                      ? 'Users can use text-to-speech (costs money)'
+                      : 'TTS disabled - prevents ElevenLabs usage'}
+                  </p>
+                  {isTogglingTts && (
+                    <p className="text-xs text-matrix-green/80 mt-1 font-matrix-mono">
+                      Updating...
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
