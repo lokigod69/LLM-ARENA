@@ -12,6 +12,8 @@
 // PHASE B: Added flexible Oracle model selection for modular analysis
 // PHASE 2 COMPLETE: Added Claude Haiku 4.5 and Gemini 2.5 Flash-Lite with existing API keys
 // PHASE 3 COMPLETE: Added Grok (xAI direct) and Qwen (via OpenRouter) models with new providers
+// GPT-5 UPDATE: Removed GPT-4o, added GPT-5 family (gpt-5, gpt-5-mini, gpt-5-nano) with correct model IDs
+// GPT-5 FIX: Added conditional parameter handling - GPT-5 uses 'max_completion_tokens', GPT-4o Mini uses 'max_tokens'
 // INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
 // INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
 
@@ -604,6 +606,9 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
+  // GPT-5 models require 'max_completion_tokens', GPT-4o Mini uses 'max_tokens'
+  const isGPT5 = config.modelName.includes('gpt-5');
+
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -613,7 +618,10 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
     body: JSON.stringify({
       model: config.modelName,
       messages: messages,
-      max_tokens: maxTokens,
+      ...(isGPT5 
+        ? { max_completion_tokens: maxTokens }  // GPT-5 uses this parameter
+        : { max_tokens: maxTokens }             // GPT-4o Mini uses this parameter
+      ),
       temperature: 0.7,
     }),
   }, 60000);
@@ -1230,6 +1238,9 @@ async function callOpenAIOracle(
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
+  // GPT-5 models require 'max_completion_tokens', GPT-4o Mini uses 'max_tokens'
+  const isGPT5 = config.modelName.includes('gpt-5');
+  
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
     headers: {
@@ -1248,7 +1259,10 @@ async function callOpenAIOracle(
           content: oraclePrompt
         }
       ],
-      max_tokens: oracleConfig.maxTokens,
+      ...(isGPT5 
+        ? { max_completion_tokens: oracleConfig.maxTokens }  // GPT-5 uses this parameter
+        : { max_tokens: oracleConfig.maxTokens }             // GPT-4o Mini uses this parameter
+      ),
       temperature: oracleConfig.temperature,
       stream: false
     }),
