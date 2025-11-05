@@ -1159,32 +1159,87 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
-  const response = await timedFetch(config.endpoint, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: config.modelName,
-      messages: messages,
-      max_tokens: maxTokens,
-      temperature: 0.7,
-    }),
-  }, 60000);
+  // Build request body
+  const requestBody = {
+    model: config.modelName,
+    messages: messages,
+    max_tokens: maxTokens,
+    temperature: 0.7,
+  };
+
+  // 🟢 DETAILED GROK REQUEST LOGGING
+  console.log('🟢 GROK API Request:', {
+    modelType,
+    endpoint: config.endpoint,
+    modelName: config.modelName,
+    maxTokens,
+    temperature: 0.7,
+    messageCount: messages.length,
+    requestBody: JSON.stringify(requestBody, null, 2),
+    messagesPreview: messages.map(m => ({
+      role: m.role,
+      contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown'
+    }))
+  });
+
+  let response: Response;
+  try {
+    response = await timedFetch(config.endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    }, 60000);
+  } catch (fetchError: any) {
+    console.error('🔴 Grok Fetch Error (network/timeout):', fetchError);
+    console.error('🔴 Grok Fetch Error Details:', {
+      message: fetchError?.message,
+      stack: fetchError?.stack,
+      name: fetchError?.name
+    });
+    throw new Error(`Grok API network error: ${fetchError?.message || 'Unknown fetch error'}`);
+  }
+
+  console.log('🟢 Grok Response Status:', response.status);
+  console.log('🟢 Grok Response OK:', response.ok);
 
   if (!response.ok) {
-    let errorMessage = `${modelType} API error: ${response.status}`;
+    console.error('🔴 Grok API Error - Response NOT OK');
+    console.error('🔴 Grok Status Code:', response.status);
+    console.error('🔴 Grok Status Text:', response.statusText);
+    console.error('🔴 Grok Request Body:', JSON.stringify(requestBody, null, 2));
+    
+    let errorText = '';
+    let errorData: any = null;
     
     try {
-      const errorData = await response.json();
-      errorMessage += ` - ${errorData.error?.message || 'Unknown error'}`;
-    } catch (jsonError) {
-      const textResponse = await response.text();
-      errorMessage += ` - ${textResponse.substring(0, 100)}...`;
+      // Try to get error as text first (might be plain text)
+      errorText = await response.text();
+      console.error('🔴 Grok API Error Response (raw text):', errorText);
+      
+      // Try to parse as JSON
+      try {
+        errorData = JSON.parse(errorText);
+        console.error('🔴 Grok API Error Response (parsed JSON):', JSON.stringify(errorData, null, 2));
+      } catch (parseError) {
+        console.error('🔴 Grok Error is not JSON, using raw text');
+      }
+    } catch (textError) {
+      console.error('🔴 Grok Failed to read error response:', textError);
     }
     
-    throw new Error(errorMessage);
+    // Build detailed error message
+    const errorMessage = errorData?.error?.message || 
+                        errorData?.message || 
+                        errorText || 
+                        `HTTP ${response.status}: ${response.statusText}`;
+    
+    const fullError = `Grok API error (${response.status}): ${errorMessage}`;
+    console.error('🔴 Grok Full Error Message:', fullError);
+    
+    throw new Error(fullError);
   }
 
   const data = await response.json();
