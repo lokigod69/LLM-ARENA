@@ -19,12 +19,19 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     color: '#059669', // emerald-600 - Darker green variant
     description: 'OpenAI GPT-4o Mini - Fast and efficient'
   },
-  'claude-3-5-sonnet-20241022': {
+  'claude-3-5-sonnet-20241022': {  // ← KEY UNCHANGED
     name: 'claude-3-5-sonnet-20241022',
-    displayName: 'Claude 3.5 Sonnet',
-    shortName: 'Claude',
+    displayName: 'Claude Sonnet 4.5',  // ← Updated display name
+    shortName: 'Sonnet 4.5',
     color: '#F59E0B', // amber-500 - Matrix orange
-    description: 'Anthropic Claude 3.5 Sonnet - Thoughtful and nuanced'
+    description: 'Anthropic\'s latest flagship model with best-in-class coding and natural dialogue'
+  },
+  'claude-haiku-4-5-20251001': {
+    name: 'claude-haiku-4-5-20251001',
+    displayName: 'Claude Haiku 4.5',
+    shortName: 'Haiku 4.5',
+    color: '#F59E0B', // amber-500 - Same Claude orange
+    description: 'Anthropic\'s fastest model with near-frontier intelligence - 90% of Sonnet quality at 4-5x speed'
   },
   'deepseek-r1': {
     name: 'deepseek-r1',
@@ -53,6 +60,13 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     shortName: 'Pro',
     color: '#1D4ED8', // blue-700 - Darker blue for Pro
     description: 'Google Gemini 2.5 Pro - Advanced thinking model'
+  },
+  'gemini-2.5-flash-lite': {
+    name: 'gemini-2.5-flash-lite',
+    displayName: 'Gemini 2.5 Flash-Lite',
+    shortName: 'Flash-Lite',
+    color: '#4285f4', // Google blue
+    description: 'Google\'s ultra-efficient model - excellent for high-volume debates at minimal cost'
   }
 };
 

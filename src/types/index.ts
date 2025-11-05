@@ -15,10 +15,12 @@ export type AvailableModel =
   | 'gpt-4o' 
   | 'gpt-4o-mini' 
   | 'claude-3-5-sonnet-20241022'
+  | 'claude-haiku-4-5-20251001'
   | 'deepseek-r1' 
   | 'deepseek-v3' 
   | 'gemini-2.5-flash-preview-05-06' 
-  | 'gemini-2.5-pro-preview-05-06';
+  | 'gemini-2.5-pro-preview-05-06'
+  | 'gemini-2.5-flash-lite';
 
 export type ModelPosition = 'pro' | 'con';
 

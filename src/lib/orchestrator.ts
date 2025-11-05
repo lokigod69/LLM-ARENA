@@ -119,14 +119,23 @@ export const MODEL_CONFIGS = {
     costPer1kTokens: { input: 0.00015, output: 0.0006 }, // GPT-4o mini pricing
     elevenLabsVoiceId: 'TxGEqnHWrfWFTfGW9XjX' // Josh - Deep, thoughtful male voice
   },
-  'claude-3-5-sonnet-20241022': {
+  'claude-3-5-sonnet-20241022': {  // ← KEY UNCHANGED (critical!)
     provider: 'anthropic',
     endpoint: 'https://api.anthropic.com/v1/messages',
-    modelName: 'claude-3-5-sonnet-20241022',
+    modelName: 'claude-sonnet-4-5-20250929',  // ← Correct API model ID (full ID with date)
     maxTokens: 200,
     apiKeyEnv: 'ANTHROPIC_API_KEY',
     costPer1kTokens: { input: 0.003, output: 0.015 }, // Claude pricing
     elevenLabsVoiceId: 'VR6AewLTigWG4xSOukaG' // Arnold - Strong, authoritative male voice
+  },
+  'claude-haiku-4-5-20251001': {
+    provider: 'anthropic',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    modelName: 'claude-haiku-4-5-20251001',  // Official Anthropic model ID
+    maxTokens: 200,
+    apiKeyEnv: 'ANTHROPIC_API_KEY',  // ← SAME KEY as Claude Sonnet!
+    costPer1kTokens: { input: 0.001, output: 0.005 }, // $1/$5 per million tokens = $0.001/$0.005 per 1k tokens
+    elevenLabsVoiceId: 'pjcYQlDFKMbcOUp6F5GD' // Adam - Clear, professional male voice
   },
   'deepseek-r1': {
     provider: 'deepseek',
@@ -134,7 +143,7 @@ export const MODEL_CONFIGS = {
     modelName: 'deepseek-reasoner',
     maxTokens: 200,
     apiKeyEnv: 'DEEPSEEK_API_KEY',
-    costPer1kTokens: { input: 0.0014, output: 0.0028 }, // DeepSeek R1 pricing
+    costPer1kTokens: { input: 0.28, output: 1.10 }, // ← Updated DeepSeek R1 pricing
     elevenLabsVoiceId: '2EiwWnXFnvU5JabPnv8n' // Clyde - Technical, wise male voice
   },
   'deepseek-v3': {
@@ -143,7 +152,7 @@ export const MODEL_CONFIGS = {
     modelName: 'deepseek-chat',
     maxTokens: 200, 
     apiKeyEnv: 'DEEPSEEK_API_KEY',
-    costPer1kTokens: { input: 0.00014, output: 0.00028 }, // DeepSeek v3 pricing
+    costPer1kTokens: { input: 0.14, output: 0.28 }, // ← Updated DeepSeek v3 pricing
     elevenLabsVoiceId: 'IKne3meq5aSn9XLyUdCD' // Charlie - Young, casual male voice
   },
   // PHASE A: Google Gemini models integration - Updated with exact API names
@@ -164,6 +173,15 @@ export const MODEL_CONFIGS = {
     apiKeyEnv: 'GOOGLE_AI_API_KEY',
     costPer1kTokens: { input: 0.00125, output: 0.005 }, // Gemini Pro pricing
     elevenLabsVoiceId: 'ErXwobaYiN019PkySvjV' // Antoni - Warm, articulate male voice
+  },
+  'gemini-2.5-flash-lite': {
+    provider: 'google',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',
+    modelName: 'gemini-2.5-flash-lite',
+    maxTokens: 200,
+    apiKeyEnv: 'GOOGLE_AI_API_KEY',  // ← SAME KEY as other Gemini models!
+    costPer1kTokens: { input: 0.0001, output: 0.0004 }, // $0.10/$0.40 per million tokens = $0.0001/$0.0004 per 1k tokens (cheapest!)
+    elevenLabsVoiceId: 'QPBKI85w0cdXVqMSJ6WB' // Bella - Warm, engaging female voice
   }
 } as const;
 
@@ -572,8 +590,8 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-4o' | 'gpt-4o-
 /**
  * Unified Anthropic API caller
  */
-async function callUnifiedAnthropic(messages: any[], extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
-  const config = MODEL_CONFIGS['claude-3-5-sonnet-20241022'];
+async function callUnifiedAnthropic(messages: any[], modelType: 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+  const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
   if (!apiKey || apiKey === 'YOUR_ANTHROPIC_API_KEY_PLACEHOLDER') {
@@ -712,7 +730,7 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
 /**
  * Unified Google Gemini API caller supporting multiple Gemini models
  */
-async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -940,13 +958,13 @@ export async function callFlexibleOracle(
         analysis = await callOpenAIOracle(oraclePrompt, modelKey as 'gpt-4o' | 'gpt-4o-mini', oracleConfigs);
         break;
       case 'anthropic':
-        analysis = await callAnthropicOracle(oraclePrompt, oracleConfigs);
+        analysis = await callAnthropicOracle(oraclePrompt, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', oracleConfigs);
         break;
       case 'deepseek':
         analysis = await callDeepSeekOracleFlexible(oraclePrompt, modelKey as 'deepseek-r1' | 'deepseek-v3', oracleConfigs);
         break;
       case 'google':
-        analysis = await callGeminiOracle(oraclePrompt, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06', oracleConfigs);
+        analysis = await callGeminiOracle(oraclePrompt, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', oracleConfigs);
         break;
       default:
         throw new Error(`Unsupported Oracle model provider: ${(config as any).provider}`);
@@ -974,10 +992,12 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'gpt-4o': { maxTokens: 16000, temperature: 0.1 },
     'gpt-4o-mini': { maxTokens: 8000, temperature: 0.1 },
     'claude-3-5-sonnet-20241022': { maxTokens: 8000, temperature: 0.1 },
+    'claude-haiku-4-5-20251001': { maxTokens: 8000, temperature: 0.1 },
     'deepseek-r1': { maxTokens: 32000, temperature: 0.1 },
     'deepseek-v3': { maxTokens: 16000, temperature: 0.1 },
     'gemini-2.5-flash-preview-05-06': { maxTokens: 8000, temperature: 0.1 },
-    'gemini-2.5-pro-preview-05-06': { maxTokens: 30000, temperature: 0.1 }
+    'gemini-2.5-pro-preview-05-06': { maxTokens: 30000, temperature: 0.1 },
+    'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 }
   };
   
   return oracleConfigs[modelName] || { maxTokens: 8000, temperature: 0.1 };
@@ -1032,9 +1052,10 @@ async function callOpenAIOracle(
  */
 async function callAnthropicOracle(
   oraclePrompt: string,
+  modelType: 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
-  const config = MODEL_CONFIGS['claude-3-5-sonnet-20241022'];
+  const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
   const response = await timedFetch(config.endpoint, {
@@ -1144,7 +1165,7 @@ async function callDeepSeekOracleFlexible(
  */
 async function callGeminiOracle(
   oraclePrompt: string,
-  modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06',
+  modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
   const config = MODEL_CONFIGS[modelType];
@@ -1220,10 +1241,12 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'gpt-4o': 'systematic and structured',
     'gpt-4o-mini': 'efficient and focused',
     'claude-3-5-sonnet-20241022': 'nuanced and thoughtful',
+    'claude-haiku-4-5-20251001': 'fast and efficient',
     'deepseek-r1': 'methodical with clear reasoning chains',
     'deepseek-v3': 'logical and analytical',
     'gemini-2.5-flash-preview-05-06': 'rapid pattern recognition',
-    'gemini-2.5-pro-preview-05-06': 'comprehensive synthesis'
+    'gemini-2.5-pro-preview-05-06': 'comprehensive synthesis',
+    'gemini-2.5-flash-lite': 'ultra-efficient and focused'
   };
 
   const strength = modelStrengths[modelName] || 'balanced analytical';
@@ -1291,11 +1314,13 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'gpt-4o-mini': '\n\nProvide focused, efficient analysis that captures key insights.',
     'claude': '\n\nEmphasize nuanced understanding and thoughtful consideration of complexities.',
     'claude-3-5-sonnet-20241022': '\n\nEmphasize nuanced understanding and thoughtful consideration of complexities.',
+    'claude-haiku-4-5-20251001': '\n\nProvide fast, efficient analysis that captures key insights.',
     'deepseek-r1': '\n\nCHAIN OF THOUGHT PROTOCOL: Use explicit step-by-step reasoning for all analysis. Your thinking process should be visible and methodical.',
     'deepseek-v3': '\n\nApply logical, analytical reasoning with clear cause-effect relationships.',
     'gemini': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-flash-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-pro-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
+    'gemini-2.5-flash-lite': '\n\nProvide ultra-efficient analysis with focused pattern recognition.',
   };
 
   const addition = modelSpecificAdditions[modelType] || modelSpecificAdditions['gpt-4o'];
@@ -1860,13 +1885,13 @@ export async function processDebateTurn(params: {
       result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-4o' | 'gpt-4o-mini', params.extensivenessLevel);
       break;
     case 'anthropic':
-      result = await callUnifiedAnthropic(fullHistory, params.extensivenessLevel);
+      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', params.extensivenessLevel);
       break;
     case 'deepseek':
       result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', params.extensivenessLevel);
       break;
     case 'google':
-      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06', params.extensivenessLevel);
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', params.extensivenessLevel);
       break;
     default:
       throw new Error(`Unsupported model provider`);
