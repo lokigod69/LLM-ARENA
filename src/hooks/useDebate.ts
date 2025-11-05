@@ -130,13 +130,13 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
   };
 
-  // Load debate state from localStorage on mount
+  // Load debate state from sessionStorage on mount (clears on page refresh)
   const loadDebateState = (): Partial<EnhancedDebateState> | null => {
     if (typeof window === 'undefined') return null;
     try {
-      const stored = localStorage.getItem('llm-arena-current-debate');
+      const stored = sessionStorage.getItem('llm-arena-current-debate');
       if (!stored) {
-        console.log('📂 No saved debate state in localStorage');
+        console.log('📂 No saved debate state in sessionStorage');
         return null;
       }
       const parsed = JSON.parse(stored);
@@ -147,7 +147,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
                       parsed.isActive;
       
       if (hasData) {
-        console.log('📥 RESTORING DEBATE STATE from localStorage', {
+        console.log('📥 RESTORING DEBATE STATE from sessionStorage', {
           isActive: parsed.isActive,
           currentTurn: parsed.currentTurn,
           topic: parsed.topic,
@@ -162,7 +162,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         return null;
       }
     } catch (error) {
-      console.error('Failed to load debate state from localStorage:', error);
+      console.error('Failed to load debate state from sessionStorage:', error);
       return null;
     }
   };
@@ -233,7 +233,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     }
   }, [state.oracleResults]);
 
-  // Persist debate state to localStorage when it changes (only if debate is in progress)
+  // Persist debate state to sessionStorage when it changes (clears on page refresh, persists on tab switch)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     // Save if debate is active OR has messages (debate was started, even if paused/completed)
@@ -260,23 +260,23 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           positionAssignment: state.positionAssignment,
           personalityConfig: state.personalityConfig,
         };
-        localStorage.setItem('llm-arena-current-debate', JSON.stringify(stateToSave));
-        console.log('💾 Saving debate state to localStorage', {
+        sessionStorage.setItem('llm-arena-current-debate', JSON.stringify(stateToSave));
+        console.log('💾 Saving debate state to sessionStorage', {
           isActive: state.isActive,
           currentTurn: state.currentTurn,
           topic: state.topic,
           messageCount: state.modelAMessages.length + state.modelBMessages.length
         });
       } catch (error) {
-        console.error('Failed to save debate state to localStorage:', error);
+        console.error('Failed to save debate state to sessionStorage:', error);
       }
     } else {
       // Clear saved state if debate is not active and no messages/topic
       try {
-        localStorage.removeItem('llm-arena-current-debate');
-        console.log('🗑️ Clearing debate state from localStorage (no active debate)');
+        sessionStorage.removeItem('llm-arena-current-debate');
+        console.log('🗑️ Clearing debate state from sessionStorage (no active debate)');
       } catch (error) {
-        console.error('Failed to clear debate state from localStorage:', error);
+        console.error('Failed to clear debate state from sessionStorage:', error);
       }
     }
   }, [
@@ -1342,12 +1342,12 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     // Clear Oracle results
     clearOracleResults();
     
-    // Clear saved debate state from localStorage
+    // Clear saved debate state from sessionStorage
     if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem('llm-arena-current-debate');
+        sessionStorage.removeItem('llm-arena-current-debate');
       } catch (error) {
-        console.error('Failed to clear debate state from localStorage:', error);
+        console.error('Failed to clear debate state from sessionStorage:', error);
       }
     }
     
