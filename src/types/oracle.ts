@@ -119,10 +119,12 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
   'gpt-4o',                         // OpenAI GPT-4o
   'gpt-4o-mini',                    // OpenAI GPT-4o Mini  
   'claude-3-5-sonnet-20241022',     // Anthropic Claude
+  'claude-haiku-4-5-20251001',      // Anthropic Claude Haiku
   'deepseek-r1',                    // DeepSeek R1
   'deepseek-v3',                    // DeepSeek V3
   'gemini-2.5-flash-preview-05-06', // Gemini Flash
   'gemini-2.5-pro-preview-05-06',   // Gemini Pro
+  'gemini-2.5-flash-lite',          // Gemini Flash-Lite
 ];
 
 // Oracle Model Strengths - What each model excels at for analysis
@@ -130,10 +132,12 @@ export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
   'gpt-4o': 'Structured analysis, systematic reasoning',
   'gpt-4o-mini': 'Quick insights, cost-effective analysis',
   'claude-3-5-sonnet-20241022': 'Nuanced reasoning, philosophical depth',
+  'claude-haiku-4-5-20251001': 'Fast reasoning, efficient analysis',
   'deepseek-r1': 'Chain of thought, step-by-step reasoning',
   'deepseek-v3': 'Fast logical analysis, efficient insights',
   'gemini-2.5-flash-preview-05-06': 'Rapid analysis, quick patterns',
-  'gemini-2.5-pro-preview-05-06': 'Large context, comprehensive synthesis'
+  'gemini-2.5-pro-preview-05-06': 'Large context, comprehensive synthesis',
+  'gemini-2.5-flash-lite': 'Quick insights, cost-effective judgments'
 };
 
 // Default Oracle model preference (best reasoning capabilities)
