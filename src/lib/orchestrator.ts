@@ -106,7 +106,7 @@ export const MODEL_CONFIGS = {
   'gpt-5': {
     provider: 'openai',
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    modelName: 'gpt-5',
+    modelName: 'gpt-5-2025-08-07', // Official OpenAI model ID with date suffix
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
     costPer1kTokens: { input: 0.00125, output: 0.01 }, // GPT-5 pricing: $1.25/$10 per million = $0.00125/$0.01 per 1k
@@ -115,7 +115,7 @@ export const MODEL_CONFIGS = {
   'gpt-5-mini': {
     provider: 'openai',
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    modelName: 'gpt-5-mini',
+    modelName: 'gpt-5-mini-2025-08-07', // Official OpenAI model ID with date suffix
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
     costPer1kTokens: { input: 0.00025, output: 0.002 }, // GPT-5 Mini pricing: $0.25/$2.00 per million = $0.00025/$0.002 per 1k
@@ -124,7 +124,7 @@ export const MODEL_CONFIGS = {
   'gpt-5-nano': {
     provider: 'openai',
     endpoint: 'https://api.openai.com/v1/chat/completions',
-    modelName: 'gpt-5-nano',
+    modelName: 'gpt-5-nano-2025-08-07', // Official OpenAI model ID with date suffix
     maxTokens: 200,
     apiKeyEnv: 'OPENAI_API_KEY',
     costPer1kTokens: { input: 0.00005, output: 0.0004 }, // GPT-5 Nano pricing: $0.05/$0.40 per million = $0.00005/$0.0004 per 1k
