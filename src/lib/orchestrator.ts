@@ -645,10 +645,21 @@ async function callOpenAIResponses(
   
   const verbosity = getVerbosityLevel(extensivenessLevel);
 
+  // ✅ CRITICAL: Sanitize messages to ensure no invalid fields
+  // Responses API only accepts: role, content (no "prompt" field!)
+  const sanitizedMessages = conversationMsgs.map((msg: any) => {
+    // Only include role and content - remove any other fields
+    return {
+      role: msg.role,
+      content: msg.content
+    };
+  });
+
   // GPT-5 Responses API request body (per official documentation)
+  // ✅ ONLY include allowed fields - no "prompt", "prompts", "previous_response_id", or "conversation_id"
   const requestBody: any = {
     model: config.modelName,
-    input: conversationMsgs,  // ✅ Only user/assistant messages (no system)
+    input: sanitizedMessages,  // ✅ Only user/assistant messages (no system), sanitized
     max_output_tokens: maxTokens,  // ✅ "max_output_tokens" not "max_tokens"
     reasoning: {
       effort: 'minimal' as const  // ✅ minimal | low | medium | high (replaces temperature)
@@ -657,12 +668,20 @@ async function callOpenAIResponses(
       verbosity: verbosity  // ✅ low | medium | high - controls output length/conciseness
     },
     store: false  // ✅ Disable storage for privacy (optional but recommended)
-    // ❌ DO NOT include: temperature, top_p, logprobs - these cause errors!
+    // ❌ DO NOT include: temperature, top_p, logprobs, prompt, prompts, previous_response_id, conversation_id - these cause errors!
   };
   
   // Add instructions field if system message exists
   if (systemMsg) {
     requestBody.instructions = systemMsg;  // ✅ System prompts go here, not in messages
+  }
+  
+  // ✅ VALIDATION: Ensure no forbidden fields are present
+  const forbiddenFields = ['prompt', 'prompts', 'previous_response_id', 'conversation_id', 'temperature', 'top_p', 'logprobs'];
+  const foundForbiddenFields = forbiddenFields.filter(field => field in requestBody);
+  if (foundForbiddenFields.length > 0) {
+    console.error('🔴 GPT-5 Request Body contains FORBIDDEN fields:', foundForbiddenFields);
+    throw new Error(`GPT-5 Responses API: Forbidden fields detected: ${foundForbiddenFields.join(', ')}`);
   }
 
   // 🔍 INVESTIGATION: Log instructions and verbosity for debugging
@@ -674,11 +693,20 @@ async function callOpenAIResponses(
     hasSystemMessage: !!systemMsg,
     systemMessageLength: systemMsg?.length || 0,
     systemMessagePreview: systemMsg ? systemMsg.substring(0, 200) + '...' : 'N/A',
+    originalMessageCount: messages.length,
     conversationMessageCount: conversationMsgs.length,
+    sanitizedMessageCount: sanitizedMessages.length,
+    sanitizedMessagesPreview: sanitizedMessages.map((m: any) => ({
+      role: m.role,
+      contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown',
+      hasPrompt: 'prompt' in m,
+      keys: Object.keys(m)
+    })),
     maxOutputTokens: maxTokens,
     verbosity: verbosity,
     verbosityMapping: `${extensivenessLevel || 'N/A'} → ${verbosity}`,
     instructions: requestBody.instructions ? requestBody.instructions.substring(0, 300) + '...' : 'N/A',
+    requestBodyKeys: Object.keys(requestBody),
     requestBody: JSON.stringify(requestBody, null, 2)
   });
 
