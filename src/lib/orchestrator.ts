@@ -1150,10 +1150,57 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
  */
 async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
-  const apiKey = process.env[config.apiKeyEnv];
   
-  if (!apiKey || apiKey === 'YOUR_GROK_API_KEY_PLACEHOLDER') {
-    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+  // 🔑 DETAILED API KEY DIAGNOSTICS
+  const apiKeyEnv = config.apiKeyEnv;
+  const apiKey = process.env[apiKeyEnv];
+  
+  console.log('🔑 GROK API KEY DIAGNOSTICS:', {
+    modelType,
+    expectedEnvVar: apiKeyEnv,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length || 0,
+    apiKeyFirstChars: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING',
+    apiKeyLastChars: apiKey && apiKey.length > 10 ? '...' + apiKey.substring(apiKey.length - 10) : 'N/A',
+    isPlaceholder: apiKey?.includes('PLACEHOLDER') || false,
+    isEmpty: !apiKey || apiKey.trim() === '',
+    // Check alternative env var names
+    checkGROK_API_KEY: !!process.env.GROK_API_KEY,
+    checkXAI_API_KEY: !!process.env.XAI_API_KEY,
+    checkVITE_GROK_API_KEY: !!process.env.VITE_GROK_API_KEY,
+    checkVITE_XAI_API_KEY: !!process.env.VITE_XAI_API_KEY,
+    // Check lengths of alternatives
+    GROK_API_KEY_length: process.env.GROK_API_KEY?.length || 0,
+    XAI_API_KEY_length: process.env.XAI_API_KEY?.length || 0,
+    VITE_GROK_API_KEY_length: process.env.VITE_GROK_API_KEY?.length || 0,
+    VITE_XAI_API_KEY_length: process.env.VITE_XAI_API_KEY?.length || 0
+  });
+  
+  if (!apiKey || apiKey === 'YOUR_GROK_API_KEY_PLACEHOLDER' || apiKey.trim() === '') {
+    console.error('🔴 GROK API KEY ERROR:', {
+      expectedEnvVar: apiKeyEnv,
+      apiKeyValue: apiKey || 'UNDEFINED',
+      apiKeyLength: apiKey?.length || 0,
+      suggestion: 'Check your .env.local file and ensure GROK_API_KEY is set correctly'
+    });
+    throw new Error(`${apiKeyEnv} is not configured. Please set ${apiKeyEnv} in your .env.local file.`);
+  }
+  
+  // Additional validation: Check if key looks truncated (xAI keys typically start with "xai-")
+  if (apiKey.length < 20) {
+    console.warn('⚠️ GROK API KEY WARNING: Key seems too short!', {
+      apiKeyLength: apiKey.length,
+      expectedMinLength: 20,
+      apiKeyPreview: apiKey.substring(0, 15) + '...',
+      suggestion: 'xAI API keys typically start with "xai-" and are longer than 20 characters'
+    });
+  }
+  
+  if (!apiKey.startsWith('xai-')) {
+    console.warn('⚠️ GROK API KEY WARNING: Key does not start with "xai-"', {
+      apiKeyFirstChars: apiKey.substring(0, 10),
+      suggestion: 'xAI API keys typically start with "xai-"'
+    });
   }
 
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
@@ -1168,6 +1215,7 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
   };
 
   // 🟢 DETAILED GROK REQUEST LOGGING
+  const authHeader = `Bearer ${apiKey}`;
   console.log('🟢 GROK API Request:', {
     modelType,
     endpoint: config.endpoint,
@@ -1179,7 +1227,11 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
     messagesPreview: messages.map(m => ({
       role: m.role,
       contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown'
-    }))
+    })),
+    // Safely log Authorization header (first 20 chars only)
+    authHeaderPreview: authHeader.substring(0, 20) + '...',
+    authHeaderLength: authHeader.length,
+    apiKeyInHeader: apiKey.substring(0, 10) + '...' + (apiKey.length > 20 ? apiKey.substring(apiKey.length - 10) : '')
   });
 
   let response: Response;
@@ -1187,7 +1239,7 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
     response = await timedFetch(config.endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
