@@ -611,10 +611,16 @@ async function timedFetch(
 async function callOpenAIResponses(
   messages: any[], 
   modelType: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano',
-  maxTokens: number
+  maxTokens: number,
+  extensivenessLevel?: number  // ✅ ADD extensivenessLevel parameter
 ): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   try {
-    console.log('🔵 callOpenAIResponses: Starting function', { modelType, maxTokens, messageCount: messages.length });
+    console.log('🔵 callOpenAIResponses: Starting function', { 
+      modelType, 
+      maxTokens, 
+      extensivenessLevel: extensivenessLevel || 'NOT PROVIDED',
+      messageCount: messages.length 
+    });
     
     const config = MODEL_CONFIGS[modelType];
     const apiKey = process.env[config.apiKeyEnv];
@@ -623,29 +629,56 @@ async function callOpenAIResponses(
       throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
     }
 
-  // GPT-5 Responses API accepts EITHER messages array OR string as input
-  // Per official docs: input can be messages array directly (recommended)
-  // We'll use messages array format for better structure preservation
-  const input = messages;  // Pass messages array directly per Responses API spec
+  // GPT-5 Responses API: Extract system messages as instructions, filter from input
+  // Per official docs: system prompts go in "instructions" field, not in messages
+  const systemMsg = messages.find(m => m.role === 'system')?.content;
+  const conversationMsgs = messages.filter(m => m.role !== 'system');
+  
+  // ✅ FIX: Calculate verbosity from extensivenessLevel (1-5), NOT maxTokens!
+  // extensivenessLevel: 1-2 = low, 3-4 = medium, 5 = high
+  function getVerbosityLevel(extensivenessLevel?: number): 'low' | 'medium' | 'high' {
+    if (!extensivenessLevel) return 'medium';  // Default if not provided
+    if (extensivenessLevel <= 2) return 'low';      // Concise, Brief (1-2)
+    if (extensivenessLevel <= 4) return 'medium';   // Balanced, Detailed (3-4)
+    return 'high';                                  // Elaborate (5)
+  }
+  
+  const verbosity = getVerbosityLevel(extensivenessLevel);
 
   // GPT-5 Responses API request body (per official documentation)
-  const requestBody = {
+  const requestBody: any = {
     model: config.modelName,
-    input: input,  // ✅ Can be messages array or string
+    input: conversationMsgs,  // ✅ Only user/assistant messages (no system)
     max_output_tokens: maxTokens,  // ✅ "max_output_tokens" not "max_tokens"
     reasoning: {
       effort: 'minimal' as const  // ✅ minimal | low | medium | high (replaces temperature)
     },
+    text: {
+      verbosity: verbosity  // ✅ low | medium | high - controls output length/conciseness
+    },
     store: false  // ✅ Disable storage for privacy (optional but recommended)
     // ❌ DO NOT include: temperature, top_p, logprobs - these cause errors!
   };
+  
+  // Add instructions field if system message exists
+  if (systemMsg) {
+    requestBody.instructions = systemMsg;  // ✅ System prompts go here, not in messages
+  }
 
+  // 🔍 INVESTIGATION: Log instructions and verbosity for debugging
   console.log('🔵 GPT-5 Responses API Request:', {
     modelType,
     modelName: config.modelName,
     endpoint: 'https://api.openai.com/v1/responses',
-    inputLength: input.length,
+    extensivenessLevel: extensivenessLevel || 'NOT PROVIDED',
+    hasSystemMessage: !!systemMsg,
+    systemMessageLength: systemMsg?.length || 0,
+    systemMessagePreview: systemMsg ? systemMsg.substring(0, 200) + '...' : 'N/A',
+    conversationMessageCount: conversationMsgs.length,
     maxOutputTokens: maxTokens,
+    verbosity: verbosity,
+    verbosityMapping: `${extensivenessLevel || 'N/A'} → ${verbosity}`,
+    instructions: requestBody.instructions ? requestBody.instructions.substring(0, 300) + '...' : 'N/A',
     requestBody: JSON.stringify(requestBody, null, 2)
   });
 
@@ -934,7 +967,7 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
   if (isGPT5) {
     try {
       console.log('🔵 Routing GPT-5 model to Responses API:', modelType);
-      const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', maxTokens);
+      const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', maxTokens, extensivenessLevel);
       console.log('✅ GPT-5 Responses API call successful');
       return result;
     } catch (error: any) {
@@ -1206,6 +1239,10 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
+  // 🔍 INVESTIGATION: Extract system message for logging
+  const systemMsg = messages.find(m => m.role === 'system')?.content;
+  const conversationMsgs = messages.filter(m => m.role !== 'system');
+
   // Build request body
   const requestBody = {
     model: config.modelName,
@@ -1220,13 +1257,19 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
     modelType,
     endpoint: config.endpoint,
     modelName: config.modelName,
+    extensivenessLevel: extensivenessLevel || 'NOT PROVIDED',
     maxTokens,
     temperature: 0.7,
     messageCount: messages.length,
+    hasSystemMessage: !!systemMsg,
+    systemMessageLength: systemMsg?.length || 0,
+    systemMessagePreview: systemMsg ? systemMsg.substring(0, 200) + '...' : 'N/A',
+    conversationMessageCount: conversationMsgs.length,
     requestBody: JSON.stringify(requestBody, null, 2),
     messagesPreview: messages.map(m => ({
       role: m.role,
-      contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown'
+      contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown',
+      contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) + '...' : 'N/A'
     })),
     // Safely log Authorization header (first 20 chars only)
     authHeaderPreview: authHeader.substring(0, 20) + '...',
@@ -1700,7 +1743,8 @@ async function callOpenAIOracle(
         content: oraclePrompt
       }
     ];
-    const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', oracleConfig.maxTokens);
+    // Oracle uses fixed extensiveness (not from debate slider), so pass undefined
+    const result = await callOpenAIResponses(messages, modelType as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano', oracleConfig.maxTokens, undefined);
     return result.reply;
   }
   
