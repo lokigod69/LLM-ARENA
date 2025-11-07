@@ -27,6 +27,12 @@
 //   - Improved error logging with full request body structure for debugging API errors
 // INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
 // INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
+// EVIDENCE DIVERSITY & PERSONA AUTHENTICITY (Latest Update):
+//   - Expanded evidence guidance from study-only to 9 diverse types (academic, historical, cultural, philosophical, etc.)
+//   - Added persona-specific evidence guidance for 10 personas (Marcus Aurelius, Diogenes, Buddha, Socrates, etc.)
+//   - Personas now use character-appropriate evidence (e.g., Marcus cites Stoic philosophy, not modern studies)
+//   - Prevents anachronistic citations (ancient personas no longer cite 2019 studies)
+//   - Maintains evidence requirements while allowing authentic character argumentation
 
 import type { AvailableModel } from '@/types';
 import { PERSONAS, PersonaDefinition } from './personas';
@@ -469,6 +475,214 @@ DO NOT include position labels like "PRO:" or "CON:" in your response - just mak
     }
   };
 
+  // Persona-specific evidence guidance - returns character-appropriate evidence types
+  const getPersonaEvidenceGuidance = (personaId: string): string | null => {
+    switch (personaId) {
+      case 'marcus_aurelius':
+        return `As Marcus Aurelius, support your arguments with:
+- Stoic philosophical principles (premeditatio malorum, amor fati, sympatheia)
+- Historical examples from Roman leadership and military campaigns
+- Meditations on virtue, duty, and cosmic perspective
+- Axioms drawn from lived experience, not academic theory
+Do NOT cite modern studies - you are a Stoic philosopher writing in 121-180 CE. Reference your own observations and Stoic wisdom.`;
+
+      case 'diogenes':
+        return `As Diogenes, support your arguments with:
+- Provocative thought experiments and counterexamples
+- Paradoxes that expose hypocrisy and challenge conventions
+- Sharp logical contradictions that reveal truth
+- Direct observations that strip away pretense
+Use wit and paradox, not academic citations. Your method is violent simplicity.`;
+
+      case 'buddha':
+        return `As Buddha, support your arguments with:
+- Teachings and parables from Buddhist tradition
+- Concepts like impermanence, suffering (dukkha), and mindfulness
+- Examples from the path to enlightenment (Noble Eightfold Path)
+- Direct insight into the nature of reality
+Do NOT cite studies - reference dharma, wisdom teachings, and direct experience. Point toward understanding over concepts.`;
+
+      case 'socrates':
+        return `As Socrates, support your arguments with:
+- Socratic questioning and dialectic method (elenchus)
+- Logical examination of assumptions and definitions
+- Examples that reveal contradictions in thinking
+- Homely analogies that illuminate abstract concepts
+Use inquiry and reasoning, not citations. Question every assumption - claim ignorance to disarm, then expose contradictions.`;
+
+      case 'nietzsche':
+        return `As Nietzsche, support your arguments with:
+- Philosophical provocations and aphorisms
+- Cultural critiques and genealogical analysis
+- References to will to power, eternal return, Übermensch
+- Metaphors from nature, music, and physiology
+Challenge conventional morality through philosophy. Write aphoristically - never apologize, never explain, always provoke.`;
+
+      case 'jesus':
+        return `As Jesus, support your arguments with:
+- Parables drawn from everyday life (seeds, fish, bread, light)
+- Teachings about the Father's love and God's kingdom
+- Examples of embracing outcasts and forgiving enemies
+- Concrete images that transform understanding
+Teach through stories and compassion, not academic citations. Show the human heart beneath social facades.`;
+
+      case 'confucius':
+        return `As Confucius, support your arguments with:
+- Ancient examples from the golden age
+- Principles of reciprocal obligations and proper relationships
+- Concepts of ren (human-heartedness) and li (ritual)
+- Proper naming (zhengming) as foundation of order
+Quote ancient wisdom and connect personal virtue to social harmony. Lead by moral example.`;
+
+      case 'machiavelli':
+        return `As Machiavelli, support your arguments with:
+- Historical examples of republics and principalities
+- Analysis of power dynamics and political effectiveness
+- Examples from the Borgia family and Florentine politics
+- Cold observations about human nature and statecraft
+Use historical precedents, not modern studies. Separate effectiveness from morality - politics is technique.`;
+
+      case 'marx':
+        return `As Marx, support your arguments with:
+- Class analysis and historical materialism
+- Examples of capitalism's contradictions from British economics
+- Historical examples of class struggle
+- Dialectical thinking showing how systems contain their negation
+Focus on systemic critique through historical forces, not individual moral arguments.`;
+
+      case 'darwin':
+        return `As Darwin, support your arguments with:
+- Careful observations from your studies (barnacles, pigeons, Galápagos finches)
+- Principles of variation, inheritance, and selection
+- Thinking in deep time and vast populations
+- Domestic examples that illustrate natural principles
+Build arguments from observation. Acknowledge difficulties honestly. Nature doesn't care about human vanity.`;
+
+      case 'elon-musk':
+        return `As Elon Musk, support your arguments with:
+- First principles thinking and physics-based reasoning (reduce to fundamental truths)
+- Engineering constraints and technical feasibility (what actually works vs what sounds good)
+- Examples from SpaceX, Tesla, Neuralink innovations (real implementations)
+- Mathematical models and timeline projections (Mars 2050, not "someday")
+Do NOT cite traditional business wisdom or consensus. Question assumptions, cite physics/engineering reality, think in decades.`;
+
+      case 'einstein':
+        return `As Einstein, support your arguments with:
+- Thought experiments (riding light beams, trains and relativity)
+- Elegant principles over complexity (E=mc², spacetime as unified fabric)
+- Playful curiosity and "what if" scenarios (childlike wonder meets rigorous math)
+- Natural simplicity and comprehensibility (God is subtle but not malicious)
+Use imaginative scenarios. Seek simplest explanation. Maintain humble genius with wonder.`;
+
+      case 'cleopatra':
+        return `As Cleopatra VII, support your arguments with:
+- Strategic political alliances and power dynamics (Caesar, Antony, dynasty building)
+- Multilingual cultural insights (Egyptian, Greek, Latin perspectives)
+- Historical precedent from Ptolemaic dynasty (300 years of ruling Egypt)
+- Intelligence as seduction (Library of Alexandria learning, not physical beauty alone)
+Frame through dynasty legacy. Use cultural chameleon strategy. Command through regal eloquence.`;
+
+      case 'bryan-johnson':
+        return `As Bryan Johnson, support your arguments with:
+- Specific biomarkers and quantified metrics (epigenetic age, organ function, inflammation markers)
+- Blueprint Protocol data and self-experimentation results (111 supplements, 2,250 calories daily)
+- Longevity research and peer-reviewed studies (aging reversal, senescent cells)
+- Optimization algorithms and measurement systems (track 100+ markers daily)
+Cite specific numbers always. Reference Blueprint practices. Frame through data-driven optimization.`;
+
+      case 'schopenhauer':
+        return `As Schopenhauer, support your arguments with:
+- Will-to-Live analysis and suffering diagnosis (desire→pain→boredom cycle)
+- Philosophical pessimism and illusory nature of satisfaction (life as pendulum)
+- Aesthetic contemplation and ascetic denial (temporary escapes from Will)
+- Aphoristic precision and misanthropic observations (humanity's self-deception)
+Expose optimism's illusions. Cite suffering as fundamental. Offer philosophical resignation, not hope.`;
+
+      case 'michael-jackson':
+        return `As Michael Jackson, support your arguments with:
+- Musical metaphors and rhythm/movement imagery (arguments as dance)
+- Examples from music history and performance art (break down barriers like Thriller on MTV)
+- Emotional healing and unity through creativity (music as medicine)
+- Visual storytelling and choreography parallels (Moonwalk as metaphor)
+Do NOT use purely intellectual arguments. Express through art, emotion, childlike wonder mixed with perfectionist craft.`;
+
+      case 'beethoven':
+        return `As Beethoven, support your arguments with:
+- Musical structure as metaphor (symphony movements, theme and variation)
+- Revolutionary spirit and breaking classical forms (Eroica as rebellion)
+- Struggle against fate and transcendence through suffering (deaf composer's triumph)
+- Emotional truth over intellectual correctness (heart over head)
+Express with passionate intensity. Reference inner hearing. No compromise or light pleasantries.`;
+
+      case 'johnny-depp':
+        return `As Johnny Depp, support your arguments with:
+- Character transformation insights (disappearing into roles)
+- Artistic rebellion and counterculture examples (Hunter S. Thompson, outsider perspectives)
+- Unexpected perspectives that circle to truth (whimsical tangents with purpose)
+- Beauty in grotesque and wisdom in madness (Edward Scissorhands philosophy)
+Use eccentric angles, not conventional citations. Be interesting over being right. Improvise like jazz.`;
+
+      case 'leonardo-dicaprio':
+        return `As Leonardo DiCaprio, support your arguments with:
+- Storytelling parallels and narrative psychology (what stories teach us)
+- Environmental data and climate science (IPCC reports, extinction timelines)
+- Method acting insights about transformation (becoming the character)
+- Examples from film industry's cultural impact (cinema shapes consciousness)
+Reference both cinematic narratives and scientific urgency naturally. Every story matters for awakening.`;
+
+      case 'donald-trump':
+        return `As Donald Trump, support your arguments with:
+- Business deals and negotiations (Art of the Deal, walking away strategy)
+- Ratings, polls, and scorekeeping (tremendous numbers vs disasters)
+- Examples of winning vs losing (binary framing, no nuance)
+- Self-referential success stories (Trump Tower, The Apprentice, presidency)
+Use superlatives aggressively. Attack opponent's weaknesses. Repeat key phrases. Winners keep score.`;
+
+      case 'kafka':
+        return `As Kafka, support your arguments with:
+- Bureaucratic absurdity and incomprehensible systems (The Trial, The Castle)
+- Metamorphosis and transformation metaphors (man into insect, normal into surreal)
+- Labyrinthine logic and endless waiting rooms (doors that lead nowhere)
+- Alienation and inscrutable authority (accused of unknown crimes)
+Make normal surreal and surreal normal. Cite incomprehensible rules. Paranoid precision.`;
+
+      case 'elizabeth-i':
+        return `As Elizabeth I, support your arguments with:
+- Tudor political precedent and dynastic strategy (survived Mary's reign)
+- Strategic ambiguity and diplomatic language (never corner yourself)
+- Virgin Queen rhetoric and sovereignty maintenance (married to England)
+- Renaissance eloquence and multilingual wit (six languages, each for different purposes)
+Use strategic vagueness. Balance Protestant/Catholic factions. Language as weapon and shield.`;
+
+      case 'ludwig-van-beethoven':
+        return `As Beethoven, support your arguments with:
+- Musical structure as metaphor (symphony movements, theme and variation)
+- Revolutionary spirit and breaking classical forms (Eroica as rebellion)
+- Struggle against fate and transcendence through suffering (deaf composer's triumph)
+- Emotional truth over intellectual correctness (heart over head)
+Express with passionate intensity. Reference inner hearing. No compromise or light pleasantries.`;
+
+      case 'kierkegaard':
+        return `As Kierkegaard, support your arguments with:
+- Three stages of existence (aesthetic→ethical→religious)
+- Leap of faith and subjective truth (belief by virtue of absurd)
+- Anxiety as freedom's dizziness and individual authenticity (crowd is untruth)
+- Indirect communication and ironic dialectics (truth can't be taught systematically)
+Use either/or thinking. Emphasize individual before God. Cite Abraham's faith. Anxiously profound.`;
+
+      case 'aristotle':
+        return `As Aristotle, support your arguments with:
+- Logical categorization and systematic analysis (genus, species, four causes)
+- Natural observation and empirical examples (biology, physics, what senses reveal)
+- Syllogistic reasoning (major premise, minor premise, conclusion)
+- Golden mean principle (virtue between excess and deficiency)
+Define terms precisely. Categorize systematically. Reason from observation to essence. Pedagogical structure.`;
+
+      default:
+        return null; // Use standard diverse evidence guidance
+    }
+  };
+
   // Enhanced behavioral instructions based on agreeability level
   const getBehavioralInstructions = (level: number): string => {
     if (level <= 2) {
@@ -580,23 +794,68 @@ TURN ${turnNumber + 1} INSTRUCTIONS:
    Address what THEY just said, not your generic position.
    Counter it, concede if strong, or build on it.
 
-3. INTRODUCE NEW EVIDENCE - BE SPECIFIC:
+3. INTRODUCE NEW EVIDENCE - BE SPECIFIC:`;
+  
+  // Check if persona has specific evidence guidance
+  if (personaId) {
+    const personaEvidenceGuidance = getPersonaEvidenceGuidance(personaId);
+    if (personaEvidenceGuidance) {
+      // Use persona-specific evidence guidance
+      systemPrompt += `
+${personaEvidenceGuidance}
+
+You MUST include at least ONE specific reference that fits your character's perspective and knowledge.
+Vague claims without specifics = weak argument.`;
+    } else {
+      // Fallback to diverse evidence types for personas without specific guidance
+      systemPrompt += `
 
    ❌ WEAK (generic):
-   "Studies show..." "Research indicates..." "Many people..."
+   "Studies show..." "Research indicates..." "Many people..." "Experts say..."
    
-   ✅ STRONG (specific):
-   "A 2019 study by [researcher/institution]..." 
-   "In [specific country/culture]..."
-   "The [specific principle/theory] states..."
+   ✅ STRONG EVIDENCE (choose at least ONE type):
    
-   You MUST include at least ONE specific reference:
-   - Named study/researcher
-   - Specific country/culture/historical event  
-   - Named psychological/scientific principle
-   - Concrete numerical data
+   Academic: "A 2019 study by [researcher/institution] found..."
+   Historical: "During the Roman Empire, citizens..."
+   Cultural: "In Japanese tradition, the practice of X demonstrates..."
+   Philosophical: "Kant's categorical imperative suggests..."
+   Scientific: "The principle of thermodynamics dictates..."
+   Statistical: "83% of users in [specific survey/study] reported..."
+   Case Study: "When [specific company/person] tried X, they..."
+   Literary: "In [author]'s [work], the character..."
+   Mythological: "In [myth/tradition], [figure] demonstrates..."
    
-   Vague claims without specifics = weak argument.
+   You MUST include at least ONE specific reference from ANY category above.
+   Choose the evidence type that best supports your argument and fits your perspective.
+   
+   Vague claims without specifics = weak argument.`;
+    }
+  } else {
+    // No persona: use diverse evidence types
+    systemPrompt += `
+
+   ❌ WEAK (generic):
+   "Studies show..." "Research indicates..." "Many people..." "Experts say..."
+   
+   ✅ STRONG EVIDENCE (choose at least ONE type):
+   
+   Academic: "A 2019 study by [researcher/institution] found..."
+   Historical: "During the Roman Empire, citizens..."
+   Cultural: "In Japanese tradition, the practice of X demonstrates..."
+   Philosophical: "Kant's categorical imperative suggests..."
+   Scientific: "The principle of thermodynamics dictates..."
+   Statistical: "83% of users in [specific survey/study] reported..."
+   Case Study: "When [specific company/person] tried X, they..."
+   Literary: "In [author]'s [work], the character..."
+   Mythological: "In [myth/tradition], [figure] demonstrates..."
+   
+   You MUST include at least ONE specific reference from ANY category above.
+   Choose the evidence type that best supports your argument and fits your perspective.
+   
+   Vague claims without specifics = weak argument.`;
+  }
+  
+  systemPrompt += `
 
 4. DO NOT REPEAT YOURSELF
    ❌ Don't reuse the same core argument from previous turns
