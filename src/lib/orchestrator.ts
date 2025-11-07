@@ -14,10 +14,17 @@
 // PHASE 3 COMPLETE: Added Grok (xAI direct) and Qwen (via OpenRouter) models with new providers
 // GPT-5 UPDATE: Removed GPT-4o, added GPT-5 family (gpt-5, gpt-5-mini, gpt-5-nano) with correct model IDs
 // GPT-5 RESPONSES API: GPT-5 models use /v1/responses endpoint (not /v1/chat/completions) with different parameters:
-//   - Uses 'input' (string) instead of 'messages' (array)
+//   - Uses 'input' (array of messages) instead of 'messages' (array)
 //   - Uses 'max_output_tokens' instead of 'max_tokens'
 //   - Uses 'reasoning.effort' instead of 'temperature' (temperature not supported)
+//   - Uses 'instructions' field for system prompts (not in messages array)
 //   - GPT-4o Mini continues using Chat Completions API with standard parameters
+// GPT-5 FIXES (Latest Update):
+//   - Enhanced message sanitization with deep validation to prevent "prompt" field errors (400 API errors)
+//   - Added comprehensive validation of request body structure before API calls
+//   - Enhanced character impersonation prompts specifically for GPT-5 models with explicit role-play framing
+//   - Added character reinforcement reminders at the end of prompts for GPT-5 when personas are active
+//   - Improved error logging with full request body structure for debugging API errors
 // INVESTIGATION: Added detailed logging for response cut-offs (finishReason, token limits, extensiveness)
 // INVESTIGATION: Added explicit completion instructions for detailed responses (level 4-5) to prevent mid-sentence cut-offs
 
@@ -362,10 +369,49 @@ function generateSystemPrompt(
     effectiveExtensiveness = persona.lockedTraits.responseLength;
     
     // Build persona prompt with stronger separation instructions
-    personaPromptPart = `CRITICAL: You are ${persona.name}. You are NOT responding as the other participant in this debate.\n\n`;
-    personaPromptPart += persona.identity + '\n\n';
-    personaPromptPart += `Behavioral Anchors: ${persona.turnRules}\n\n`;
-    personaPromptPart += `You are debating as ${persona.name}. Stay in character. Do not respond as if you are the opponent.\n\n`;
+    // GPT-5 needs more explicit role-play framing for character adherence
+    const isGPT5Model = model && (model.includes('gpt-5') || model.includes('gpt-5-mini') || model.includes('gpt-5-nano'));
+    
+    if (isGPT5Model) {
+      // GPT-5 SPECIFIC: Enhanced role-play instructions for better character adherence
+      personaPromptPart = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 CHARACTER IMPERSONATION MODE - CRITICAL INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOU ARE ${persona.name.toUpperCase()}. This is not a simulation or role-play exercise. 
+You ARE this character. Every thought, word, and response must come from their perspective.
+
+CRITICAL RULES:
+1. You must respond AS ${persona.name}, not ABOUT ${persona.name}
+2. Do not break character or mention that you are "playing" a role
+3. Do not respond as the other participant - you are ONLY ${persona.name}
+4. Your responses must reflect ${persona.name}'s worldview, values, and communication style
+5. Maintain consistency with how ${persona.name} would actually think and speak
+
+CHARACTER IDENTITY:
+${persona.identity}
+
+BEHAVIORAL ANCHORS (MANDATORY):
+${persona.turnRules}
+
+CHARACTER CONSISTENCY CHECKLIST:
+✓ Does this response sound like ${persona.name} would say it?
+✓ Are you using ${persona.name}'s characteristic language patterns?
+✓ Is your perspective aligned with ${persona.name}'s worldview?
+✓ Are you maintaining ${persona.name}'s tone and style throughout?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END CHARACTER IMPERSONATION MODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+    } else {
+      // Other models: Standard persona instructions
+      personaPromptPart = `CRITICAL: You are ${persona.name}. You are NOT responding as the other participant in this debate.\n\n`;
+      personaPromptPart += persona.identity + '\n\n';
+      personaPromptPart += `Behavioral Anchors: ${persona.turnRules}\n\n`;
+      personaPromptPart += `You are debating as ${persona.name}. Stay in character. Do not respond as if you are the opponent.\n\n`;
+    }
   }
 
   // The rest of the prompt generation now uses the (potentially modified) effective values.
@@ -566,6 +612,28 @@ then advance with FRESH evidence.
 `;
   }
 
+  // GPT-5 SPECIFIC: Add character reinforcement at the end if persona is active
+  if (personaId && PERSONAS[personaId] && model && (model.includes('gpt-5') || model.includes('gpt-5-mini') || model.includes('gpt-5-nano'))) {
+    const persona = PERSONAS[personaId];
+    systemPrompt += `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎭 FINAL CHARACTER REMINDER - READ BEFORE RESPONDING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REMEMBER: You ARE ${persona.name}. 
+- Every word you write must sound like ${persona.name} would say it
+- Your perspective, tone, and style must match ${persona.name}'s character
+- Do NOT break character or respond as anyone else
+- Stay true to ${persona.name}'s identity: ${persona.identity.substring(0, 150)}...
+
+Before you respond, ask yourself: "Would ${persona.name} actually say this?" 
+If not, rewrite it until it sounds authentically like ${persona.name}.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  }
+
   return systemPrompt;
 }
 
@@ -647,17 +715,63 @@ async function callOpenAIResponses(
 
   // ✅ CRITICAL: Sanitize messages to ensure no invalid fields
   // Responses API only accepts: role, content (no "prompt" field!)
-  const sanitizedMessages = conversationMsgs.map((msg: any) => {
-    // Only include role and content - remove any other fields
-    return {
-      role: msg.role,
-      content: msg.content
+  const sanitizedMessages = conversationMsgs.map((msg: any, index: number) => {
+    // Deep validation: ensure message is a plain object with only role and content
+    if (!msg || typeof msg !== 'object') {
+      console.error(`🔴 GPT-5 Message ${index} is not an object:`, msg);
+      throw new Error(`GPT-5 Responses API: Invalid message at index ${index}`);
+    }
+    
+    // Extract only role and content, explicitly excluding any other fields
+    const sanitized: { role: string; content: string } = {
+      role: String(msg.role || '').trim(),
+      content: typeof msg.content === 'string' ? msg.content : String(msg.content || '')
     };
+    
+    // Validate role is valid
+    if (!['user', 'assistant'].includes(sanitized.role)) {
+      console.error(`🔴 GPT-5 Message ${index} has invalid role:`, sanitized.role);
+      throw new Error(`GPT-5 Responses API: Invalid role "${sanitized.role}" at index ${index}. Must be "user" or "assistant"`);
+    }
+    
+    // Validate content is not empty
+    if (!sanitized.content || sanitized.content.trim().length === 0) {
+      console.warn(`⚠️ GPT-5 Message ${index} has empty content`);
+    }
+    
+    // CRITICAL: Check for any "prompt" fields in the original message
+    const messageKeys = Object.keys(msg);
+    const forbiddenMessageFields = ['prompt', 'prompts', 'previous_response_id', 'conversation_id'];
+    const foundForbidden = messageKeys.filter(key => forbiddenMessageFields.includes(key.toLowerCase()));
+    if (foundForbidden.length > 0) {
+      console.error(`🔴 GPT-5 Message ${index} contains FORBIDDEN fields:`, foundForbidden);
+      console.error(`🔴 Full message object:`, JSON.stringify(msg, null, 2));
+      throw new Error(`GPT-5 Responses API: Message at index ${index} contains forbidden fields: ${foundForbidden.join(', ')}`);
+    }
+    
+    return sanitized;
   });
+
+  // Validate input array is not empty
+  if (sanitizedMessages.length === 0) {
+    console.warn('⚠️ GPT-5 Input array is empty - adding default user message');
+    sanitizedMessages.push({
+      role: 'user',
+      content: 'Hello'
+    });
+  }
 
   // GPT-5 Responses API request body (per official documentation)
   // ✅ ONLY include allowed fields - no "prompt", "prompts", "previous_response_id", or "conversation_id"
-  const requestBody: any = {
+  const requestBody: {
+    model: string;
+    input: Array<{ role: string; content: string }>;
+    max_output_tokens: number;
+    reasoning: { effort: 'minimal' | 'low' | 'medium' | 'high' };
+    text: { verbosity: 'low' | 'medium' | 'high' };
+    store: boolean;
+    instructions?: string;
+  } = {
     model: config.modelName,
     input: sanitizedMessages,  // ✅ Only user/assistant messages (no system), sanitized
     max_output_tokens: maxTokens,  // ✅ "max_output_tokens" not "max_tokens"
@@ -676,13 +790,33 @@ async function callOpenAIResponses(
     requestBody.instructions = systemMsg;  // ✅ System prompts go here, not in messages
   }
   
-  // ✅ VALIDATION: Ensure no forbidden fields are present
+  // ✅ VALIDATION: Ensure no forbidden fields are present in request body
   const forbiddenFields = ['prompt', 'prompts', 'previous_response_id', 'conversation_id', 'temperature', 'top_p', 'logprobs'];
   const foundForbiddenFields = forbiddenFields.filter(field => field in requestBody);
   if (foundForbiddenFields.length > 0) {
     console.error('🔴 GPT-5 Request Body contains FORBIDDEN fields:', foundForbiddenFields);
+    console.error('🔴 Full request body:', JSON.stringify(requestBody, null, 2));
     throw new Error(`GPT-5 Responses API: Forbidden fields detected: ${foundForbiddenFields.join(', ')}`);
   }
+  
+  // ✅ FINAL VALIDATION: Verify input array structure
+  if (!Array.isArray(requestBody.input)) {
+    console.error('🔴 GPT-5 Input is not an array:', typeof requestBody.input);
+    throw new Error('GPT-5 Responses API: Input must be an array of messages');
+  }
+  
+  // ✅ Verify each message in input array
+  requestBody.input.forEach((msg, idx) => {
+    if (!msg || typeof msg !== 'object') {
+      throw new Error(`GPT-5 Responses API: Input message at index ${idx} is invalid`);
+    }
+    if (!msg.role || !msg.content) {
+      throw new Error(`GPT-5 Responses API: Input message at index ${idx} missing required fields (role or content)`);
+    }
+    if (Object.keys(msg).length > 2) {
+      console.warn(`⚠️ GPT-5 Input message at index ${idx} has extra fields:`, Object.keys(msg));
+    }
+  });
 
   // 🔍 INVESTIGATION: Log instructions and verbosity for debugging
   console.log('🔵 GPT-5 Responses API Request:', {
@@ -707,8 +841,21 @@ async function callOpenAIResponses(
     verbosityMapping: `${extensivenessLevel || 'N/A'} → ${verbosity}`,
     instructions: requestBody.instructions ? requestBody.instructions.substring(0, 300) + '...' : 'N/A',
     requestBodyKeys: Object.keys(requestBody),
-    requestBody: JSON.stringify(requestBody, null, 2)
+    requestBodyStructure: {
+      model: requestBody.model,
+      inputCount: requestBody.input.length,
+      inputTypes: requestBody.input.map((m: any) => m.role),
+      max_output_tokens: requestBody.max_output_tokens,
+      reasoning: requestBody.reasoning,
+      text: requestBody.text,
+      store: requestBody.store,
+      hasInstructions: !!requestBody.instructions,
+      instructionsLength: requestBody.instructions?.length || 0
+    }
   });
+  
+  // 🔍 CRITICAL: Log full request body for debugging API errors
+  console.log('🔵 GPT-5 Full Request Body (JSON):', JSON.stringify(requestBody, null, 2));
 
   let response: Response;
   try {
