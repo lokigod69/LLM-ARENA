@@ -2964,3 +2964,127 @@ async function callMoonshotOracle(oraclePrompt: string, modelType: 'moonshot-v1-
   
   return analysis;
 }
+
+export async function processDebateTurn(params: {
+  prevMessage: string;
+  conversationHistory: { sender: string; text: string }[];
+  model: string;
+  agreeabilityLevel?: number;
+  position?: 'pro' | 'con';
+  extensivenessLevel?: number;
+  topic?: string;
+  maxTurns?: number;
+  personaId?: string;
+  turnNumber?: number;
+}): Promise<RunTurnResponse> {
+  const {
+    prevMessage,
+    conversationHistory,
+    model,
+    agreeabilityLevel = 5,
+    position,
+    extensivenessLevel = 3,
+    topic = 'Unknown topic',
+    maxTurns = 20,
+    personaId,
+    turnNumber
+  } = params;
+
+  const normalizedHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const effectiveTurnNumber = turnNumber ?? normalizedHistory.length;
+
+  console.log('🤖 Orchestrator: Processing debate turn', {
+    model,
+    agreeabilityLevel,
+    position,
+    extensivenessLevel,
+    topic: topic.substring(0, 60),
+    personaId,
+    turnNumber: effectiveTurnNumber,
+    historyLength: normalizedHistory.length
+  });
+
+  if (MOCK_MODE) {
+    console.log('🎭 MOCK_MODE active – generating simulated response');
+    const mockReply = generateMockResponse(model, agreeabilityLevel, position, topic, prevMessage);
+
+    return {
+      reply: mockReply,
+      model,
+      timestamp: new Date().toISOString(),
+      tokenUsage: {
+        inputTokens: 250,
+        outputTokens: 150,
+        totalTokens: 400,
+        estimatedCost: 0
+      }
+    };
+  }
+
+  const systemPrompt = generateSystemPrompt(
+    model,
+    agreeabilityLevel,
+    position,
+    topic,
+    maxTurns,
+    extensivenessLevel,
+    personaId,
+    effectiveTurnNumber,
+    normalizedHistory,
+    model
+  );
+
+  const modelKey = getModelKey(model);
+  const modelConfig = MODEL_CONFIGS[modelKey];
+
+  if (!modelConfig) {
+    throw new Error(`Model configuration not found for: ${model}`);
+  }
+
+  const currentModelDisplayName = getModelDisplayName(modelKey as AvailableModel);
+
+  const messages = normalizedHistory.map((entry) => {
+    const isCurrentModel = entry.sender === currentModelDisplayName;
+    return {
+      role: isCurrentModel ? 'assistant' : 'user',
+      content: entry.text
+    };
+  });
+
+  const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
+
+  let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
+
+  switch (modelConfig.provider) {
+    case 'openai':
+      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', extensivenessLevel);
+      break;
+    case 'anthropic':
+      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', extensivenessLevel);
+      break;
+    case 'deepseek':
+      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', extensivenessLevel);
+      break;
+    case 'google':
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel);
+      break;
+    case 'grok':
+      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel);
+      break;
+    case 'moonshot':
+      result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', extensivenessLevel);
+      break;
+    case 'openrouter':
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', extensivenessLevel);
+      break;
+    default:
+      throw new Error(`Unsupported model provider: ${modelConfig.provider}`);
+  }
+
+  return {
+    reply: result.reply,
+    model: modelKey,
+    timestamp: new Date().toISOString(),
+    tokenUsage: result.tokenUsage
+  };
+}
