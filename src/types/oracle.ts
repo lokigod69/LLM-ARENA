@@ -131,6 +131,7 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
   'grok-4-fast',                    // Grok Fast
   'qwen3-max',                      // Qwen 3 Max
   'qwen3-30b-a3b',                  // Qwen 3 30B
+  'moonshot-v1-128k',               // Moonshot Kimi 128K
 ];
 
 // Oracle Model Strengths - What each model excels at for analysis
@@ -149,7 +150,10 @@ export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
   'grok-4-fast-reasoning': 'Real-time data access, transparent reasoning chains',
   'grok-4-fast': 'Ultra-fast analysis, conversational insights',
   'qwen3-max': 'Exceptional multilingual analysis, 1T parameter depth',
-  'qwen3-30b-a3b': 'Cost-effective reasoning, efficient analysis'
+  'qwen3-30b-a3b': 'Cost-effective reasoning, efficient analysis',
+  'moonshot-v1-8k': 'Fast bilingual assistant with short context',
+  'moonshot-v1-32k': 'Extended context bilingual reasoning',
+  'moonshot-v1-128k': 'Long-context bilingual analysis, excels at evidence aggregation'
 };
 
 // Default Oracle model preference (best reasoning capabilities)

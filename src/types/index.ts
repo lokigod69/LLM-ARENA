@@ -26,7 +26,10 @@ export type AvailableModel =
   | 'grok-4-fast-reasoning'
   | 'grok-4-fast'
   | 'qwen3-max'
-  | 'qwen3-30b-a3b';
+  | 'qwen3-30b-a3b'
+  | 'moonshot-v1-8k'
+  | 'moonshot-v1-32k'
+  | 'moonshot-v1-128k';
 
 export type ModelPosition = 'pro' | 'con';
 

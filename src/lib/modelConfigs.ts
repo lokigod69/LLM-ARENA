@@ -110,6 +110,27 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     shortName: 'Qwen 30B',
     color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
     description: 'Cost-effective MoE model with optional reasoning - excellent for scaled debates'
+  },
+  'moonshot-v1-8k': {
+    name: 'moonshot-v1-8k',
+    displayName: 'Kimi 8K',
+    shortName: 'Kimi 8K',
+    color: '#FF6B35', // Moonshot brand orange
+    description: 'Moonshot AI\'s Kimi 8K model – fast bilingual assistant with short context'
+  },
+  'moonshot-v1-32k': {
+    name: 'moonshot-v1-32k',
+    displayName: 'Kimi 32K',
+    shortName: 'Kimi 32K',
+    color: '#FF6B35',
+    description: 'Kimi 32K – extended reasoning with 32K context window for richer debates'
+  },
+  'moonshot-v1-128k': {
+    name: 'moonshot-v1-128k',
+    displayName: 'Kimi 128K',
+    shortName: 'Kimi 128K',
+    color: '#FF6B35',
+    description: 'Moonshot AI\'s flagship Kimi 128K – ultra-long context and multilingual reasoning'
   }
 };
 

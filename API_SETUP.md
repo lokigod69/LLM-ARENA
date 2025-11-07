@@ -20,6 +20,11 @@ Plan A has been implemented! The LLM Arena now uses **real API calls** to OpenAI
 - Get your project URL and anon key from Settings → API
 - Example URL format: `https://cickzxbllbecfpxdklyl.supabase.co`
 
+### 4. Moonshot AI API Key (for Kimi)
+- Visit: https://platform.moonshot.cn/
+- Generate a Moonshot (Kimi) API key
+- Required for the new Kimi debate models (8K / 32K / 128K)
+
 ## Setup Instructions
 
 1. **Create environment file:**
@@ -45,6 +50,9 @@ NEXT_PUBLIC_SUPABASE_URL=https://cickzxbllbecfpxdklyl.supabase.co
 
 # ElevenLabs API Key (optional - for text-to-speech)
 ELEVENLABS_API_KEY=your-elevenlabs-api-key-here
+
+# Moonshot AI API Key (for Kimi models)
+MOONSHOT_API_KEY=sk-your-moonshot-key-here
    ```
 
 3. **Restart the development server:**

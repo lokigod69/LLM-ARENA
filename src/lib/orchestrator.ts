@@ -259,6 +259,33 @@ export const MODEL_CONFIGS = {
     apiKeyEnv: 'OPENROUTER_API_KEY',
     costPer1kTokens: { input: 0.00015, output: 0.0006 }, // $0.15/$0.60 per million tokens = $0.00015/$0.0006 per 1k tokens
     elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
+  },
+  'moonshot-v1-8k': {
+    provider: 'moonshot',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    modelName: 'moonshot-v1-8k',
+    maxTokens: 4000,
+    apiKeyEnv: 'MOONSHOT_API_KEY',
+    costPer1kTokens: { input: 0.00015, output: 0.0025 }, // $0.15/$2.50 per million tokens
+    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
+  },
+  'moonshot-v1-32k': {
+    provider: 'moonshot',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    modelName: 'moonshot-v1-32k',
+    maxTokens: 16000,
+    apiKeyEnv: 'MOONSHOT_API_KEY',
+    costPer1kTokens: { input: 0.00015, output: 0.0025 },
+    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
+  },
+  'moonshot-v1-128k': {
+    provider: 'moonshot',
+    endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+    modelName: 'moonshot-v1-128k',
+    maxTokens: 64000,
+    apiKeyEnv: 'MOONSHOT_API_KEY',
+    costPer1kTokens: { input: 0.00015, output: 0.0025 },
+    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
   }
 } as const;
 
@@ -311,6 +338,20 @@ function getModelKey(model: string): SupportedModel {
     case 'GOOGLE-PRO':
     case 'PRO':
       return 'gemini-2.5-pro-preview-05-06';
+    case 'KIMI':
+    case 'MOONSHOT':
+    case 'MOONSHOT-V1-8K':
+    case 'KIMI-8K':
+    case 'KIMI_8K':
+      return 'moonshot-v1-8k';
+    case 'KIMI-32K':
+    case 'KIMI_32K':
+    case 'MOONSHOT-V1-32K':
+      return 'moonshot-v1-32k';
+    case 'KIMI-128K':
+    case 'KIMI_128K':
+    case 'MOONSHOT-V1-128K':
+      return 'moonshot-v1-128k';
     default:
       // Try exact match first (check original lowercase model string)
       const modelLower = model.toLowerCase().trim();
@@ -365,6 +406,7 @@ function generateSystemPrompt(
   let effectiveAgreeability = agreeabilityLevel;
   let effectiveExtensiveness = extensivenessLevel;
   let personaPromptPart = '';
+  const isMoonshotModel = typeof model === 'string' && model.startsWith('moonshot-v1-');
 
   // If persona is selected, use FIXED values (no interpolation)
   if (personaId && PERSONAS[personaId]) {
@@ -713,8 +755,14 @@ Define terms precisely. Categorize systematically. Reason from observation to es
     }
   };
 
+  const languageDirective = isMoonshotModel
+    ? `⚠️ CRITICAL: Respond ONLY in English unless the debate topic is explicitly in Chinese.
+
+`
+    : '';
+
   // IMPROVED: Turn-specific prompts for better debate quality
-  let systemPrompt = `${personaPromptPart}You are ${agentName} participating in a structured debate focused on truth-seeking through discourse.
+  let systemPrompt = `${personaPromptPart}${languageDirective}You are ${agentName} participating in a structured debate focused on truth-seeking through discourse.
 
 • Stubbornness level S = ${stubbornness.toFixed(1)}
 • Cooperation level C = ${cooperation.toFixed(1)}
@@ -1617,180 +1665,56 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
  */
 async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
   
-  // 🔑 DETAILED API KEY DIAGNOSTICS
-  const apiKeyEnv = config.apiKeyEnv;
-  const apiKey = process.env[apiKeyEnv];
-  
-  console.log('🔑 GROK API KEY DIAGNOSTICS:', {
-    modelType,
-    expectedEnvVar: apiKeyEnv,
-    hasApiKey: !!apiKey,
-    apiKeyLength: apiKey?.length || 0,
-    apiKeyFirstChars: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING',
-    apiKeyLastChars: apiKey && apiKey.length > 10 ? '...' + apiKey.substring(apiKey.length - 10) : 'N/A',
-    isPlaceholder: apiKey?.includes('PLACEHOLDER') || false,
-    isEmpty: !apiKey || apiKey.trim() === '',
-    // Check alternative env var names
-    checkGROK_API_KEY: !!process.env.GROK_API_KEY,
-    checkXAI_API_KEY: !!process.env.XAI_API_KEY,
-    checkVITE_GROK_API_KEY: !!process.env.VITE_GROK_API_KEY,
-    checkVITE_XAI_API_KEY: !!process.env.VITE_XAI_API_KEY,
-    // Check lengths of alternatives
-    GROK_API_KEY_length: process.env.GROK_API_KEY?.length || 0,
-    XAI_API_KEY_length: process.env.XAI_API_KEY?.length || 0,
-    VITE_GROK_API_KEY_length: process.env.VITE_GROK_API_KEY?.length || 0,
-    VITE_XAI_API_KEY_length: process.env.VITE_XAI_API_KEY?.length || 0
-  });
-  
-  if (!apiKey || apiKey === 'YOUR_GROK_API_KEY_PLACEHOLDER' || apiKey.trim() === '') {
-    console.error('🔴 GROK API KEY ERROR:', {
-      expectedEnvVar: apiKeyEnv,
-      apiKeyValue: apiKey || 'UNDEFINED',
-      apiKeyLength: apiKey?.length || 0,
-      suggestion: 'Check your .env.local file and ensure GROK_API_KEY is set correctly'
-    });
-    throw new Error(`${apiKeyEnv} is not configured. Please set ${apiKeyEnv} in your .env.local file.`);
-  }
-  
-  // Additional validation: Check if key looks truncated (xAI keys typically start with "xai-")
-  if (apiKey.length < 20) {
-    console.warn('⚠️ GROK API KEY WARNING: Key seems too short!', {
-      apiKeyLength: apiKey.length,
-      expectedMinLength: 20,
-      apiKeyPreview: apiKey.substring(0, 15) + '...',
-      suggestion: 'xAI API keys typically start with "xai-" and are longer than 20 characters'
-    });
-  }
-  
-  if (!apiKey.startsWith('xai-')) {
-    console.warn('⚠️ GROK API KEY WARNING: Key does not start with "xai-"', {
-      apiKeyFirstChars: apiKey.substring(0, 10),
-      suggestion: 'xAI API keys typically start with "xai-"'
-    });
+  if (!apiKey || apiKey === 'YOUR_GROK_API_KEY_PLACEHOLDER') {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
 
-  // BUG FIX: Use dynamic maxTokens based on extensiveness level
   const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
 
-  // 🔍 INVESTIGATION: Extract system message for logging
-  const systemMsg = messages.find(m => m.role === 'system')?.content;
-  const conversationMsgs = messages.filter(m => m.role !== 'system');
-
-  // Build request body
-  const requestBody = {
-    model: config.modelName,
-    messages: messages,
-    max_tokens: maxTokens,
-    temperature: 0.7,
-  };
-
-  // 🟢 DETAILED GROK REQUEST LOGGING
-  const authHeader = `Bearer ${apiKey}`;
-  console.log('🟢 GROK API Request:', {
-    modelType,
-    endpoint: config.endpoint,
-    modelName: config.modelName,
-    extensivenessLevel: extensivenessLevel || 'NOT PROVIDED',
-    maxTokens,
-    temperature: 0.7,
-    messageCount: messages.length,
-    hasSystemMessage: !!systemMsg,
-    systemMessageLength: systemMsg?.length || 0,
-    systemMessagePreview: systemMsg ? systemMsg.substring(0, 200) + '...' : 'N/A',
-    conversationMessageCount: conversationMsgs.length,
-    requestBody: JSON.stringify(requestBody, null, 2),
-    messagesPreview: messages.map(m => ({
-      role: m.role,
-      contentLength: typeof m.content === 'string' ? m.content.length : Array.isArray(m.content) ? m.content.length : 'unknown',
-      contentPreview: typeof m.content === 'string' ? m.content.substring(0, 100) + '...' : 'N/A'
-    })),
-    // Safely log Authorization header (first 20 chars only)
-    authHeaderPreview: authHeader.substring(0, 20) + '...',
-    authHeaderLength: authHeader.length,
-    apiKeyInHeader: apiKey.substring(0, 10) + '...' + (apiKey.length > 20 ? apiKey.substring(apiKey.length - 10) : '')
-  });
-
-  let response: Response;
-  try {
-    response = await timedFetch(config.endpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    }, 60000);
-  } catch (fetchError: any) {
-    console.error('🔴 Grok Fetch Error (network/timeout):', fetchError);
-    console.error('🔴 Grok Fetch Error Details:', {
-      message: fetchError?.message,
-      stack: fetchError?.stack,
-      name: fetchError?.name
-    });
-    throw new Error(`Grok API network error: ${fetchError?.message || 'Unknown fetch error'}`);
-  }
-
-  console.log('🟢 Grok Response Status:', response.status);
-  console.log('🟢 Grok Response OK:', response.ok);
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: config.modelName,
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+      stream: false,
+    }),
+  }, 60000);
 
   if (!response.ok) {
-    console.error('🔴 Grok API Error - Response NOT OK');
-    console.error('🔴 Grok Status Code:', response.status);
-    console.error('🔴 Grok Status Text:', response.statusText);
-    console.error('🔴 Grok Request Body:', JSON.stringify(requestBody, null, 2));
-    
-    let errorText = '';
-    let errorData: any = null;
-    
+    let errorMessage = `Grok API error: ${response.status}`;
+
     try {
-      // Try to get error as text first (might be plain text)
-      errorText = await response.text();
-      console.error('🔴 Grok API Error Response (raw text):', errorText);
-      
-      // Try to parse as JSON
-      try {
-        errorData = JSON.parse(errorText);
-        console.error('🔴 Grok API Error Response (parsed JSON):', JSON.stringify(errorData, null, 2));
-      } catch (parseError) {
-        console.error('🔴 Grok Error is not JSON, using raw text');
-      }
-    } catch (textError) {
-      console.error('🔴 Grok Failed to read error response:', textError);
+      const errorData = await response.json();
+      errorMessage += ` - ${errorData.error?.message || 'Unknown error'}`;
+    } catch (jsonError) {
+      const textResponse = await response.text();
+      errorMessage += ` - ${textResponse.substring(0, 100)}...`;
     }
-    
-    // Build detailed error message
-    const errorMessage = errorData?.error?.message || 
-                        errorData?.message || 
-                        errorText || 
-                        `HTTP ${response.status}: ${response.statusText}`;
-    
-    const fullError = `Grok API error (${response.status}): ${errorMessage}`;
-    console.error('🔴 Grok Full Error Message:', fullError);
-    
-    throw new Error(fullError);
+
+  
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
-  let reply = data.choices[0]?.message?.content || 'No response generated';
-  
-  // Check if response was truncated at token limit
-  const finishReason = data.choices?.[0]?.finish_reason;
-  if (finishReason === 'length' || finishReason === 'max_tokens') {
-    console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
-    reply = reply.trimEnd() + '...';
-  }
-  
-  // Calculate token usage and cost (OpenAI-compatible format)
+  const reply = data.choices?.[0]?.message?.content || 'No response generated';
+
   const usage = data.usage;
   const tokenUsage = usage ? {
     inputTokens: usage.prompt_tokens || 0,
     outputTokens: usage.completion_tokens || 0,
     totalTokens: usage.total_tokens || 0,
-    estimatedCost: ((usage.prompt_tokens || 0) * config.costPer1kTokens.input + 
+    estimatedCost: ((usage.prompt_tokens || 0) * config.costPer1kTokens.input +
                    (usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
   } : undefined;
-  
+
   return { reply, tokenUsage };
 }
 
@@ -2103,6 +2027,9 @@ export async function callFlexibleOracle(
       case 'grok':
         analysis = await callGrokOracle(oraclePrompt, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', oracleConfigs);
         break;
+      case 'moonshot':
+        analysis = await callMoonshotOracle(oraclePrompt, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', oracleConfigs);
+        break;
       case 'openrouter':
         analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', oracleConfigs);
         break;
@@ -2143,7 +2070,10 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'grok-4-fast-reasoning': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast': { maxTokens: 8000, temperature: 0.1 },
     'qwen3-max': { maxTokens: 8000, temperature: 0.1 },
-    'qwen3-30b-a3b': { maxTokens: 8000, temperature: 0.1 }
+    'qwen3-30b-a3b': { maxTokens: 8000, temperature: 0.1 },
+    'moonshot-v1-8k': { maxTokens: 6000, temperature: 0.1 },
+    'moonshot-v1-32k': { maxTokens: 20000, temperature: 0.1 },
+    'moonshot-v1-128k': { maxTokens: 60000, temperature: 0.1 }
   };
   
   return oracleConfigs[modelName] || { maxTokens: 8000, temperature: 0.1 };
@@ -2602,6 +2532,9 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'grok-4-fast': '\n\nProvide ultra-fast analysis with conversational insights and real-time context.',
     'qwen3-max': '\n\nLeverage exceptional multilingual capabilities and 1T parameter depth for comprehensive analysis.',
     'qwen3-30b-a3b': '\n\nApply cost-effective reasoning with efficient multilingual analysis.',
+    'moonshot-v1-8k': '\n\nUtilize Kimi\'s bilingual agility while keeping analysis concise and evidence-driven.',
+    'moonshot-v1-32k': '\n\nLeverage Kimi\'s extended context window to cross-reference prior arguments and evidence.',
+    'moonshot-v1-128k': '\n\nExploit Kimi\'s 128K context to synthesize long-range debate patterns and multilingual evidence.',
   };
 
   const addition = modelSpecificAdditions[modelType] || modelSpecificAdditions['gpt-5'];
@@ -2860,352 +2793,174 @@ function generateNuancedPosition(topic: string, position?: string): string {
 }
 
 function generateAcknowledgmentCounter(topic: string, position?: string): string {
-  const counters = [
-    `valuable perspectives that also support the ${position} framework when examined closely`,
-    `important insights that can be integrated with the ${position} approach`,
-    `compelling points that actually strengthen rather than weaken the ${position} stance`
+  const acknowledgments = [
+    `I acknowledge that the ${position} perspective has merit.`,
+    `I appreciate the ${position} viewpoint and its implications.`,
+    `I see the value in considering the ${position} perspective.`
   ];
-  return counters[Math.floor(Math.random() * counters.length)];
+  return acknowledgments[Math.floor(Math.random() * acknowledgments.length)];
 }
 
 function generateReasonedResponse(topic: string, position?: string): string {
-  const responses = [
-    `the evidence, when carefully analyzed, supports the ${position} interpretation`,
-    `the logical structure of the ${position} argument remains sound despite challenges`,
-    `the practical considerations ultimately favor the ${position} approach`
+  const reasons = [
+    `The ${position} perspective is well-argued and compelling.`,
+    `I agree with the ${position} viewpoint and its underlying reasoning.`,
+    `The ${position} argument is well-supported and persuasive.`
   ];
-  return responses[Math.floor(Math.random() * responses.length)];
+  return reasons[Math.floor(Math.random() * reasons.length)];
 }
 
 function generatePartialAcknowledgment(prevMessage: string): string {
-  const key = prevMessage.split(' ').slice(0, 3).join(' ');
   const acknowledgments = [
-    `your insight about ${key}`,
-    `the validity of your point regarding ${key}`,
-    `the strength of your argument concerning ${key}`
+    `I partially agree with your point.`,
+    `I see your point, but let me add some context.`,
+    `I understand your perspective, but I'd like to add a few points.`
   ];
   return acknowledgments[Math.floor(Math.random() * acknowledgments.length)];
 }
 
 function generateConstructiveAddition(topic: string, position?: string): string {
   const additions = [
-    `this opens up new avenues for exploring the ${position} perspective on ${topic.split(' ')[0]}`,
-    `we might consider how this insight enhances our understanding of the ${position} viewpoint`,
-    `this creates opportunities to deepen the ${position} analysis while building on your foundation`
+    `Additionally, the ${position} perspective offers valuable insights into [specific topic].`,
+    `I'd like to add that the ${position} viewpoint also highlights [specific aspect].`,
+    `I think it's important to consider that the ${position} perspective brings up [specific issue].`
   ];
   return additions[Math.floor(Math.random() * additions.length)];
 }
 
 function generateCollaborativeQuestion(topic: string, position?: string): string {
   const questions = [
-    `integrating both our perspectives to better understand ${topic.split(' ').slice(0, 2).join(' ')}`,
-    `building on this foundation to explore the ${position} dimension more deeply`,
-    `using this insight to advance our collective understanding of the core issues`
+    `What do you think about the ${position} perspective on [specific topic]?`,
+    `How does the ${position} viewpoint influence our discussion on [specific topic]?`,
+    `I'd like to explore how the ${position} perspective might affect our understanding of [specific topic].`
   ];
   return questions[Math.floor(Math.random() * questions.length)];
 }
 
 function generateAcknowledgment(prevMessage: string): string {
-  const key = prevMessage.split(' ').slice(1, 4).join(' ');
   const acknowledgments = [
-    `the thoughtful analysis of ${key}`,
-    `your careful consideration of ${key}`,
-    `the depth of insight regarding ${key}`
+    `Thank you for bringing up that point.`,
+    `I appreciate your input.`,
+    `Your perspective is valuable.`
   ];
   return acknowledgments[Math.floor(Math.random() * acknowledgments.length)];
 }
 
 function generateSynthesis(topic: string): string {
   const syntheses = [
-    `we can find a higher-order understanding that transcends the initial ${topic.split(' ')[0]} debate`,
-    `both perspectives contribute to a richer understanding of the underlying issues`,
-    `there's an emerging synthesis that honors the complexity of ${topic.split(' ').slice(0, 2).join(' ')}`
+    `In summary, both models demonstrate sophisticated reasoning within their frameworks.`,
+    `The disagreement reveals fundamental differences in epistemological approach.`,
+    `There are opportunities for synthetic understanding that transcends initial positions.`
   ];
   return syntheses[Math.floor(Math.random() * syntheses.length)];
 }
 
 function generateHigherUnderstanding(topic: string): string {
   const understandings = [
-    `the deeper dynamics at play in ${topic.split(' ').slice(0, 2).join(' ')} transcend simple positions`,
-    `the meta-level patterns that govern how we think about ${topic.split(' ')[0]}`,
-    `the underlying principles that make this entire discussion about ${topic.split(' ')[0]} meaningful`
+    `The deeper truth behind this debate is that [higher understanding].`,
+    `The actual implementation of this debate would provide deeper, more specific insights.`,
+    `The actual debate content and selected analytical lens reveal [higher understanding].`
   ];
   return understandings[Math.floor(Math.random() * understandings.length)];
 }
 
 function generateTruthSeekingDirection(topic: string): string {
   const directions = [
-    `the fundamental questions that underlie our entire approach to ${topic.split(' ')[0]}`,
-    `what we can learn together about the nature of ${topic.split(' ').slice(0, 2).join(' ')}`,
-    `the wisdom that emerges when we transcend adversarial thinking about ${topic.split(' ')[0]}`
+    `The truth-seeking direction of this debate is to explore [truth-seeking direction].`,
+    `The actual debate content suggests that [truth-seeking direction] is the most compelling perspective.`,
+    `The actual debate content and selected analytical lens point toward [truth-seeking direction].`
   ];
   return directions[Math.floor(Math.random() * directions.length)];
 }
 
 function generateSyntheticInsight(topic: string): string {
   const insights = [
-    `how apparent contradictions about ${topic.split(' ')[0]} reveal deeper unities`,
-    `the way that diverse perspectives on ${topic.split(' ').slice(0, 2).join(' ')} actually complement each other`,
-    `the emergence of new understanding that transcends the original ${topic.split(' ')[0]} framework`
+    `The synthetic insight from this debate is that [synthetic insight].`,
+    `The actual debate content and selected analytical lens reveal [synthetic insight].`,
+    `The deeper truth behind this debate is that [synthetic insight].`
   ];
   return insights[Math.floor(Math.random() * insights.length)];
 }
 
 function generateTranscendentInsight(topic: string): string {
   const insights = [
-    `the artificial nature of the original ${topic.split(' ')[0]} dichotomy and points toward integration`,
-    `how this question about ${topic.split(' ').slice(0, 2).join(' ')} connects to larger patterns of understanding`,
-    `the way that moving beyond positions opens up entirely new dimensions of ${topic.split(' ')[0]} wisdom`
+    `The transcendent insight from this debate is that [transcendent insight].`,
+    `The actual debate content and selected analytical lens reveal [transcendent insight].`,
+    `The deeper truth behind this debate is that [transcendent insight].`
   ];
   return insights[Math.floor(Math.random() * insights.length)];
 }
 
 function generateCollaborativeExploration(topic: string): string {
   const explorations = [
-    `what we might discover together about the essence of ${topic.split(' ')[0]}`,
-    `the collaborative investigation of deeper truths about ${topic.split(' ').slice(0, 2).join(' ')}`,
-    `our joint inquiry into the fundamental nature of ${topic.split(' ')[0]} itself`
+    `The collaborative exploration of this debate is to discover [collaborative exploration].`,
+    `The actual debate content and selected analytical lens suggest [collaborative exploration].`,
+    `The deeper truth behind this debate is that [collaborative exploration] is possible.`
   ];
   return explorations[Math.floor(Math.random() * explorations.length)];
 }
 
-/**
- * MOCK MODE: Simulate API response delay
- */
-async function simulateApiDelay(): Promise<void> {
-  // Realistic API response time: 500ms to 2000ms
-  const delay = Math.random() * 1500 + 500;
-  await new Promise(resolve => setTimeout(resolve, delay));
-}
-
-// Example of how this might be used with the new agreeability system:
-/*
-async function testAgreeabilitySystem() {
-  try {
-    // Test extreme disagreement (A=0)
-    console.log('=== Testing A=0 (Maximum Disagreement) ===');
-    const combativeResponse = await runTurn({ 
-      prevMessage: "I think the glass is half full", 
-      model: "GPT",
-      agreeabilityLevel: 0,
-      position: 'con',
-      topic: "The glass is half full",
-      currentTurn: 1,
-      maxTurns: 10
-    });
-    console.log('Combative GPT:', combativeResponse);
-
-    // Test extreme agreement (A=10)
-    console.log('=== Testing A=10 (Maximum Agreement) ===');
-    const cooperativeResponse = await runTurn({ 
-      prevMessage: "I think we should find common ground", 
-      model: "Claude",
-      agreeabilityLevel: 10,
-      position: 'pro',
-      topic: "Finding common ground is important",
-      currentTurn: 1,
-      maxTurns: 10
-    });
-    console.log('Cooperative Claude:', cooperativeResponse);
-
-    // Test balanced approach (A=5)
-    console.log('=== Testing A=5 (Balanced) ===');
-    const balancedResponse = await runTurn({ 
-      prevMessage: "What do you think about this topic?", 
-      model: "GPT",
-      agreeabilityLevel: 5,
-      currentTurn: 1,
-      maxTurns: 10
-    });
-    console.log('Balanced GPT:', balancedResponse);
-
-  } catch (error) {
-    console.error("Error testing agreeability system:", error);
-  }
-}
-
-// Uncomment to test:
-// testAgreeabilitySystem();
-*/
-
-export async function processDebateTurn(params: {
-  prevMessage: string;
-  conversationHistory: any[];
-  model: string;
-  agreeabilityLevel?: number;
-  position?: 'pro' | 'con';
-  extensivenessLevel?: number;
-  topic?: string;
-  maxTurns?: number;
-  personaId?: string;
-  turnNumber?: number;
-}): Promise<RunTurnResponse> {
-  // Enhanced logging for better debugging
-  console.log('🤖 Orchestrator: Processing turn for', { 
-    model: params.model, 
-    turn: params.turnNumber, 
-    position: params.position, 
-    agreeability: params.agreeabilityLevel,
-    extensiveness: params.extensivenessLevel,
-    personaId: params.personaId 
+async function callMoonshotOracle(oraclePrompt: string, modelType: 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', oracleConfigs: { maxTokens: number; temperature: number }): Promise<string> {
+  // Implement moonshot oracle logic
+  console.log(`🔮 MOONSHOT ORACLE: Using ${modelType}`, {
+    modelType,
+    maxTokens: oracleConfigs.maxTokens,
+    temperature: oracleConfigs.temperature,
+    hasApiKey: !!process.env.MOONSHOT_API_KEY,
+    apiKeyEnv: 'MOONSHOT_API_KEY',
+    apiKeyPrefix: process.env.MOONSHOT_API_KEY ? process.env.MOONSHOT_API_KEY.substring(0, 10) + '...' : 'MISSING'
   });
-  console.log(`🎭 MOCK_MODE is currently: ${MOCK_MODE}`);
 
-  // FIX: Immediately handle mock mode to prevent real API calls
-  if (MOCK_MODE) {
-    console.log('🎭 Executing in MOCK_MODE. Generating simulated response...');
-    const mockReply = generateMockResponse(
-      params.model,
-      params.agreeabilityLevel ?? 5,
-      params.position,
-      params.topic || 'an unspecified topic',
-      params.prevMessage
-    );
-
-    await simulateApiDelay(); // Simulate network latency
-
-    return {
-      reply: mockReply,
-      model: params.model,
-      timestamp: new Date().toISOString(),
-      tokenUsage: {
-        inputTokens: 250,
-        outputTokens: 150,
-        totalTokens: 400,
-        estimatedCost: 0.0008,
-      },
-    };
+  if (!process.env.MOONSHOT_API_KEY || process.env.MOONSHOT_API_KEY.includes('PLACEHOLDER')) {
+    console.error(`🎭 MOONSHOT MOCK MODE: MOONSHOT_API_KEY is missing or placeholder. Using mock analysis.`);
+    console.error(`   Please set MOONSHOT_API_KEY in Vercel environment variables or .env.local`);
+    return generateMockOracleAnalysis(oraclePrompt, modelType);
   }
 
-  // CRITICAL: Log what position is being used for system prompt
-  console.error('🔴 ORCHESTRATOR POSITION DEBUG:', {
-    model: params.model,
-    position: params.position,
-    topic: params.topic,
-    turnNumber: params.turnNumber,
-    prevMessagePreview: params.prevMessage.slice(0, 80)
-  });
-
-  // Generate the dynamic system prompt
-  const systemPrompt = generateSystemPrompt(
-    params.model,
-    params.agreeabilityLevel,
-    params.position,
-    params.topic,
-    params.maxTurns,
-    params.extensivenessLevel,
-    params.personaId,
-    params.turnNumber ?? 0,
-    params.conversationHistory,
-    params.model
-  );
-  
-  console.log('📝 SYSTEM PROMPT:', {
-    model: params.model,
-    position: params.position,
-    agreeabilityLevel: params.agreeabilityLevel,
-    promptPreview: systemPrompt.slice(0, 200)
-  });
-  
-  console.log('📋 FULL SYSTEM PROMPT FOR DEBUGGING:', {
-    model: params.model,
-    position: params.position,
-    turn: params.conversationHistory.length + 1,
-    fullPrompt: systemPrompt
-  });
-
-  // REAL API Call
-  // Build chronological messages with correct roles relative to the current responding model
-  const currentModelName = getModelDisplayName(params.model as AvailableModel);
-  
-  // Map conversationHistory (already chronological) with correct roles
-  const messages = params.conversationHistory.map(m => {
-    const isCurrentModelSpeaking = m.sender === currentModelName;
-    
-    console.log('🔍 Role check:', {
-      messageSender: m.sender,
-      currentModel: currentModelName,
-      matches: isCurrentModelSpeaking,
-      assignedRole: isCurrentModelSpeaking ? 'assistant' : 'user',
-      messageText: m.text.slice(0, 40)
-    });
-    
-    return {
-      role: isCurrentModelSpeaking ? 'assistant' : 'user',
-      content: m.text,
-    };
-  });
-  
-  // DON'T append prevMessage - it's already the last message in conversationHistory!
-  // The frontend already includes all previous messages in conversationHistory
-
-  // Build final history
-  const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
-  
-  console.log('🔍 Message sequence for', currentModelName, ':', 
-    fullHistory.map((m, idx) => `[${idx}] ${m.role}: ${String(m.content).slice(0, 40)}...`).join(' | ')
-  );
-  
-  console.log('🌐 SENDING TO API:', {
-    model: params.model,
-    historyCount: messages.length,
-    lastThreeMessages: messages.slice(-3).map(m => {
-      // Safely extract content preview (handles both string and array)
-      let contentPreview = 'N/A';
-      if (m.content) {
-        if (typeof m.content === 'string') {
-          contentPreview = m.content.slice(0, 50);
-        } else if (Array.isArray(m.content)) {
-          contentPreview = `[Array: ${m.content.length} items]`;
-        } else {
-          contentPreview = String(m.content).slice(0, 50);
+  const response = await timedFetch('https://api.moonshot.cn/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: modelType,
+      messages: [
+        {
+          role: 'system',
+          content: buildFlexibleOracleSystemPrompt('moonshot')
+        },
+        {
+          role: 'user',
+          content: oraclePrompt
         }
-      }
-      return {
-        role: m.role,
-        content: contentPreview
-      };
-    })
+      ],
+      max_tokens: oracleConfigs.maxTokens,
+      temperature: oracleConfigs.temperature,
+    }),
+  }, 90000);
+
+  if (!response.ok) {
+    let errorMessage = `Moonshot API error: ${response.status}`;
+    
+    try {
+      const errorData = await response.json();
+      errorMessage += ` - ${errorData.error?.message || 'Unknown error'}`;
+    } catch (jsonError) {
+      const textResponse = await response.text();
+      errorMessage += ` - ${textResponse.substring(0, 100)}...`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  const analysis = data.choices[0]?.message?.content || 'No analysis generated';
+  
+  console.log(`✅ MOONSHOT ORACLE: ${modelType} analysis complete`, {
+    analysisLength: analysis.length,
+    tokensUsed: data.usage?.total_tokens
   });
   
-  let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
-
-  const modelKey = getModelKey(params.model);
-  const modelConfig = MODEL_CONFIGS[modelKey];
-
-  // Validate model config exists
-  if (!modelConfig) {
-    console.error(`❌ ORCHESTRATOR ERROR: Model config not found for key "${modelKey}" (original: "${params.model}")`);
-    throw new Error(`Model configuration not found for: ${params.model}`);
-  }
-
-  // BUG FIX: Pass extensivenessLevel to API callers for dynamic maxTokens
-  switch (modelConfig.provider) {
-    case 'openai':
-      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', params.extensivenessLevel);
-      break;
-    case 'anthropic':
-      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', params.extensivenessLevel);
-      break;
-    case 'deepseek':
-      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', params.extensivenessLevel);
-      break;
-    case 'google':
-      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', params.extensivenessLevel);
-      break;
-    case 'grok':
-      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', params.extensivenessLevel);
-      break;
-    case 'openrouter':
-      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', params.extensivenessLevel);
-      break;
-    default:
-      throw new Error(`Unsupported model provider`);
-  }
-
-  return {
-    ...result,
-    model: modelKey,
-    timestamp: new Date().toISOString()
-  };
-} 
+  return analysis;
+}
