@@ -266,8 +266,8 @@ export const MODEL_CONFIGS = {
     modelName: 'moonshot-v1-8k',
     maxTokens: 4000,
     apiKeyEnv: 'MOONSHOT_API_KEY',
-    costPer1kTokens: { input: 0.00015, output: 0.0025 }, // $0.15/$2.50 per million tokens
-    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
+    costPer1kTokens: { input: 0.00015, output: 0.0025 },
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM'
   },
   'moonshot-v1-32k': {
     provider: 'moonshot',
@@ -276,7 +276,7 @@ export const MODEL_CONFIGS = {
     maxTokens: 16000,
     apiKeyEnv: 'MOONSHOT_API_KEY',
     costPer1kTokens: { input: 0.00015, output: 0.0025 },
-    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM'
   },
   'moonshot-v1-128k': {
     provider: 'moonshot',
@@ -285,7 +285,7 @@ export const MODEL_CONFIGS = {
     maxTokens: 64000,
     apiKeyEnv: 'MOONSHOT_API_KEY',
     costPer1kTokens: { input: 0.00015, output: 0.0025 },
-    elevenLabsVoiceId: 'nBKdbSdaLWZTX0tYSgvZ'
+    elevenLabsVoiceId: '21m00Tcm4TlvDq8ikWAM'
   }
 } as const;
 
@@ -2451,7 +2451,10 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'grok-4-fast-reasoning': 'real-time data access with transparent reasoning',
     'grok-4-fast': 'ultra-fast analysis with conversational insights',
     'qwen3-max': 'exceptional multilingual analysis with 1T parameter depth',
-    'qwen3-30b-a3b': 'cost-effective reasoning with efficient analysis'
+    'qwen3-30b-a3b': 'cost-effective reasoning with efficient analysis',
+    'moonshot-v1-8k': 'Fast bilingual reasoning',
+    'moonshot-v1-32k': 'Extended context analysis',
+    'moonshot-v1-128k': 'Ultra-long context aggregation',
   };
 
   const strength = modelStrengths[modelName] || 'balanced analytical';
@@ -3077,8 +3080,10 @@ export async function processDebateTurn(params: {
     case 'openrouter':
       result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', extensivenessLevel);
       break;
-    default:
-      throw new Error(`Unsupported model provider: ${modelConfig.provider}`);
+    default: {
+      const exhaustiveCheck: never = modelConfig;
+      throw new Error('Unsupported model provider encountered in processDebateTurn');
+    }
   }
 
   return {
@@ -3086,5 +3091,82 @@ export async function processDebateTurn(params: {
     model: modelKey,
     timestamp: new Date().toISOString(),
     tokenUsage: result.tokenUsage
+  };
+}
+
+async function callUnifiedMoonshot(
+  fullHistory: Array<{ role: string; content: string }>,
+  modelType: 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k',
+  extensivenessLevel: number
+): Promise<{ reply: string; tokenUsage: RunTurnResponse['tokenUsage'] }> {
+  const config = MODEL_CONFIGS[modelType];
+  const apiKey = process.env[config.apiKeyEnv];
+
+  if (!apiKey || apiKey === 'YOUR_MOONSHOT_API_KEY_PLACEHOLDER') {
+    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+  }
+
+  const systemMessage = fullHistory.find((msg) => msg.role === 'system');
+  const conversationMessages = fullHistory.filter((msg) => msg.role !== 'system');
+
+  const messages = systemMessage
+    ? [{ role: 'system', content: systemMessage.content }, ...conversationMessages]
+    : conversationMessages;
+
+  const maxTokens = getMaxTokensForExtensiveness(extensivenessLevel);
+
+  let temperature = 0.7;
+  temperature = Math.max(0, Math.min(1, temperature));
+
+  const requestBody = {
+    model: config.modelName,
+    messages,
+    max_tokens: maxTokens,
+    temperature,
+  };
+
+  console.log(`🌙 Moonshot API call: ${modelType}, max_tokens=${maxTokens}, temperature=${temperature}`);
+
+  const response = await timedFetch(config.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  }, 90000);
+
+  if (!response.ok) {
+    let errorText = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorText = JSON.stringify(errorData);
+    } catch {
+      errorText = await response.text();
+    }
+    throw new Error(`Moonshot API error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  const reply = data.choices?.[0]?.message?.content || '';
+
+  const inputTokens = data.usage?.prompt_tokens || 0;
+  const outputTokens = data.usage?.completion_tokens || 0;
+  const totalTokens = inputTokens + outputTokens;
+
+  const inputCost = (inputTokens / 1000) * config.costPer1kTokens.input;
+  const outputCost = (outputTokens / 1000) * config.costPer1kTokens.output;
+  const estimatedCost = inputCost + outputCost;
+
+  console.log(`🌙 Moonshot usage: ${inputTokens}in + ${outputTokens}out = $${estimatedCost.toFixed(6)}`);
+
+  return {
+    reply,
+    tokenUsage: {
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      estimatedCost,
+    },
   };
 }
