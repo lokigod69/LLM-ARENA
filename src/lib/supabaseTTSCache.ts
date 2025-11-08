@@ -88,6 +88,11 @@ export async function saveToSupabaseTTS(
     const hash = await computeContentHash(modelName, voiceIdentifier, text);
     const filePath = `${hash}.mp3`;
 
+    console.log('📤 Supabase: Attempting upload', {
+      fileName: filePath,
+      blobSize: audioBlob.size,
+    });
+
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, audioBlob, {
@@ -97,8 +102,11 @@ export async function saveToSupabaseTTS(
       });
 
     if (uploadError) {
+      console.error('❌ Supabase: Storage upload failed:', uploadError);
       throw uploadError;
     }
+
+    console.log('✅ Supabase: Storage upload succeeded');
 
     const textPreview = text.length > 100 ? `${text.substring(0, 100)}…` : text;
 
@@ -117,8 +125,11 @@ export async function saveToSupabaseTTS(
       );
 
     if (upsertError) {
+      console.error('❌ Supabase: Table insert failed:', upsertError);
       throw upsertError;
     }
+
+    console.log('✅ Supabase: Metadata saved to tts_audio table');
   } catch (err) {
     console.error('Supabase TTS cache save failed:', err);
   }
