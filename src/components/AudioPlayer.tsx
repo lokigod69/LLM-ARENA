@@ -9,6 +9,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Loader, RotateCcw } from 'lucide-react';
+import { checkSupabaseTTSCache, saveToSupabaseTTS } from '@/lib/supabaseTTSCache';
 
 interface AudioPlayerProps {
   text: string;
@@ -21,6 +22,18 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const resolveModelKey = (): string => {
+    if (modelName) return modelName;
+    if (personaId) return `persona:${personaId}`;
+    return 'default';
+  };
+
+  const resolveVoiceKey = (): string => {
+    if (personaId) return `persona:${personaId}`;
+    if (modelName) return `model:${modelName}`;
+    return 'default';
+  };
 
   // Generate cache key from text and voice identifier
   const getCacheKey = (): string => {
@@ -38,6 +51,21 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     });
     
     return cacheKey;
+  };
+
+  const blobToDataUrl = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to convert blob to data URL'));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
   };
 
   // Get cached audio blob from IndexedDB
@@ -79,8 +107,14 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       if (cached) {
         const data = JSON.parse(cached);
         if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
-          console.log('✅ AudioPlayer: CACHE HIT (localStorage):', cacheKey);
-          return data.url;
+          if (typeof data.dataUrl === 'string') {
+            console.log('✅ AudioPlayer: CACHE HIT (localStorage dataUrl):', cacheKey);
+            return data.dataUrl;
+          }
+          if (typeof data.url === 'string') {
+            console.warn('⚠️ AudioPlayer: Removing legacy blob URL cache entry:', cacheKey);
+            localStorage.removeItem(cacheKey);
+          }
         } else {
           console.log('⏰ AudioPlayer: Cache expired (localStorage), removing:', cacheKey);
           localStorage.removeItem(cacheKey);
@@ -118,13 +152,13 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       console.error('❌ AudioPlayer: Error saving to cache:', error);
       // Fallback: Try localStorage (but this won't persist blob URLs)
       try {
-        const url = URL.createObjectURL(blob);
+        const dataUrl = await blobToDataUrl(blob);
         const data = {
-          url,
+          dataUrl,
           timestamp: Date.now(),
         };
         localStorage.setItem(cacheKey, JSON.stringify(data));
-        console.log('⚠️ AudioPlayer: Saved to localStorage (fallback):', cacheKey);
+        console.log('⚠️ AudioPlayer: Saved to localStorage (fallback, dataUrl):', cacheKey);
       } catch (fallbackError) {
         console.error('❌ AudioPlayer: Failed to save to localStorage:', fallbackError);
       }
@@ -305,6 +339,40 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     }
   };
 
+  const playBlob = async (blob: Blob) => {
+    await cacheAudio(blob);
+
+    const url = URL.createObjectURL(blob);
+    console.log('🎵 AudioPlayer: Created blob URL, playing audio:', {
+      url: url.substring(0, 50) + '...',
+      blobType: blob.type,
+      blobSize: blob.size,
+    });
+
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    audio.play();
+    setIsPlaying(true);
+    setError(null);
+
+    audio.onended = () => {
+      setIsPlaying(false);
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    audio.onerror = (e) => {
+      console.error('❌ AudioPlayer: Audio playback error:', e);
+      setError('Playback failed');
+      setIsPlaying(false);
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  };
+
   const handlePlay = async () => {
     // If already playing, pause
     if (audioRef.current && !audioRef.current.paused) {
@@ -332,13 +400,11 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     // LOG: Voice ID being used (for debugging)
     console.log('🎤 AudioPlayer: Using voice ID:', voiceId, 'for persona:', personaId || 'NONE', 'model:', modelName || 'NONE');
 
-    // Check cache first (async) - get blob, create fresh URL
     const cachedBlobUrl = await getCachedAudio();
     if (cachedBlobUrl) {
       console.log('✅ AudioPlayer: Using cached audio from IndexedDB');
       try {
-        // Create fresh blob URL each time (never reuse old URLs)
-        const freshUrl = cachedBlobUrl; // getCachedAudio already returns a fresh blob URL
+        const freshUrl = cachedBlobUrl;
         const audio = new Audio(freshUrl);
         audioRef.current = audio;
         
@@ -348,7 +414,6 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
 
         audio.onended = () => {
           setIsPlaying(false);
-          // Clean up blob URL when done
           if (freshUrl.startsWith('blob:')) {
             URL.revokeObjectURL(freshUrl);
           }
@@ -358,7 +423,6 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
           console.error('❌ AudioPlayer: Audio playback error:', e);
           setIsPlaying(false);
           setError('Playback failed');
-          // Clean up blob URL on error
           if (freshUrl.startsWith('blob:')) {
             URL.revokeObjectURL(freshUrl);
           }
@@ -367,15 +431,31 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
         return;
       } catch (error) {
         console.error('❌ AudioPlayer: Error playing cached audio:', error);
-        // Clean up blob URL on error
         if (cachedBlobUrl.startsWith('blob:')) {
           URL.revokeObjectURL(cachedBlobUrl);
         }
-        // Continue to fetch new audio
       }
     }
 
-    // Fetch new audio
+    const supabaseModelKey = resolveModelKey();
+    const supabaseVoiceKey = resolveVoiceKey();
+
+    try {
+      const supabaseUrl = await checkSupabaseTTSCache(supabaseModelKey, text, supabaseVoiceKey);
+      if (supabaseUrl) {
+        console.log('✅ AudioPlayer: Supabase cache hit – streaming audio');
+        const response = await fetch(supabaseUrl);
+        if (response.ok) {
+          const supabaseBlob = await response.blob();
+          await playBlob(supabaseBlob);
+          return;
+        }
+        console.warn('⚠️ AudioPlayer: Supabase audio fetch failed with status', response.status);
+      }
+    } catch (supabaseError) {
+      console.error('❌ AudioPlayer: Supabase cache lookup failed:', supabaseError);
+    }
+
     if (!personaId && !modelName) {
       console.error('❌ AudioPlayer: No voice available (no personaId or modelName)');
       setError('No voice available');
@@ -411,39 +491,11 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
         isBlob: blob instanceof Blob,
       });
       
-      // Cache the blob itself (persistent storage)
-      await cacheAudio(blob);
-      
-      const url = URL.createObjectURL(blob);
-      console.log('🎵 AudioPlayer: Created blob URL, playing audio:', {
-        url: url.substring(0, 50) + '...',
-        blobType: blob.type,
-        blobSize: blob.size,
-      });
+      await playBlob(blob);
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      audio.play();
-      setIsPlaying(true);
-
-      audio.onended = () => {
-        setIsPlaying(false);
-        // Clean up blob URL when done
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      };
-
-      audio.onerror = (e) => {
-        console.error('❌ AudioPlayer: Audio playback error:', e);
-        setError('Playback failed');
-        setIsPlaying(false);
-        // Clean up blob URL on error
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      };
+      saveToSupabaseTTS(supabaseModelKey, text, supabaseVoiceKey, blob)
+        .then(() => console.log('💾 AudioPlayer: Saved audio to Supabase cache'))
+        .catch((error) => console.error('❌ AudioPlayer: Failed to save audio to Supabase cache:', error));
     } catch (error) {
       console.error('Error playing audio:', error);
       setError(error instanceof Error ? error.message : 'Failed to load audio');

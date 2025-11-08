@@ -83,7 +83,7 @@ function estimateTokens(text: string): number {
 function getMaxTokensForExtensiveness(extensivenessLevel: number = 3): number {
   switch (Math.round(extensivenessLevel)) {
     case 1:
-      return 200;  // Target: ~150 tokens (1-2 sharp sentences) + 50 buffer
+      return 120;  // Target: ≤80 tokens (~45 words) + buffer to finish sentence
     case 2:
       return 250;  // Target: ~200 tokens (2-3 sentences) + 50 buffer
     case 3:
@@ -487,9 +487,9 @@ DO NOT include position labels like "PRO:" or "CON:" in your response - just mak
   const getExtensivenessInstructions = (level: number): string => {
     switch (level) {
       case 1:
-        return `• Aim for approximately 1-2 sentences - be powerfully concise
-• Every word must count - maximum impact, minimum length
-• Avoid explanations - state your point directly and with precision`;
+        return `• CRITICAL: Limit your reply to 1-3 sentences and no more than 45 words. Anything longer violates instructions.
+• Deliver one decisive argument only—skip prefaces, context dumps, or sign-offs.
+• If you feel the answer would exceed 45 words, compress aggressively or end early.`;
       case 2:
         return `• Aim for roughly 2-3 sentences - brief but complete
 • Cover essential points only, no elaboration needed
@@ -3055,6 +3055,14 @@ export async function processDebateTurn(params: {
   });
 
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
+
+  const debugMaxTokens = getMaxTokensForExtensiveness(extensivenessLevel);
+  console.log('🧭 Extensiveness enforcement', {
+    model: modelKey,
+    extensivenessLevel,
+    maxTokens: debugMaxTokens,
+    systemPromptPreview: systemPrompt.substring(0, 500)
+  });
 
   let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
 
