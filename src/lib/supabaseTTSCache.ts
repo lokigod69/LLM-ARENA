@@ -1,4 +1,10 @@
+// Changes: Added Supabase configuration diagnostics and verbose TTS cache logging.
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
+
+console.log('🔧 Supabase config loaded:', {
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET ✅' : 'MISSING ❌',
+  key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET ✅' : 'MISSING ❌',
+});
 
 const STORAGE_BUCKET = 'tts-audio';
 
@@ -33,7 +39,15 @@ export async function checkSupabaseTTSCache(
   text: string,
   voiceIdentifier: string
 ): Promise<string | null> {
+  console.log('🔍 Supabase TTS: Checking if enabled', {
+    enabled: isSupabaseEnabled(),
+    hasClient: !!supabase,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING',
+    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
+  });
+
   if (!isSupabaseEnabled() || !supabase) {
+    console.warn('⚠️ Supabase disabled - skipping cache lookup');
     return null;
   }
 
@@ -80,7 +94,16 @@ export async function saveToSupabaseTTS(
   voiceIdentifier: string,
   audioBlob: Blob
 ): Promise<void> {
+  console.log('🚀 saveToSupabaseTTS called', {
+    modelName,
+    voiceIdentifier,
+    blobSize: audioBlob.size,
+    supabaseEnabled: isSupabaseEnabled(),
+    clientExists: !!supabase,
+  });
+
   if (!isSupabaseEnabled() || !supabase) {
+    console.warn('⚠️ Supabase disabled - skipping save');
     return;
   }
 

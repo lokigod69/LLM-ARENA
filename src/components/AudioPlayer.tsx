@@ -4,6 +4,7 @@
 // - Handles play/pause/restart, loading states, and error handling
 // - Fetches audio from /api/tts endpoint with ElevenLabs integration
 // - PROMPT 3: Added restart button to reset audio to beginning
+// - Added verbose Supabase save diagnostics for cross-user caching
 
 'use client';
 
@@ -493,9 +494,22 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       
       await playBlob(blob);
 
+      console.log('📤 AudioPlayer: Attempting Supabase save...', {
+        model: supabaseModelKey,
+        textLength: text.length,
+        blobSize: blob.size,
+      });
+
       saveToSupabaseTTS(supabaseModelKey, text, supabaseVoiceKey, blob)
-        .then(() => console.log('💾 AudioPlayer: Saved audio to Supabase cache'))
-        .catch((error) => console.error('❌ AudioPlayer: Failed to save audio to Supabase cache:', error));
+        .then(() => console.log('✅ AudioPlayer: Supabase save completed'))
+        .catch((error) => {
+          console.error('❌ AudioPlayer: Supabase save FAILED:', error);
+          try {
+            console.error('Error details:', JSON.stringify(error, null, 2));
+          } catch {
+            console.error('Error details: <unserializable error object>');
+          }
+        });
     } catch (error) {
       console.error('Error playing audio:', error);
       setError(error instanceof Error ? error.message : 'Failed to load audio');
