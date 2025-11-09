@@ -1,5 +1,5 @@
-// Changes: Added Supabase configuration diagnostics and verbose TTS cache logging.
-import { supabase, isSupabaseEnabled } from '@/lib/supabase';
+// Changes: Wired Supabase TTS cache to browser client with expanded diagnostics.
+import { supabaseBrowser as supabase, isSupabaseBrowserEnabled as isSupabaseEnabled } from '@/lib/supabase';
 
 console.log('🔧 Supabase config loaded:', {
   url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET ✅' : 'MISSING ❌',
