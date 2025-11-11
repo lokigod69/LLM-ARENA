@@ -1,7 +1,9 @@
-'use client';
+// Change Log:
+// - Added PNG-first persona portraits with JPG fallback for selector thumbnails and preview.
 
+'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PERSONAS, PersonaDefinition } from '@/lib/personas';
+import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
 
 // Card flip animation styles
 const flipStyles = `
@@ -40,6 +42,14 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
   title,
 }) => {
   const selectedPersona = selectedPersonaId ? PERSONAS[selectedPersonaId] : null;
+  const selectedPortraitPaths = selectedPersona
+    ? getPersonaPortraitPaths(selectedPersona.id)
+    : { primary: '', fallback: '' };
+  const selectedPortraitSrc = selectedPersona
+    ? selectedPortraitPaths.primary || selectedPersona.portrait
+    : '';
+  const selectedShouldFallback =
+    Boolean(selectedPersona && selectedPortraitPaths.fallback && selectedPortraitPaths.fallback !== selectedPortraitSrc);
 
   const handlePersonaClick = (personaId: string) => {
     // Toggle behavior: if already selected, deselect
@@ -58,46 +68,68 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
         
         {/* Persona Grid with Flip Cards */}
         <div className="grid grid-cols-5 gap-4">
-          {Object.values(PERSONAS).map((persona) => (
-            <div
-              key={persona.id}
-              className={`flip-card ${selectedPersonaId === persona.id ? 'flipped' : ''} cursor-pointer hover:scale-105 transition-transform aspect-square rounded-md overflow-hidden`}
-              onClick={() => handlePersonaClick(persona.id)}
-            >
-              <div className="flip-card-inner">
-                {/* Front - Portrait */}
-                <div className="flip-card-front">
-                  <img
-                    src={persona.portrait}
-                    alt={persona.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                {/* Back - Black with initials */}
-                <div className="flip-card-back bg-black flex items-center justify-center border border-matrix-green">
-                  <span className="text-matrix-green text-2xl font-bold font-matrix">
-                    {getInitials(persona.name)}
-                  </span>
+          {Object.values(PERSONAS).map((persona) => {
+            const portraitPaths = getPersonaPortraitPaths(persona.id);
+            const portraitSrc = portraitPaths.primary || persona.portrait;
+            const shouldFallback = portraitPaths.fallback && portraitPaths.fallback !== portraitSrc;
+
+            return (
+              <div
+                key={persona.id}
+                className={`flip-card ${selectedPersonaId === persona.id ? 'flipped' : ''} cursor-pointer hover:scale-105 transition-transform aspect-square rounded-md overflow-hidden`}
+                onClick={() => handlePersonaClick(persona.id)}
+              >
+                <div className="flip-card-inner">
+                  {/* Front - Portrait */}
+                  <div className="flip-card-front">
+                    <img
+                      src={portraitSrc}
+                      alt={persona.name}
+                      onError={
+                        shouldFallback
+                          ? (e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = portraitPaths.fallback;
+                            }
+                          : undefined
+                      }
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* Back - Black with initials */}
+                  <div className="flip-card-back bg-black flex items-center justify-center border border-matrix-green">
+                    <span className="text-matrix-green text-2xl font-bold font-matrix">
+                      {getInitials(persona.name)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Large Selected Persona Display */}
-        {selectedPersonaId && PERSONAS[selectedPersonaId] && (
+        {selectedPersona && (
           <div 
             className="mt-6 flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)] cursor-pointer hover:border-matrix-green/80 transition-colors"
             onClick={() => onSelectPersona(null)}
           >
             <img 
-              src={PERSONAS[selectedPersonaId].portrait} 
-              alt={PERSONAS[selectedPersonaId].name}
+              src={selectedPortraitSrc} 
+              alt={selectedPersona.name}
+              onError={
+                selectedShouldFallback
+                  ? (e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = selectedPortraitPaths.fallback;
+                    }
+                  : undefined
+              }
               className="w-32 h-32 border-2 border-matrix-green shadow-[0_0_25px_rgba(0,255,0,0.6)]"
             />
             <span className="text-matrix-green text-xl font-bold font-matrix tracking-wider">
-              {PERSONAS[selectedPersonaId].name.toUpperCase()}
+              {selectedPersona.name.toUpperCase()}
             </span>
           </div>
         )}

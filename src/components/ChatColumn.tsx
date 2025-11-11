@@ -1,9 +1,11 @@
-// Task 3.3 Complete + Matrix UI: Matrix-styled chat column with cyberpunk aesthetics
-// Updated with dynamic model colors for consistent UI experience
-// MarkButton integration: Added MarkButton after each message for marking (heart/star) debate messages
-// PROMPT 4: Display persona name instead of model name when message has personaId
-// PROMPT 5: Color-code persona icons by model type (GPT: Green, Claude: Orange, Gemini: Blue, DeepSeek: Purple)
-// PROMPT 3: Removed timestamp display to prevent overlap with audio controls
+// Change Log:
+// - Added PNG-first persona portraits with JPG fallback support.
+// - Task 3.3 Complete + Matrix UI: Matrix-styled chat column with cyberpunk aesthetics.
+// - Updated with dynamic model colors for consistent UI experience.
+// - MarkButton integration: Added MarkButton after each message for marking (heart/star) debate messages.
+// - PROMPT 4: Display persona name instead of model name when message has personaId.
+// - PROMPT 5: Color-code persona icons by model type (GPT: Green, Claude: Orange, Gemini: Blue, DeepSeek: Purple).
+// - PROMPT 3: Removed timestamp display to prevent overlap with audio controls.
 'use client';
 
 import { forwardRef } from 'react';
@@ -15,7 +17,7 @@ import type { AvailableModel } from '@/types';
 import AudioPlayer from './AudioPlayer';
 import { usePlayback } from '@/contexts/PlaybackContext';
 
-import { PERSONAS } from '@/lib/personas';
+import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
 
 interface ChatColumnProps {
   messages: Message[];
@@ -107,13 +109,26 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
               // PROMPT 5: Get model-specific color for persona icon
               const iconModelName = actualModelName || modelName;
               const iconColor = getModelColorForIcons(iconModelName);
+              const portraitPaths = persona ? getPersonaPortraitPaths(persona.id) : { primary: '', fallback: '' };
+              const portraitSrc = portraitPaths.primary || persona?.portrait || '';
+              const shouldUseFallback = Boolean(
+                portraitPaths.fallback && portraitPaths.fallback !== portraitSrc
+              );
               
               return (
                 <div className="flex items-center justify-center gap-3">
                   {persona && (
                     <img 
-                      src={persona.portrait} 
+                      src={portraitSrc} 
                       alt={persona.name}
+                      onError={
+                        shouldUseFallback
+                          ? (e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = portraitPaths.fallback;
+                            }
+                          : undefined
+                      }
                       className="w-16 h-16 border-2"
                       style={{ 
                         imageRendering: 'crisp-edges',

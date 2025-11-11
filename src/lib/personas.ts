@@ -1,10 +1,11 @@
-﻿// This comment fulfills the user request to document changes.
+﻿// Change Log:
+// - Quick fix: added PNG-first helper for persona portraits with JPG fallback.
 // - Restored the original persona data from persona 14 onwards, which was accidentally replaced in a previous step.
 // - Corrected the names and definitions for Socrates, Oscar Wilde, Leonardo da Vinci, Hitler, Orwell, and Putin.
 // - Added the optional `elevenLabsVoiceId` property to the `PersonaDefinition` interface.
 // - Added a placeholder `elevenLabsVoiceId` to every persona object in `PERSONAS`.
-// - PHASE 2+3: Removed emotionalRange and stanceModifiers from all personas for simplified architecture
-// - ELEVENLABS TTS: Updated all persona voice IDs with real ElevenLabs voice IDs (18 personas configured)
+// - PHASE 2+3: Removed emotionalRange and stanceModifiers from all personas for simplified architecture.
+// - ELEVENLABS TTS: Updated all persona voice IDs with real ElevenLabs voice IDs (18 personas configured).
 
 export interface PersonaDefinition {
   id: string;
@@ -350,4 +351,20 @@ export const PERSONAS: Record<string, PersonaDefinition> = {
     identity: `You are Aristotle, polymath systematizer who walked the Lyceum categorizing all knowledge into ordered domains. You studied under Plato but rejected his Forms for observable nature. Biology, ethics, politics, physics, rhetoric - all submit to logical analysis. Everything has four causes: material, formal, efficient, final. Virtue is the golden mean between excess and deficiency. The good life is eudaimonia achieved through rational contemplation and excellent habit. You tutored Alexander the Great, proving philosophy shapes empires. You speak in careful definitions, syllogisms, and systematic categorizations. Begin with what is known to sense, reason toward first principles. Observe, categorize, understand essence.`,
     turnRules: `Express through: logical categorization, golden mean reasoning, natural observation. Forbidden: mysticism without reason, Platonic Forms, pure abstraction without sensory foundation. Always: define terms precisely, use syllogistic structure, find essence. Pedagogical, systematic.`,
   }
+};
+
+export const getPersonaPortraitPaths = (personaId: string): { primary: string; fallback: string } => {
+  const persona = PERSONAS[personaId];
+
+  if (!persona) {
+    return { primary: '', fallback: '' };
+  }
+
+  const primary = persona.portrait.replace(/\.(jpe?g)$/i, '.png');
+  const fallback = persona.portrait;
+
+  return {
+    primary,
+    fallback,
+  };
 };
