@@ -4,8 +4,7 @@
 // gemini-2.5-flash-preview-05-06, gemini-2.5-pro-preview-05-06
 // Maintains Matrix cyberpunk theme while adding complete model flexibility
 // Backward compatibility maintained for existing functionality
-// Enhanced UI with new model selector and personality controls
-// UI/UX FIXES: Added cursor-pointer class to Oracle Analysis button
+// Personas UX update: persona previews remain visible even when the selection panel collapses
 // UI FIX: Removed onNewDebate prop from PromptInput - [NEW] button removed
 
 'use client'; // Required for useAuth and useState
@@ -24,6 +23,7 @@ import { useDebate } from '@/hooks/useDebate';
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getModelDisplayName, getModelColor } from '@/lib/modelConfigs';
+import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
 import type { OracleConfig } from '../types/oracle';
 import MarkButton from '@/components/MarkButton';
 import PersonaSelector from '@/components/PersonaSelector';
@@ -104,6 +104,47 @@ function HomeContent() {
 
   const modelAChatScrollRef = useRef<HTMLDivElement>(null);
   const modelBChatScrollRef = useRef<HTMLDivElement>(null);
+
+  const personaAConfig = modelA.personaId ? PERSONAS[modelA.personaId] : undefined;
+  const personaBConfig = modelB.personaId ? PERSONAS[modelB.personaId] : undefined;
+
+  const renderPersonaPreview = (
+    personaConfig: typeof personaAConfig,
+    onClear: () => void
+  ) => {
+    if (!personaConfig) {
+      return null;
+    }
+
+    const portraitPaths = getPersonaPortraitPaths(personaConfig.id);
+    const portraitSrc = portraitPaths.primary || personaConfig.portrait;
+    const shouldFallback =
+      Boolean(portraitPaths.fallback && portraitPaths.fallback !== portraitSrc);
+
+    return (
+      <div
+        className="flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)] cursor-pointer hover:border-matrix-green/80 transition-colors"
+        onClick={onClear}
+      >
+        <img
+          src={portraitSrc}
+          alt={personaConfig.name}
+          onError={
+            shouldFallback
+              ? (e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = portraitPaths.fallback;
+                }
+              : undefined
+          }
+          className="w-32 h-32 border-2 border-matrix-green shadow-[0_0_25px_rgba(0,255,0,0.6)]"
+        />
+        <span className="text-matrix-green text-xl font-bold font-matrix tracking-wider text-center">
+          {personaConfig.name.toUpperCase()}
+        </span>
+      </div>
+    );
+  };
 
   // PHASE 1 FIX: On initial load, check for existing auth cookies
   useEffect(() => {
@@ -352,6 +393,19 @@ function HomeContent() {
                   </svg>
                 </motion.div>
               </motion.div>
+
+            {(personaAConfig || personaBConfig) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                {personaAConfig &&
+                  renderPersonaPreview(personaAConfig, () =>
+                    setModelA((prev) => ({ ...prev, personaId: undefined }))
+                  )}
+                {personaBConfig &&
+                  renderPersonaPreview(personaBConfig, () =>
+                    setModelB((prev) => ({ ...prev, personaId: undefined }))
+                  )}
+              </div>
+            )}
 
               <AnimatePresence>
                 {isPersonaSelectionOpen && (
