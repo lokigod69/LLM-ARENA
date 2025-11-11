@@ -109,30 +109,6 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
           })}
         </div>
 
-        {/* Large Selected Persona Display */}
-        {selectedPersona && (
-          <div 
-            className="mt-6 flex flex-col items-center gap-3 p-6 border-2 border-matrix-green rounded-lg bg-black/50 shadow-[0_0_20px_rgba(0,255,0,0.3)] cursor-pointer hover:border-matrix-green/80 transition-colors"
-            onClick={() => onSelectPersona(null)}
-          >
-            <img 
-              src={selectedPortraitSrc} 
-              alt={selectedPersona.name}
-              onError={
-                selectedShouldFallback
-                  ? (e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = selectedPortraitPaths.fallback;
-                    }
-                  : undefined
-              }
-              className="w-32 h-32 border-2 border-matrix-green shadow-[0_0_25px_rgba(0,255,0,0.6)]"
-            />
-            <span className="text-matrix-green text-xl font-bold font-matrix tracking-wider">
-              {selectedPersona.name.toUpperCase()}
-            </span>
-          </div>
-        )}
       </div>
     </>
   );
