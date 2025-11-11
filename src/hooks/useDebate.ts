@@ -14,7 +14,7 @@ import { getModelDisplayName } from '@/lib/modelConfigs';
 import { PERSONAS } from '@/lib/personas';
 import { addItem as addLibraryItem, MarkedItem } from '@/lib/libraryStorage';
 
-// PHASE 1: New data structures for individual model personality control
+// PHASE 1: New data structures for individual model personality control + session/timer guards
 export interface ModelPersonality {
   agreeabilityLevel: number; // 0-10 (position defending to truth seeking)
   position: ModelPosition;   // 'pro' | 'con'
@@ -132,39 +132,50 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
 
   // Load debate state from sessionStorage on mount (clears on page refresh)
   const loadDebateState = (): Partial<EnhancedDebateState> | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const stored = sessionStorage.getItem('llm-arena-current-debate');
-      if (!stored) {
-        console.log('📂 No saved debate state in sessionStorage');
-        return null;
-      }
-      const parsed = JSON.parse(stored);
-      // Restore if debate has any data (topic, messages, or was active)
-      const hasData = parsed.topic?.length > 0 || 
-                      parsed.modelAMessages?.length > 0 || 
-                      parsed.modelBMessages?.length > 0 || 
-                      parsed.isActive;
-      
-      if (hasData) {
-        console.log('📥 RESTORING DEBATE STATE from sessionStorage', {
-          isActive: parsed.isActive,
-          currentTurn: parsed.currentTurn,
-          topic: parsed.topic,
-          messageACount: parsed.modelAMessages?.length || 0,
-          messageBCount: parsed.modelBMessages?.length || 0,
-          modelA: parsed.modelA?.name,
-          modelB: parsed.modelB?.name
-        });
-        return parsed;
-      } else {
-        console.log('📂 Saved debate state exists but has no data, skipping restore');
-        return null;
-      }
-    } catch (error) {
-      console.error('Failed to load debate state from sessionStorage:', error);
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = sessionStorage.getItem('llm-arena-current-debate');
+    if (!stored) {
+      console.log('📂 No saved debate state in sessionStorage');
       return null;
     }
+    const parsed = JSON.parse(stored);
+    // Restore if debate has any data (topic, messages, or was active)
+    const hasData = parsed.topic?.length > 0 || 
+                    parsed.modelAMessages?.length > 0 || 
+                    parsed.modelBMessages?.length > 0 || 
+                    parsed.isActive;
+    
+    if (hasData) {
+      console.log('📥 RESTORING DEBATE STATE from sessionStorage', {
+        isActive: parsed.isActive,
+        currentTurn: parsed.currentTurn,
+        topic: parsed.topic,
+        messageACount: parsed.modelAMessages?.length || 0,
+        messageBCount: parsed.modelBMessages?.length || 0,
+        modelA: parsed.modelA?.name,
+        modelB: parsed.modelB?.name
+      });
+
+      parsed.isActive = false;
+      parsed.isPaused = false;
+      parsed.isModelALoading = false;
+      parsed.isModelBLoading = false;
+      parsed.lastActiveModel = null;
+      parsed.currentTurn = parsed.modelAMessages?.length === parsed.modelBMessages?.length
+        ? parsed.modelAMessages?.length ?? 0
+        : Math.max(parsed.modelAMessages?.length ?? 0, parsed.modelBMessages?.length ?? 0);
+
+      console.log('📥 Restored session sanitized - auto-continue disabled');
+      return parsed;
+    } else {
+      console.log('📂 Saved debate state exists but has no data, skipping restore');
+      return null;
+    }
+  } catch (error) {
+    console.error('Failed to load debate state from sessionStorage:', error);
+    return null;
+  }
   };
 
   const savedState = loadDebateState();
@@ -222,6 +233,19 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   useEffect(() => {
     debateStateRef.current = state;
   }, [state]);
+
+  const visibleModelsRef = useRef({
+    modelA: state.modelA.name,
+    modelB: state.modelB.name,
+    topic: state.topic
+  });
+  useEffect(() => {
+    visibleModelsRef.current = {
+      modelA: state.modelA.name,
+      modelB: state.modelB.name,
+      topic: state.topic
+    };
+  }, [state.modelA.name, state.modelB.name, state.topic]);
 
   // Persist Oracle results to localStorage whenever they change
   useEffect(() => {
@@ -454,6 +478,14 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     console.log(`   └── Topic: "${topic.substring(0, 40)}${topic.length > 40 ? '...' : ''}"`);
     
     console.log('🔥 About to enter try block...');
+    
+    console.log('🔍 API Call Validation:', {
+      requestingModel: targetModel,
+      currentModelA: debateStateRef.current.modelA.name,
+      currentModelB: debateStateRef.current.modelB.name,
+      isActive: debateStateRef.current.isActive,
+      topic: debateStateRef.current.topic
+    });
     
     try {
       console.log('🔥 Inside try block - creating request body...');
@@ -726,15 +758,34 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
   const processNextTurn = useCallback(async () => {
     // Get FRESH state from ref - this includes the most recently added message
     const currentState = debateStateRef.current;
+    const visibleModels = visibleModelsRef.current;
 
-    // Check if we should continue
     if (!currentState.isActive) {
-      console.log('🏁 Auto-step process ended: debate stopped');
+      console.warn('⚠️ Skipping processNextTurn - debate not active');
+      clearAutoStep();
+      waitingForTypingRef.current = false;
       return;
     }
-    
+
+    if (
+      currentState.modelA.name !== visibleModels.modelA ||
+      currentState.modelB.name !== visibleModels.modelB
+    ) {
+      console.warn('⚠️ Skipping processNextTurn - models changed mid-flight', {
+        currentModelA: currentState.modelA.name,
+        currentModelB: currentState.modelB.name,
+        visibleModelA: visibleModels.modelA,
+        visibleModelB: visibleModels.modelB
+      });
+      clearAutoStep();
+      waitingForTypingRef.current = false;
+      return;
+    }
+
     if (currentState.currentTurn >= currentState.maxTurns) {
       console.log('🏁 Max turns reached, debate complete');
+      clearAutoStep();
+      waitingForTypingRef.current = false;
       
       // Auto-save debate to library
       try {
@@ -1020,15 +1071,25 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
 
   // PHASE B: New flexible model configuration actions
   const setModelA = useCallback((config: ModelConfiguration) => {
+    if (typeof window !== 'undefined') {
+      console.log('⏹️ Auto-step cancelled due to model A change');
+    }
+    clearAutoStep();
+    waitingForTypingRef.current = false;
     setState(prev => ({
       ...prev,
       modelA: config,
     }));
-  }, []);
+  }, [clearAutoStep]);
 
   const setModelB = useCallback((config: ModelConfiguration) => {
+    if (typeof window !== 'undefined') {
+      console.log('⏹️ Auto-step cancelled due to model B change');
+    }
+    clearAutoStep();
+    waitingForTypingRef.current = false;
     setState(prev => ({ ...prev, modelB: { ...prev.modelB, ...config } }));
-  }, []);
+  }, [clearAutoStep]);
 
   const setModelConfiguration = useCallback((modelA: ModelConfiguration, modelB: ModelConfiguration) => {
     setState(prev => ({

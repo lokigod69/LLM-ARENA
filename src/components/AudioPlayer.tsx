@@ -5,12 +5,14 @@
 // - Fetches audio from /api/tts endpoint with ElevenLabs integration
 // - PROMPT 3: Added restart button to reset audio to beginning
 // - Added verbose Supabase save diagnostics for cross-user caching
+// - Added global audio coordination to prevent overlapping playback
 
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Loader, RotateCcw } from 'lucide-react';
 import { checkSupabaseTTSCache, saveToSupabaseTTS } from '@/lib/supabaseTTSCache';
+import { useAudioContext } from '@/contexts/AudioContext';
 
 interface AudioPlayerProps {
   text: string;
@@ -23,6 +25,7 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { currentAudioRef, stopCurrentAudio } = useAudioContext();
 
   const resolveModelKey = (): string => {
     if (modelName) return modelName;
@@ -341,6 +344,16 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   };
 
   const playBlob = async (blob: Blob) => {
+    stopCurrentAudio();
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch (error) {
+        console.error('❌ AudioPlayer: Error pausing previous audio:', error);
+      }
+      audioRef.current = null;
+    }
+
     await cacheAudio(blob);
 
     const url = URL.createObjectURL(blob);
@@ -352,6 +365,7 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
 
     const audio = new Audio(url);
     audioRef.current = audio;
+    currentAudioRef.current = audio;
 
     audio.play();
     setIsPlaying(true);
@@ -362,6 +376,9 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       if (url.startsWith('blob:')) {
         URL.revokeObjectURL(url);
       }
+      if (currentAudioRef.current === audio) {
+        currentAudioRef.current = null;
+      }
     };
 
     audio.onerror = (e) => {
@@ -370,6 +387,9 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
       setIsPlaying(false);
       if (url.startsWith('blob:')) {
         URL.revokeObjectURL(url);
+      }
+      if (currentAudioRef.current === audio) {
+        currentAudioRef.current = null;
       }
     };
   };
@@ -405,9 +425,20 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
     if (cachedBlobUrl) {
       console.log('✅ AudioPlayer: Using cached audio from IndexedDB');
       try {
+        stopCurrentAudio();
+        if (audioRef.current) {
+          try {
+            audioRef.current.pause();
+          } catch (error) {
+            console.error('❌ AudioPlayer: Error pausing previous audio:', error);
+          }
+          audioRef.current = null;
+        }
+
         const freshUrl = cachedBlobUrl;
         const audio = new Audio(freshUrl);
         audioRef.current = audio;
+        currentAudioRef.current = audio;
         
         audio.play();
         setIsPlaying(true);
@@ -418,6 +449,9 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
           if (freshUrl.startsWith('blob:')) {
             URL.revokeObjectURL(freshUrl);
           }
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
         };
         
         audio.onerror = (e) => {
@@ -426,6 +460,9 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
           setError('Playback failed');
           if (freshUrl.startsWith('blob:')) {
             URL.revokeObjectURL(freshUrl);
+          }
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
           }
         };
         
@@ -538,13 +575,16 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
   useEffect(() => {
     return () => {
       if (audioRef.current) {
-        // Get current src (might be a blob URL)
+        if (currentAudioRef.current === audioRef.current) {
+          stopCurrentAudio();
+        } else {
+          try {
+            audioRef.current.pause();
+          } catch (error) {
+            console.error('❌ AudioPlayer: Error pausing audio during cleanup:', error);
+          }
+        }
         const currentSrc = audioRef.current.src;
-        
-        // Pause and cleanup audio element
-        audioRef.current.pause();
-        
-        // Revoke blob URL if it's a blob URL
         if (currentSrc.startsWith('blob:')) {
           try {
             URL.revokeObjectURL(currentSrc);
@@ -553,7 +593,6 @@ const AudioPlayer = ({ text, personaId, modelName }: AudioPlayerProps) => {
             console.error('❌ AudioPlayer: Error revoking blob URL:', error);
           }
         }
-        
         audioRef.current = null;
       }
     };
