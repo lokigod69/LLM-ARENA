@@ -1810,45 +1810,66 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash' 
   // Gemini uses a different API format. We combine messages into a single text block.
   const combinedText = messages.map(m => `${m.role}: ${m.content}`).join('\n\n');
 
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          { text: combinedText }
+        ]
+      }
+    ],
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      temperature: 0.7,
+      topP: 0.8,
+      topK: 40
+    },
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_NONE'
+      },
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_NONE'
+      },
+      {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_NONE'
+      },
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE'
+      }
+    ]
+  };
+
+  console.log('🔍 Gemini Request Debug:', {
+    modelType,
+    endpoint: config.endpoint,
+    apiVersion: config.endpoint.includes('/v1beta/') ? 'v1beta' : 'v1',
+    promptLength: combinedText.length,
+    promptPreview: combinedText.substring(0, 200),
+    requestBodyPreview: JSON.stringify(requestBody).substring(0, 500)
+  });
+
   const response = await timedFetch(`${config.endpoint}?key=${apiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: combinedText }
-          ]
-        }
-      ],
-      generationConfig: {
-        maxOutputTokens: maxTokens,
-        temperature: 0.7,
-        topP: 0.8,
-        topK: 40
-      },
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_NONE'
-        },
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_NONE'
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_NONE'
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_NONE'
-        }
-      ]
-    }),
+    body: JSON.stringify(requestBody),
   }, 60000);
+
+  console.log('📥 Gemini Response Status:', {
+    modelType,
+    status: response.status,
+    ok: response.ok,
+    headers: {
+      'content-type': response.headers.get('content-type'),
+      'x-request-id': response.headers.get('x-request-id')
+    }
+  });
 
   if (!response.ok) {
     let errorMessage = `${modelType} API error: ${response.status}`;
@@ -1865,11 +1886,31 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash' 
   }
 
   const data = await response.json();
+  console.log('📦 Gemini Raw Response:', {
+    modelType,
+    hasCandidates: !!data?.candidates,
+    candidatesLength: data?.candidates?.length || 0,
+    promptFeedback: data?.promptFeedback,
+    firstCandidateKeys: data?.candidates?.[0] ? Object.keys(data.candidates[0]) : [],
+    firstCandidatePreview: data?.candidates?.[0]
+      ? JSON.stringify(data.candidates[0]).substring(0, 500)
+      : 'NONE'
+  });
+
   let reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated';
   
-  // Check if response was truncated at token limit
   const finishReason = data.candidates?.[0]?.finishReason;
-  
+  const safetyRatings = data.candidates?.[0]?.safetyRatings;
+  const promptFeedback = data.promptFeedback;
+
+  console.log('🛡️ Gemini Safety Check:', {
+    finishReason: finishReason || 'UNKNOWN',
+    safetyRatings,
+    promptFeedback,
+    blockReason: promptFeedback?.blockReason || safetyRatings?.find?.(() => false)
+  });
+
+  // Check if response was truncated at token limit
   // INVESTIGATION: Log ALL finish reasons to diagnose cut-offs
   console.log(`🔍 Gemini API Response (${modelType}):`, {
     finishReason: finishReason || 'UNKNOWN',
