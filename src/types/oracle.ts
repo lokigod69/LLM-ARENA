@@ -124,7 +124,7 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
   'claude-haiku-4-5-20251001',      // Anthropic Claude Haiku
   'deepseek-r1',                    // DeepSeek R1
   'deepseek-v3',                    // DeepSeek V3
-  'gemini-2.0-flash-exp',           // Gemini Flash
+  'gemini-2.5-flash',               // Gemini Flash
   'gemini-2.5-pro-preview-05-06',   // Gemini Pro
   'gemini-2.5-flash-lite',          // Gemini Flash-Lite
   'grok-4-fast-reasoning',          // Grok Fast Reasoning
@@ -144,7 +144,7 @@ export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
   'claude-haiku-4-5-20251001': 'Fast reasoning, efficient analysis',
   'deepseek-r1': 'Chain of thought, step-by-step reasoning',
   'deepseek-v3': 'Fast logical analysis, efficient insights',
-  'gemini-2.0-flash-exp': 'Rapid analysis, quick patterns',
+  'gemini-2.5-flash': 'Rapid analysis, quick patterns',
   'gemini-2.5-pro-preview-05-06': 'Large context, comprehensive synthesis',
   'gemini-2.5-flash-lite': 'Quick insights, cost-effective judgments',
   'grok-4-fast-reasoning': 'Real-time data access, transparent reasoning chains',

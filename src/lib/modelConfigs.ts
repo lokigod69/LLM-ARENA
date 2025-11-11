@@ -1,7 +1,7 @@
 // PHASE B: Model Display Configuration for UI Components - Updated with exact API names
 // Defines visual properties and metadata for all available models
 // Updated to use exact API model names for proper API calls
-// MODEL UPDATE: Swapped Gemini Flash model to gemini-2.0-flash-exp
+// MODEL UPDATE: Swapped Gemini Flash model to gemini-2.5-flash
 // MIGRATION SUPPORT: Added legacy model name migrations for backward compatibility
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
@@ -10,7 +10,8 @@ const DEFAULT_MODEL_KEY: AvailableModel = 'gpt-5';
 
 // Model migration map - handles renamed/deprecated models
 export const MODEL_MIGRATIONS: Record<string, AvailableModel> = {
-  'gemini-2.5-flash-preview-05-06': 'gemini-2.0-flash-exp',
+  'gemini-2.5-flash-preview-05-06': 'gemini-2.5-flash',
+  'gemini-2.0-flash-exp': 'gemini-2.5-flash',
 };
 
 // Helper function to get current model name
@@ -84,10 +85,10 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     color: '#7C3AED', // violet-600 - Darker purple variant
     description: 'DeepSeek V3 - Fast chat model'
   },
-  'gemini-2.0-flash-exp': {
-    name: 'gemini-1.5-flash' as AvailableModel,
-    displayName: 'Gemini 2.0 Flash',
-    shortName: 'Flash',
+  'gemini-2.5-flash': {
+    name: 'gemini-2.5-flash' as AvailableModel,
+    displayName: 'Gemini 2.5 Flash',
+    shortName: 'Gemini 2.5',
     color: '#0B57D0', // Google dark blue - distinct from Grok light blue
     description: 'Google Gemini 2.5 Flash - Lightning fast responses'
   },

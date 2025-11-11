@@ -1,7 +1,7 @@
 // PHASE B: Main page component for LLM Arena debate platform - FLEXIBLE MODEL SUPPORT
 // Enhanced with Model A vs Model B selection with exact API model names
 // Uses exact API names: gpt-5, gpt-5-mini, gpt-5-nano, gpt-4o-mini, claude-3-5-sonnet-20241022, deepseek-r1, deepseek-v3,
-// gemini-2.0-flash-exp, gemini-2.5-pro-preview-05-06
+// gemini-2.5-flash, gemini-2.5-pro-preview-05-06
 // Maintains Matrix cyberpunk theme while adding complete model flexibility
 // Backward compatibility maintained for existing functionality
 // Access code tracking: saves verified access codes into debate state for Supabase exports
