@@ -1,4 +1,5 @@
 // Change Log:
+// - Fixed persona avatar borders to honor model colors for Moonshot/Kimi and Qwen models.
 // - Added PNG-first persona portraits with JPG fallback support.
 // - Task 3.3 Complete + Matrix UI: Matrix-styled chat column with cyberpunk aesthetics.
 // - Updated with dynamic model colors for consistent UI experience.
@@ -69,11 +70,17 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
 
     // PROMPT 5: Get model-specific color for icons
     const getModelColorForIcons = (modelName: string): string => {
+      if (actualModelName) {
+        return getModelColor(actualModelName);
+      }
+
       const name = modelName.toLowerCase();
       if (name.includes('gpt')) return '#00ff41'; // Green
       if (name.includes('claude')) return '#ff6b35'; // Orange
       if (name.includes('gemini')) return '#4a9eff'; // Blue
       if (name.includes('deepseek')) return '#9d4edd'; // Purple
+      if (name.includes('moonshot') || name.includes('kimi')) return '#ff6b35'; // Moonshot orange
+      if (name.includes('qwen')) return '#e8420a'; // Qwen red-orange
       return '#00ff41'; // Default green
     };
 
