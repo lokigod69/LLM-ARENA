@@ -508,7 +508,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           break;
         case 'deepseek-r1':
         case 'deepseek-v3':
-        case 'gemini-2.5-flash-preview-05-06':
+        case 'gemini-2.0-flash-exp':
         case 'gemini-2.5-pro-preview-05-06':
         case 'gemini-2.5-flash-lite':
         case 'grok-4-fast-reasoning':

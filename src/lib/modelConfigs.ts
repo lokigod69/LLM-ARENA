@@ -1,7 +1,7 @@
 // PHASE B: Model Display Configuration for UI Components - Updated with exact API names
 // Defines visual properties and metadata for all available models
 // Updated to use exact API model names for proper API calls
-// DISPLAY UPDATE: Simplified Grok 4 Fast display names (Grok 4 / Grok 4 Reasoning)
+// MODEL UPDATE: Swapped Gemini Flash model to gemini-2.0-flash-exp
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
@@ -62,9 +62,9 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     color: '#7C3AED', // violet-600 - Darker purple variant
     description: 'DeepSeek V3 - Fast chat model'
   },
-  'gemini-2.5-flash-preview-05-06': {
-    name: 'gemini-2.5-flash-preview-05-06',
-    displayName: 'Gemini 2.5 Flash',
+  'gemini-2.0-flash-exp': {
+    name: 'gemini-2.0-flash-exp',
+    displayName: 'Gemini 2.0 Flash',
     shortName: 'Flash',
     color: '#0B57D0', // Google dark blue - distinct from Grok light blue
     description: 'Google Gemini 2.5 Flash - Lightning fast responses'

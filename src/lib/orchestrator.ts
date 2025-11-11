@@ -195,10 +195,10 @@ export const MODEL_CONFIGS = {
     elevenLabsVoiceId: 'IKne3meq5aSn9XLyUdCD' // Charlie - Young, casual male voice
   },
   // PHASE A: Google Gemini models integration - Updated with exact API names
-  'gemini-2.5-flash-preview-05-06': {
+  'gemini-2.0-flash-exp': {
     provider: 'google',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-06:generateContent',
-    modelName: 'gemini-2.5-flash-preview-05-06',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+    modelName: 'gemini-2.0-flash-exp',
     maxTokens: 200,
     apiKeyEnv: 'GOOGLE_AI_API_KEY',
     costPer1kTokens: { input: 0.00015, output: 0.0006 }, // Gemini Flash pricing (similar to GPT-4 mini)
@@ -329,7 +329,7 @@ function getModelKey(model: string): SupportedModel {
     case 'GEMINI_FLASH':
     case 'FLASH':
     case 'GOOGLE-FLASH':
-      return 'gemini-2.5-flash-preview-05-06';
+      return 'gemini-2.0-flash-exp';
     case 'GEMINI-2.5-PRO':
     case 'GEMINI_2.5_PRO':
     case 'GEMINI-PRO':
@@ -1788,7 +1788,7 @@ async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen3-max' | '
 /**
  * Unified Google Gemini API caller supporting multiple Gemini models
  */
-async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.0-flash-exp' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -2022,7 +2022,7 @@ export async function callFlexibleOracle(
         analysis = await callDeepSeekOracleFlexible(oraclePrompt, modelKey as 'deepseek-r1' | 'deepseek-v3', oracleConfigs);
         break;
       case 'google':
-        analysis = await callGeminiOracle(oraclePrompt, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', oracleConfigs);
+        analysis = await callGeminiOracle(oraclePrompt, modelKey as 'gemini-2.0-flash-exp' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', oracleConfigs);
         break;
       case 'grok':
         analysis = await callGrokOracle(oraclePrompt, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', oracleConfigs);
@@ -2064,7 +2064,7 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'claude-haiku-4-5-20251001': { maxTokens: 8000, temperature: 0.1 },
     'deepseek-r1': { maxTokens: 32000, temperature: 0.1 },
     'deepseek-v3': { maxTokens: 16000, temperature: 0.1 },
-    'gemini-2.5-flash-preview-05-06': { maxTokens: 8000, temperature: 0.1 },
+    'gemini-2.0-flash-exp': { maxTokens: 8000, temperature: 0.1 },
     'gemini-2.5-pro-preview-05-06': { maxTokens: 30000, temperature: 0.1 },
     'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast-reasoning': { maxTokens: 8000, temperature: 0.1 },
@@ -2364,7 +2364,7 @@ async function callOpenRouterOracle(
  */
 async function callGeminiOracle(
   oraclePrompt: string,
-  modelType: 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite',
+  modelType: 'gemini-2.0-flash-exp' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
   const config = MODEL_CONFIGS[modelType];
@@ -2445,7 +2445,7 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'claude-haiku-4-5-20251001': 'fast and efficient',
     'deepseek-r1': 'methodical with clear reasoning chains',
     'deepseek-v3': 'logical and analytical',
-    'gemini-2.5-flash-preview-05-06': 'rapid pattern recognition',
+    'gemini-2.0-flash-exp': 'rapid pattern recognition',
     'gemini-2.5-pro-preview-05-06': 'comprehensive synthesis',
     'gemini-2.5-flash-lite': 'ultra-efficient and focused',
     'grok-4-fast-reasoning': 'real-time data access with transparent reasoning',
@@ -2528,7 +2528,7 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'deepseek-r1': '\n\nCHAIN OF THOUGHT PROTOCOL: Use explicit step-by-step reasoning for all analysis. Your thinking process should be visible and methodical.',
     'deepseek-v3': '\n\nApply logical, analytical reasoning with clear cause-effect relationships.',
     'gemini': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
-    'gemini-2.5-flash-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
+    'gemini-2.0-flash-exp': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-pro-preview-05-06': '\n\nLeverage comprehensive pattern recognition and synthesis capabilities.',
     'gemini-2.5-flash-lite': '\n\nProvide ultra-efficient analysis with focused pattern recognition.',
     'grok-4-fast-reasoning': '\n\nUse real-time data access and transparent reasoning chains for analysis.',
@@ -3077,7 +3077,7 @@ export async function processDebateTurn(params: {
       result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', extensivenessLevel);
       break;
     case 'google':
-      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash-preview-05-06' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel);
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.0-flash-exp' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel);
       break;
     case 'grok':
       result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel);
