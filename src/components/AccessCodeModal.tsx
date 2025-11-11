@@ -1,6 +1,7 @@
 // src/components/AccessCodeModal.tsx
 
 // Changes: Updated to use new auth system with proper admin/token separation
+// Changes: Propagates entered access code back to parent so debate state can track it
 // This component creates a modal dialog for users to enter their access code.
 // It is styled to match the application's "Matrix" theme.
 // It handles its own state for the input field, loading status, and error messages.
@@ -12,7 +13,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface AccessCodeModalProps {
-  onVerified: (authState: { mode: 'admin' | 'token', remaining?: number, allowed?: number }) => void;
+  onVerified: (authState: { mode: 'admin' | 'token', remaining?: number, allowed?: number, code?: string }) => void;
   setAppIsLoading: (isLoading: boolean) => void;
 }
 
@@ -45,7 +46,7 @@ export default function AccessCodeModal({ onVerified, setAppIsLoading }: AccessC
       const data = await response.json();
 
       if (response.ok) {
-        onVerified(data);
+        onVerified({ ...data, code });
       } else {
         setError(data.error || 'An unknown error occurred.');
         setIsLoading(false);

@@ -1,6 +1,7 @@
 // Save Debate Endpoint
 // Saves completed debates to Supabase database
 // Returns 503 if Supabase not configured (graceful degradation)
+// Access code tracking: stores provided access codes for analytics
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       extensivenessLevel,
       messages,
       oracleAnalysis,
-      accessToken,
+      accessCode,
       debateDurationSeconds,
       totalTokensUsed
     } = body;
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
         extensiveness_level: extensivenessLevel,
         messages: messages,
         oracle_analysis: oracleAnalysis || null,
-        access_token: accessToken || null,
+        access_code: accessCode || null,
         debate_duration_seconds: debateDurationSeconds || null,
         total_tokens_used: totalTokensUsed || null
       })

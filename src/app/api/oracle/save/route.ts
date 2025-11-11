@@ -1,6 +1,7 @@
 // Save Oracle Analysis Endpoint
 // Saves completed Oracle analyses to Supabase database
 // Returns 503 if Supabase not configured (graceful degradation)
+// Access code tracking: persists provided access codes for analytics
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       extensivenessLevel,
       maxTurns,
       actualTurns,
-      accessToken,
+      accessCode,
       debateId
     } = body;
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
         extensiveness_level: extensivenessLevel || null,
         max_turns: maxTurns || null,
         actual_turns: actualTurns || null,
-        access_token: accessToken || null,
+        access_code: accessCode || null,
         debate_id: debateId || null
       })
       .select()

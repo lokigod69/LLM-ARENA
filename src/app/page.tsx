@@ -4,6 +4,7 @@
 // gemini-2.5-flash-preview-05-06, gemini-2.5-pro-preview-05-06
 // Maintains Matrix cyberpunk theme while adding complete model flexibility
 // Backward compatibility maintained for existing functionality
+// Access code tracking: saves verified access codes into debate state for Supabase exports
 // Personas UX update: persona previews remain visible even when the selection panel collapses
 // UI FIX: Removed onNewDebate prop from PromptInput - [NEW] button removed
 
@@ -86,6 +87,7 @@ function HomeContent() {
     personalityConfig,
     setModelPersonality,
     setModelPersona,
+    setAccessCode,
   } = useDebate();
   
   // DIAGNOSTIC: Log current model configuration
@@ -166,7 +168,8 @@ function HomeContent() {
             handleCodeVerified({
               mode: 'token',
               remaining: data.remaining,
-              allowed: data.allowed
+              allowed: data.allowed,
+              token: data.token
             });
             return;
           }
@@ -215,7 +218,7 @@ function HomeContent() {
     return () => clearInterval(interval);
   }, [isUnlocked, queriesRemaining]);
 
-  const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number }) => {
+  const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number; code?: string; token?: string }) => {
     setIsUnlocked(true);
     if (authState.mode === 'admin') {
       setIsAdmin(true);
@@ -225,6 +228,12 @@ function HomeContent() {
       setQueriesRemaining(authState.remaining);
     }
     setAppIsLoading(false);
+
+    const accessCodeValue = authState.code ?? authState.token ?? null;
+    if (accessCodeValue) {
+      setAccessCode(accessCodeValue);
+      console.log('✅ Access code saved to state:', accessCodeValue);
+    }
   };
 
   // Enable Mock Mode explicitly on component mount

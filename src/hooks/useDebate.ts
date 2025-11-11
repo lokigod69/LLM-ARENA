@@ -165,6 +165,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
       parsed.currentTurn = parsed.modelAMessages?.length === parsed.modelBMessages?.length
         ? parsed.modelAMessages?.length ?? 0
         : Math.max(parsed.modelAMessages?.length ?? 0, parsed.modelBMessages?.length ?? 0);
+      parsed.accessCode = parsed.accessCode ?? null;
 
       console.log('📥 Restored session sanitized - auto-continue disabled');
       return parsed;
@@ -276,6 +277,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
           modelAMessages: state.modelAMessages,
           modelBMessages: state.modelBMessages,
           lastActiveModel: state.lastActiveModel,
+          accessCode: state.accessCode,
           // Legacy fields for backward compatibility
           gptMessages: state.gptMessages,
           claudeMessages: state.claudeMessages,
@@ -320,6 +322,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     state.agreeabilityLevel,
     state.positionAssignment,
     state.personalityConfig,
+    state.accessCode,
   ]);
 
   const setAccessCode = (code: string | null) => {
@@ -729,10 +732,12 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         extensivenessLevel: debateState.modelA.extensivenessLevel || null, // Use modelA's extensiveness (or could average both)
         messages: allMessages, // Full conversation history
         oracleAnalysis: debateState.oracleResults.length > 0 ? debateState.oracleResults : null,
-        accessToken: debateState.accessCode || null,
+        accessCode: debateState.accessCode || null,
         debateDurationSeconds: null, // Can add timer if needed
         totalTokensUsed: null // Can track if needed
       };
+
+      console.log('💾 Saving debate with access code:', debateState.accessCode);
 
       const response = await fetch('/api/debates/save', {
         method: 'POST',
@@ -1269,9 +1274,11 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         extensivenessLevel: debateState.modelA.extensivenessLevel || null,
         maxTurns: debateState.maxTurns || null,
         actualTurns: debateState.currentTurn || null,
-        accessToken: debateState.accessCode || null,
+        accessCode: debateState.accessCode || null,
         debateId: null // Can link to debate if needed in the future
       };
+
+      console.log('💾 Saving oracle analysis with access code:', debateState.accessCode);
 
       const response = await fetch('/api/oracle/save', {
         method: 'POST',
