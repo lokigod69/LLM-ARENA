@@ -1,6 +1,6 @@
 // Simplified PositionSelector - UPDATED TO MATCH DUAL PERSONALITY MATRIX STYLE
 // Refined to present squarer PRO/CON tiles by constraining button width ~20%
-// Still offers click-to-flip behavior with model names above and stance labels below
+// Added temporary yellow debug border on buttons to verify component usage
 
 'use client';
 
@@ -87,6 +87,7 @@ const PositionSelector: React.FC<PositionSelectorProps> = ({
             className={`${getBoxBg('gpt')} p-5 rounded-lg border ${getBoxBorder('gpt')} cursor-pointer transition-all duration-300 hover:scale-105 mx-auto w-full max-w-[80%] ${
               disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
+            style={{ border: '3px solid yellow' }}
             onClick={() => handleModelToggle('gpt')}
             whileHover={!disabled ? { scale: 1.05 } : {}}
             whileTap={!disabled ? { scale: 0.95 } : {}}
@@ -119,6 +120,7 @@ const PositionSelector: React.FC<PositionSelectorProps> = ({
             className={`${getBoxBg('claude')} p-5 rounded-lg border ${getBoxBorder('claude')} cursor-pointer transition-all duration-300 hover:scale-105 mx-auto w-full max-w-[80%] ${
               disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
+            style={{ border: '3px solid yellow' }}
             onClick={() => handleModelToggle('claude')}
             whileHover={!disabled ? { scale: 1.05 } : {}}
             whileTap={!disabled ? { scale: 0.95 } : {}}
