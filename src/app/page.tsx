@@ -398,11 +398,11 @@ function HomeContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 {personaAConfig &&
                   renderPersonaPreview(personaAConfig, () =>
-                    setModelA((prev) => ({ ...prev, personaId: undefined }))
+                    setModelA({ ...modelA, personaId: undefined })
                   )}
                 {personaBConfig &&
                   renderPersonaPreview(personaBConfig, () =>
-                    setModelB((prev) => ({ ...prev, personaId: undefined }))
+                    setModelB({ ...modelB, personaId: undefined })
                   )}
               </div>
             )}
