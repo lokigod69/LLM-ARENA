@@ -9,7 +9,7 @@ import { AudioProvider } from "@/contexts/AudioContext";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "LLM Arena",
+  title: "Matrix Arena",
   description: "A platform for LLM debates",
 };
 

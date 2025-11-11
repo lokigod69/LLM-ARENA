@@ -1,7 +1,7 @@
 // PHASE B: Model Display Configuration for UI Components - Updated with exact API names
 // Defines visual properties and metadata for all available models
 // Updated to use exact API model names for proper API calls
-// COLOR UPDATE: Updated Gemini models to dark blue (#0B57D0) and Qwen models to red-orange (#E8420A) for better visual distinction
+// DISPLAY UPDATE: Simplified Grok 4 Fast display names (Grok 4 / Grok 4 Reasoning)
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
@@ -85,15 +85,15 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
   },
   'grok-4-fast-reasoning': {
     name: 'grok-4-fast-reasoning',
-    displayName: 'Grok 4 Fast Reasoning',
-    shortName: 'Grok Reasoning',
+    displayName: 'Grok 4 Reasoning',
+    shortName: 'Grok 4 Reasoning',
     color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s fastest model with transparent reasoning and real-time data access'
   },
   'grok-4-fast': {
     name: 'grok-4-fast',
-    displayName: 'Grok 4 Fast',
-    shortName: 'Grok Fast',
+    displayName: 'Grok 4',
+    shortName: 'Grok 4',
     color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s ultra-fast conversational model for rapid debates'
   },

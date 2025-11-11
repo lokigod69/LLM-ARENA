@@ -1,6 +1,6 @@
 // Simplified PositionSelector - UPDATED TO MATCH DUAL PERSONALITY MATRIX STYLE
-// Removed random/manual complexity, just click to flip positions
-// Now matches the elegant layout with model names above boxes and pro/con labels below
+// Refined to present squarer PRO/CON tiles by constraining button width ~20%
+// Still offers click-to-flip behavior with model names above and stance labels below
 
 'use client';
 
@@ -84,7 +84,7 @@ const PositionSelector: React.FC<PositionSelectorProps> = ({
           </div>
           
           <motion.div
-            className={`${getBoxBg('gpt')} p-5 rounded-lg border ${getBoxBorder('gpt')} cursor-pointer transition-all duration-300 hover:scale-105 ${
+            className={`${getBoxBg('gpt')} p-5 rounded-lg border ${getBoxBorder('gpt')} cursor-pointer transition-all duration-300 hover:scale-105 mx-auto w-full max-w-[80%] ${
               disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             onClick={() => handleModelToggle('gpt')}
@@ -116,7 +116,7 @@ const PositionSelector: React.FC<PositionSelectorProps> = ({
           </div>
           
           <motion.div
-            className={`${getBoxBg('claude')} p-5 rounded-lg border ${getBoxBorder('claude')} cursor-pointer transition-all duration-300 hover:scale-105 ${
+            className={`${getBoxBg('claude')} p-5 rounded-lg border ${getBoxBorder('claude')} cursor-pointer transition-all duration-300 hover:scale-105 mx-auto w-full max-w-[80%] ${
               disabled ? 'opacity-50 cursor-not-allowed' : ''
             }`}
             onClick={() => handleModelToggle('claude')}

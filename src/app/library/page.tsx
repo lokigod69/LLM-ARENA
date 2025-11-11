@@ -192,8 +192,8 @@ const LibraryPage: React.FC = () => {
         <header className="sticky top-0 z-50 border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm">
           <div className="flex justify-between items-center p-6">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo.png" alt="LLM Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
-              <h1 className="text-3xl font-matrix font-black matrix-title text-matrix-green drop-shadow-lg">LLM ARENA LIBRARY</h1>
+              <img src="/assets/logo.png" alt="Matrix Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
+              <h1 className="text-3xl font-matrix font-black matrix-title text-matrix-green drop-shadow-lg">MATRIX ARENA LIBRARY</h1>
             </div>
             <Link href="/" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Back to Arena" style={{ fontSize: 28 }}>
               <span role="img" aria-label="Arena">🏟️</span>

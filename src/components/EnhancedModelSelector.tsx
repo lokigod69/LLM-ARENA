@@ -1,6 +1,6 @@
 // PHASE B: Enhanced Model Selector - Clean & Big Model Selection
-// Redesigned to be bigger, cleaner, and remove redundant displays
-// Just shows Model A and Model B with clean dropdowns - no duplicate info
+// Updated to enlarge the "SELECTION MATRIX" header relative to model labels
+// Presents Model A and Model B with clean dropdowns and no redundant info
 
 'use client';
 
@@ -140,7 +140,7 @@ const EnhancedModelSelector: React.FC<EnhancedModelSelectorProps> = ({
     >
       {/* Header - Bigger and more prominent */}
       <div className="text-center mb-8">
-        <h3 className="text-2xl font-matrix font-bold text-matrix-green mb-3 tracking-wider">
+        <h3 className="text-4xl font-matrix font-bold text-matrix-green mb-3 tracking-wider">
           SELECTION MATRIX
         </h3>
         <div className="w-32 h-0.5 bg-matrix-green mx-auto mb-3 opacity-80"></div>

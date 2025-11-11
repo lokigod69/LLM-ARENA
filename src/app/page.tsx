@@ -279,11 +279,11 @@ function HomeContent() {
               className="flex items-center gap-3"
             >
               {/* Logo image */}
-              <img src="/assets/logo.png" alt="LLM Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
+              <img src="/assets/logo.png" alt="Matrix Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
               <div>
                 <h1 className="text-3xl font-matrix font-black matrix-title">
                   <TypewriterText 
-                    text="LLM ARENA" 
+                    text="MATRIX ARENA" 
                     speed={100}
                     className="text-matrix-green drop-shadow-lg"
                   />
