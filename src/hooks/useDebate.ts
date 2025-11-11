@@ -10,7 +10,7 @@ import type {
   FlexibleDebateState 
 } from '@/types';
 import type { OracleConfig, OracleResult } from '@/types/oracle';
-import { getModelDisplayName } from '@/lib/modelConfigs';
+import { getModelDisplayName, getMigratedModelName } from '@/lib/modelConfigs';
 import { PERSONAS } from '@/lib/personas';
 import { addItem as addLibraryItem, MarkedItem } from '@/lib/libraryStorage';
 
@@ -155,6 +155,26 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         messageBCount: parsed.modelBMessages?.length || 0,
         modelA: parsed.modelA?.name,
         modelB: parsed.modelB?.name
+      });
+
+      const originalModelAName = parsed.modelA?.name;
+      const originalModelBName = parsed.modelB?.name;
+
+      if (originalModelAName) {
+        const migratedName = getMigratedModelName(originalModelAName);
+        parsed.modelA = { ...parsed.modelA, name: migratedName };
+      }
+
+      if (originalModelBName) {
+        const migratedName = getMigratedModelName(originalModelBName);
+        parsed.modelB = { ...parsed.modelB, name: migratedName };
+      }
+
+      console.log('🔄 Model migration check:', {
+        oldModelA: originalModelAName,
+        newModelA: parsed.modelA?.name,
+        oldModelB: originalModelBName,
+        newModelB: parsed.modelB?.name,
       });
 
       parsed.isActive = false;

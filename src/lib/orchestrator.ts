@@ -197,8 +197,8 @@ export const MODEL_CONFIGS = {
   // PHASE A: Google Gemini models integration - Updated with exact API names
   'gemini-2.0-flash-exp': {
     provider: 'google',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
-    modelName: 'gemini-2.0-flash-exp',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+    modelName: 'gemini-1.5-flash',
     maxTokens: 200,
     apiKeyEnv: 'GOOGLE_AI_API_KEY',
     costPer1kTokens: { input: 0.00015, output: 0.0006 }, // Gemini Flash pricing (similar to GPT-4 mini)

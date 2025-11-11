@@ -2,8 +2,30 @@
 // Defines visual properties and metadata for all available models
 // Updated to use exact API model names for proper API calls
 // MODEL UPDATE: Swapped Gemini Flash model to gemini-2.0-flash-exp
+// MIGRATION SUPPORT: Added legacy model name migrations for backward compatibility
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
+
+const DEFAULT_MODEL_KEY: AvailableModel = 'gpt-5';
+
+// Model migration map - handles renamed/deprecated models
+export const MODEL_MIGRATIONS: Record<string, AvailableModel> = {
+  'gemini-2.5-flash-preview-05-06': 'gemini-2.0-flash-exp',
+};
+
+// Helper function to get current model name
+export function getMigratedModelName(oldName: string): AvailableModel {
+  const migrated = MODEL_MIGRATIONS[oldName] || oldName;
+  if (migrated in MODEL_DISPLAY_CONFIGS) {
+    return migrated as AvailableModel;
+  }
+
+  console.error('❌ Unknown model during migration - falling back to default:', {
+    requested: oldName,
+    migrated,
+  });
+  return DEFAULT_MODEL_KEY;
+}
 
 export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> = {
   'gpt-5': {
@@ -63,7 +85,7 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     description: 'DeepSeek V3 - Fast chat model'
   },
   'gemini-2.0-flash-exp': {
-    name: 'gemini-2.0-flash-exp',
+    name: 'gemini-1.5-flash' as AvailableModel,
     displayName: 'Gemini 2.0 Flash',
     shortName: 'Flash',
     color: '#0B57D0', // Google dark blue - distinct from Grok light blue
@@ -134,9 +156,23 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
   }
 };
 
+function resolveModelConfig(model: AvailableModel): ModelDisplayConfig {
+  const migratedName = getMigratedModelName(model);
+  const config = MODEL_DISPLAY_CONFIGS[migratedName];
+  if (config) {
+    return config;
+  }
+
+  console.error('❌ Model config not found - using default configuration:', {
+    requested: model,
+    migratedName,
+  });
+  return MODEL_DISPLAY_CONFIGS[DEFAULT_MODEL_KEY];
+}
+
 // Helper function to get model display config
 export function getModelDisplayConfig(model: AvailableModel): ModelDisplayConfig {
-  return MODEL_DISPLAY_CONFIGS[model];
+  return resolveModelConfig(model);
 }
 
 // Get all available models for dropdown selection
@@ -146,15 +182,15 @@ export function getAvailableModels(): AvailableModel[] {
 
 // Get model color for styling
 export function getModelColor(model: AvailableModel): string {
-  return MODEL_DISPLAY_CONFIGS[model].color;
+  return resolveModelConfig(model).color;
 }
 
 // Get model display name
 export function getModelDisplayName(model: AvailableModel): string {
-  return MODEL_DISPLAY_CONFIGS[model].displayName;
+  return resolveModelConfig(model).displayName;
 }
 
 // Get model short name for compact displays
 export function getModelShortName(model: AvailableModel): string {
-  return MODEL_DISPLAY_CONFIGS[model].shortName;
-} 
+  return resolveModelConfig(model).shortName;
+}
