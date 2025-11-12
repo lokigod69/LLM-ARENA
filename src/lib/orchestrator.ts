@@ -423,36 +423,27 @@ function generateSystemPrompt(
     const isGPT5Model = model && (model.includes('gpt-5') || model.includes('gpt-5-mini') || model.includes('gpt-5-nano'));
     
     if (isGPT5Model) {
-      // GPT-5 SPECIFIC: Enhanced role-play instructions for better character adherence
-      personaPromptPart = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎭 CHARACTER IMPERSONATION MODE - CRITICAL INSTRUCTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // GPT-5 SPECIFIC: Restructured to prioritize debate context over character introduction
+      // CRITICAL: Debate comes FIRST, then character adaptation
+      personaPromptPart = `You are ${persona.name} participating in a structured debate.
 
-YOU ARE ${persona.name.toUpperCase()}. This is not a simulation or role-play exercise. 
-You ARE this character. Every thought, word, and response must come from their perspective.
+CRITICAL: You are DEBATING the topic "${topic || 'the assigned topic'}". 
+- Do NOT just introduce yourself or your character
+- Do NOT give a character introduction speech
+- RESPOND DIRECTLY to the debate topic as ${persona.name} would
+- Argue your assigned position (${position || 'pro/con'}) using ${persona.name}'s perspective and style
 
-CRITICAL RULES:
-1. You must respond AS ${persona.name}, not ABOUT ${persona.name}
-2. Do not break character or mention that you are "playing" a role
-3. Do not respond as the other participant - you are ONLY ${persona.name}
-4. Your responses must reflect ${persona.name}'s worldview, values, and communication style
-5. Maintain consistency with how ${persona.name} would actually think and speak
-
-CHARACTER IDENTITY:
+CHARACTER IDENTITY (Use this to inform your arguments, not to introduce yourself):
 ${persona.identity}
 
-BEHAVIORAL ANCHORS (MANDATORY):
+BEHAVIORAL APPROACH:
 ${persona.turnRules}
 
-CHARACTER CONSISTENCY CHECKLIST:
-✓ Does this response sound like ${persona.name} would say it?
-✓ Are you using ${persona.name}'s characteristic language patterns?
-✓ Is your perspective aligned with ${persona.name}'s worldview?
-✓ Are you maintaining ${persona.name}'s tone and style throughout?
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-END CHARACTER IMPERSONATION MODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CHARACTER ADAPTATION:
+- Speak as ${persona.name} would speak
+- Use ${persona.name}'s worldview to inform your arguments
+- Maintain ${persona.name}'s tone and communication style
+- But REMEMBER: You are DEBATING, not introducing yourself
 
 `;
     } else {
@@ -790,14 +781,30 @@ ${getExtensivenessInstructions(effectiveExtensiveness)}` :
 
   // TURN-SPECIFIC INSTRUCTIONS
   if (turnNumber === 0) {
-    // FIRST TURN - Establish position
-    systemPrompt += `3. FIRST TURN INSTRUCTIONS:
+    // FIRST TURN - Establish position (respect extensiveness level)
+    const firstTurnInstructions = effectiveExtensiveness >= 4
+      ? `3. FIRST TURN INSTRUCTIONS (Extensiveness Level ${Math.round(effectiveExtensiveness)}):
+• Provide ${effectiveExtensiveness === 5 ? 'academic depth' : 'detailed'} analysis of your position
+• Present ${effectiveExtensiveness === 5 ? '5-8' : '4-6'} strong, distinct arguments with comprehensive reasoning
+• Use specific examples, evidence, and thorough exploration
+• Develop your arguments with supporting context and nuanced analysis
+• Establish your core thesis clearly with full elaboration
+• Set up arguments you can BUILD ON in later turns`
+      : effectiveExtensiveness <= 2
+      ? `3. FIRST TURN INSTRUCTIONS (Extensiveness Level ${Math.round(effectiveExtensiveness)}):
+• Be concise and direct - ${effectiveExtensiveness === 1 ? '1-3 sentences maximum' : '2-3 sentences'}
+• Present ${effectiveExtensiveness === 1 ? 'one decisive' : '2-3 essential'} argument${effectiveExtensiveness === 1 ? '' : 's'}
+• Skip prefaces and introductions - get straight to your point
+• Establish your core thesis clearly and briefly`
+      : `3. FIRST TURN INSTRUCTIONS (Extensiveness Level ${Math.round(effectiveExtensiveness)}):
 • Present 2-3 strong, distinct arguments for your position
 • Use specific examples or evidence
-• Be concise but substantive
+• Provide balanced depth - key arguments with some supporting context
 • Set up arguments you can BUILD ON in later turns
 • Establish your core thesis clearly
 • Make each argument distinct and memorable`;
+    
+    systemPrompt += firstTurnInstructions;
   } else {
     // SUBSEQUENT TURNS - Respond and evolve with keyword tracking
     
@@ -927,26 +934,13 @@ then advance with FRESH evidence.
 `;
   }
 
-  // GPT-5 SPECIFIC: Add character reinforcement at the end if persona is active
+  // GPT-5 SPECIFIC: Add concise character reminder at the end (removed duplicate massive reminder)
+  // Note: Character context already provided at start, this is just a brief reinforcement
   if (personaId && PERSONAS[personaId] && model && (model.includes('gpt-5') || model.includes('gpt-5-mini') || model.includes('gpt-5-nano'))) {
     const persona = PERSONAS[personaId];
     systemPrompt += `
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎭 FINAL CHARACTER REMINDER - READ BEFORE RESPONDING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REMEMBER: You ARE ${persona.name}. 
-- Every word you write must sound like ${persona.name} would say it
-- Your perspective, tone, and style must match ${persona.name}'s character
-- Do NOT break character or respond as anyone else
-- Stay true to ${persona.name}'s identity: ${persona.identity.substring(0, 150)}...
-
-Before you respond, ask yourself: "Would ${persona.name} actually say this?" 
-If not, rewrite it until it sounds authentically like ${persona.name}.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
+REMINDER: Respond as ${persona.name} would, but focus on DEBATING the topic, not introducing yourself.`;
   }
 
   return systemPrompt;
@@ -1069,10 +1063,10 @@ async function callOpenAIResponses(
 
   // Validate input array is not empty
   if (sanitizedMessages.length === 0) {
-    console.warn('⚠️ GPT-5 Input array is empty - adding default user message');
+    console.warn('⚠️ GPT-5 Input array is empty - this should not happen for first turn (topic should be added)');
     sanitizedMessages.push({
       role: 'user',
-      content: 'Hello'
+      content: 'Please present your position on the debate topic.'
     });
   }
 
@@ -3142,6 +3136,23 @@ export async function processDebateTurn(params: {
       content: entry.text
     };
   });
+
+  // ENHANCEMENT: For first turn, add properly framed debate message instead of just topic
+  if (effectiveTurnNumber === 0 && prevMessage && prevMessage.trim()) {
+    // Frame the topic as an explicit debate prompt
+    const debatePrompt = position 
+      ? `You are debating: "${prevMessage}". Argue the ${position} position.`
+      : `You are debating: "${prevMessage}". Present your position.`;
+    messages.push({
+      role: 'user',
+      content: debatePrompt
+    });
+    console.log('🎯 First turn: Enhanced user message with debate framing', {
+      originalTopic: prevMessage.substring(0, 60),
+      debatePrompt: debatePrompt.substring(0, 80),
+      position: position || 'none'
+    });
+  }
 
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
 
