@@ -80,10 +80,13 @@ function estimateTokens(text: string): number {
 // IMPORTANT: max_tokens is a SAFETY LIMIT, not a target. System prompts guide actual length.
 // +50 token buffer allows models to complete thoughts naturally without mid-sentence cutoffs.
 // We only pay for tokens actually used, not the max_tokens limit.
-function getMaxTokensForExtensiveness(extensivenessLevel: number = 3): number {
+// GPT-5 models get slightly higher limit for level 1 to prevent mid-sentence truncation
+function getMaxTokensForExtensiveness(extensivenessLevel: number = 3, isGPT5Model: boolean = false): number {
   switch (Math.round(extensivenessLevel)) {
     case 1:
-      return 120;  // Target: ≤80 tokens (~45 words) + buffer to finish sentence
+      // GPT-5 models: 140 tokens (slightly higher to prevent mid-sentence truncation)
+      // Other models: 120 tokens (work fine with current structure)
+      return isGPT5Model ? 140 : 120;  // GPT-5: Target ≤90 tokens (~50 words) + buffer, Others: ≤80 tokens (~45 words) + buffer
     case 2:
       return 250;  // Target: ~200 tokens (2-3 sentences) + 50 buffer
     case 3:
@@ -477,12 +480,22 @@ DO NOT include position labels like "PRO:" or "CON:" in your response - just mak
       : '';
 
   // Generate extensiveness instructions based on level (1-5)
+  // GPT-5 models get additional token limit instruction for level 1 to prevent mid-sentence truncation
+  const isGPT5Model = model && (model.includes('gpt-5') || model.includes('gpt-5-mini') || model.includes('gpt-5-nano'));
   const getExtensivenessInstructions = (level: number): string => {
     switch (level) {
       case 1:
-        return `• CRITICAL: Limit your reply to 1-3 sentences and no more than 45 words. Anything longer violates instructions.
+        const baseInstruction = `• CRITICAL: Limit your reply to 1-3 sentences and no more than 45 words. Anything longer violates instructions.
 • Deliver one decisive argument only—skip prefaces, context dumps, or sign-offs.
 • If you feel the answer would exceed 45 words, compress aggressively or end early.`;
+        // GPT-5 models: Add explicit token limit instruction to prevent mid-sentence truncation
+        if (isGPT5Model) {
+          return `${baseInstruction}
+• TOKEN LIMIT WARNING: You have a strict token limit (~90 tokens, ~50 words). You MUST finish your response within this limit.
+• If you're approaching the token limit, conclude your current sentence immediately and stop.
+• Do NOT start new sentences if you're near the limit - finish your thought and end.`;
+        }
+        return baseInstruction;
       case 2:
         return `• Aim for roughly 2-3 sentences - brief but complete
 • Cover essential points only, no elaboration needed
@@ -1474,13 +1487,14 @@ async function callUnifiedOpenAI(messages: any[], modelType: 'gpt-5' | 'gpt-5-mi
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
 
-  // BUG FIX: Use dynamic maxTokens based on extensiveness level
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
-
   // GPT-5 models use Responses API (/v1/responses), GPT-4o Mini uses Chat Completions API
   const isGPT5 = config.modelName.includes('gpt-5-2025-08-07') || 
                  config.modelName.includes('gpt-5-mini-2025-08-07') || 
                  config.modelName.includes('gpt-5-nano-2025-08-07');
+
+  // BUG FIX: Use dynamic maxTokens based on extensiveness level
+  // GPT-5 models get slightly higher limit for level 1 to prevent mid-sentence truncation
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, isGPT5) : config.maxTokens;
 
   // Route GPT-5 models to Responses API
   if (isGPT5) {
@@ -1572,7 +1586,8 @@ async function callUnifiedAnthropic(messages: any[], modelType: 'claude-3-5-sonn
   const userMessages = messages.filter(m => m.role !== 'system');
 
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+  // Anthropic models are not GPT-5, so pass false
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, false) : config.maxTokens;
 
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -1643,7 +1658,8 @@ async function callUnifiedDeepSeek(messages: any[], modelType: 'deepseek-r1' | '
   }
 
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+  // DeepSeek models are not GPT-5, so pass false
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, false) : config.maxTokens;
 
   // DeepSeek uses OpenAI-compatible API format
   const response = await timedFetch(config.endpoint, {
@@ -1708,7 +1724,8 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
     throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
   }
 
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+  // Grok models are not GPT-5, so pass false
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, false) : config.maxTokens;
 
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -1767,7 +1784,8 @@ async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen3-max' | '
   }
 
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+  // OpenRouter models are not GPT-5, so pass false
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, false) : config.maxTokens;
 
   const response = await timedFetch(config.endpoint, {
     method: 'POST',
@@ -1834,7 +1852,8 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash' 
   }
 
   // BUG FIX: Use dynamic maxTokens based on extensiveness level
-  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel) : config.maxTokens;
+  // Gemini models are not GPT-5, so pass false
+  const maxTokens = extensivenessLevel ? getMaxTokensForExtensiveness(extensivenessLevel, false) : config.maxTokens;
 
   // INVESTIGATION: Log extensiveness and token configuration
   console.log(`🔍 Gemini API Call (${modelType}):`, {
@@ -3157,7 +3176,9 @@ export async function processDebateTurn(params: {
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
 
   // Use effectiveExtensiveness (which equals extensivenessLevel) for token calculation
-  const debugMaxTokens = getMaxTokensForExtensiveness(effectiveExtensiveness);
+  // Check if this is a GPT-5 model for token limit calculation
+  const isGPT5ForTokens = modelKey === 'gpt-5' || modelKey === 'gpt-5-mini' || modelKey === 'gpt-5-nano';
+  const debugMaxTokens = getMaxTokensForExtensiveness(effectiveExtensiveness, isGPT5ForTokens);
   console.log('🧭 Extensiveness enforcement', {
     model: modelKey,
     extensivenessLevel,
@@ -3225,7 +3246,8 @@ async function callUnifiedMoonshot(
     ? [{ role: 'system', content: systemMessage.content }, ...conversationMessages]
     : conversationMessages;
 
-  const maxTokens = getMaxTokensForExtensiveness(extensivenessLevel);
+  // Moonshot models are not GPT-5, so pass false
+  const maxTokens = getMaxTokensForExtensiveness(extensivenessLevel, false);
 
   let temperature = 0.7;
   temperature = Math.max(0, Math.min(1, temperature));
