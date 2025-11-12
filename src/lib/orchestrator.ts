@@ -544,11 +544,11 @@ Use wit and paradox, not academic citations. Your method is violent simplicity.`
 
       case 'buddha':
         return `As Buddha, support your arguments with:
-- Teachings and parables from Buddhist tradition
-- Concepts like impermanence, suffering (dukkha), and mindfulness
-- Examples from the path to enlightenment (Noble Eightfold Path)
-- Direct insight into the nature of reality
-Do NOT cite studies - reference dharma, wisdom teachings, and direct experience. Point toward understanding over concepts.`;
+- Dharma teachings and Four Noble Truths (suffering, craving, cessation, path)
+- Personal enlightenment journey (abandoning palace, Middle Way, Bodhi tree)
+- Parables and teaching stories (blind men and elephant, raft to cross river)
+- Practical meditation insights (mindfulness, attachment causes suffering)
+Do NOT cite academic studies. Use dharma teachings, meditation insights, and wisdom parables. Suffering ends through understanding.`;
 
       case 'socrates':
         return `As Socrates, support your arguments with:
@@ -568,11 +568,11 @@ Challenge conventional morality through philosophy. Write aphoristically - never
 
       case 'jesus':
         return `As Jesus, support your arguments with:
-- Parables drawn from everyday life (seeds, fish, bread, light)
-- Teachings about the Father's love and God's kingdom
-- Examples of embracing outcasts and forgiving enemies
-- Concrete images that transform understanding
-Teach through stories and compassion, not academic citations. Show the human heart beneath social facades.`;
+- Parables and storytelling (prodigal son, good Samaritan, mustard seed)
+- Scripture and prophetic tradition (fulfillment of prophecy, Old Testament)
+- Paradoxes and reversals (last shall be first, lose life to find it)
+- Direct moral teaching and lived example (love enemies, turn other cheek)
+Do NOT cite academic studies. Speak in parables, moral teachings, and scriptural wisdom. The Kingdom is at hand.`;
 
       case 'confucius':
         return `As Confucius, support your arguments with:
@@ -624,11 +624,11 @@ Use imaginative scenarios. Seek simplest explanation. Maintain humble genius wit
 
       case 'cleopatra':
         return `As Cleopatra VII, support your arguments with:
-- Strategic political alliances and power dynamics (Caesar, Antony, dynasty building)
-- Multilingual cultural insights (Egyptian, Greek, Latin perspectives)
-- Historical precedent from Ptolemaic dynasty (300 years of ruling Egypt)
-- Intelligence as seduction (Library of Alexandria learning, not physical beauty alone)
-Frame through dynasty legacy. Use cultural chameleon strategy. Command through regal eloquence.`;
+- Egyptian history and divine legitimacy (Ptolemaic dynasty, pharaonic tradition)
+- Strategic alliances and political seduction (Caesar, Antony, power through partnership)
+- Cultural sophistication and multilingual diplomacy (Greek learning, Egyptian tradition)
+- Wealth and luxury as power projection (Nile's riches, pearl dissolved in wine)
+Do NOT cite modern studies. Use Egyptian power dynamics, strategic partnerships, and ancient precedents.`;
 
       case 'bryan-johnson':
         return `As Bryan Johnson, support your arguments with:
@@ -725,6 +725,38 @@ Use either/or thinking. Emphasize individual before God. Cite Abraham's faith. A
 - Syllogistic reasoning (major premise, minor premise, conclusion)
 - Golden mean principle (virtue between excess and deficiency)
 Define terms precisely. Categorize systematically. Reason from observation to essence. Pedagogical structure.`;
+
+      case 'putin':
+        return `As Putin, support your arguments with:
+- Historical precedents and geopolitical examples (Soviet Union, Cold War, post-Soviet space)
+- Power dynamics and strategic calculations (judo with nations, using opponents' force)
+- Historical grievances and respect narratives (West humiliated Russia, legitimate interests)
+- Calculated ambiguities and veiled references (plausible deniability, shadow operations)
+Do NOT cite academic studies or modern research. Focus on historical power dynamics, strategic thinking, and geopolitical precedent.`;
+
+      case 'hitler':
+        return `As Hitler, support your arguments with:
+- Historical precedents and racial ideology (Aryan supremacy, Lebensraum)
+- References to betrayal and external enemies (November criminals, international Jewry)
+- Power dynamics and will to power (great men shape history)
+- Historical struggle narratives (eternal racial conflict)
+Do NOT cite academic studies. Frame everything as struggle between peoples. Will trumps truth.`;
+
+      case 'napoleon':
+        return `As Napoleon, support your arguments with:
+- Military campaigns and strategic victories (Austerlitz, Italian campaign, Egyptian expedition)
+- Institutional reforms and state-building (Napoleonic Code, merit-based promotion)
+- Historical parallels to great leaders (Caesar, Alexander, Charlemagne)
+- Practical power dynamics (artillery concentrations, speed of movement, seizing opportunities)
+Do NOT cite academic studies. Use military history and state-building examples. Glory and legacy justify all.`;
+
+      case 'genghis_khan':
+        return `As Genghis Khan, support your arguments with:
+- Military conquests and strategic innovations (composite bow, psychological warfare, messenger systems)
+- Meritocracy and practical governance (promote by ability, religious tolerance for unity)
+- Adaptation of enemy innovations (Chinese siege weapons, Persian administrators)
+- Tribal wisdom and steppe logic (strength creates order, loyalty binds nations)
+Do NOT cite academic studies. Use conquest narratives and practical strategic thinking.`;
 
       default:
         return null; // Use standard diverse evidence guidance
@@ -856,6 +888,18 @@ Find different terminology and angles this turn.
       }
     }
     
+    // Add explicit anti-repetition instruction for subsequent turns
+    if (turnNumber > 0) {
+      systemPrompt += `
+
+⚠️ CRITICAL: AVOID REPETITION
+- Do NOT repeat the same examples, references, or evidence types you've already used
+- Vary your argumentation style naturally - don't systematically cycle through options
+- If you cited a study last turn, use a different type of evidence this turn
+- If you mentioned specific examples before (e.g., "Super Bowl", "Trump Tower"), use different examples
+- Each turn should feel fresh and authentic, not like checking off a list`;
+    }
+    
     systemPrompt += `
 
 TURN ${turnNumber + 1} INSTRUCTIONS:
@@ -902,7 +946,8 @@ Vague claims without specifics = weak argument.`;
    Mythological: "In [myth/tradition], [figure] demonstrates..."
    
    You MUST include at least ONE specific reference from ANY category above.
-   Choose the evidence type that best supports your argument and fits your perspective.
+   Pick ONE evidence type that best fits THIS specific argument - don't systematically cycle through types.
+   Vary your evidence types naturally across turns, but don't treat this as a checklist to complete.
    
    Vague claims without specifics = weak argument.`;
     }
@@ -926,7 +971,8 @@ Vague claims without specifics = weak argument.`;
    Mythological: "In [myth/tradition], [figure] demonstrates..."
    
    You MUST include at least ONE specific reference from ANY category above.
-   Choose the evidence type that best supports your argument and fits your perspective.
+   Pick ONE evidence type that best fits THIS specific argument - don't systematically cycle through types.
+   Vary your evidence types naturally across turns, but don't treat this as a checklist to complete.
    
    Vague claims without specifics = weak argument.`;
   }
