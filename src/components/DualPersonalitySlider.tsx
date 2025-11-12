@@ -26,11 +26,9 @@ const getEffectiveAgreeability = (model: ModelConfiguration) => {
   return model.agreeabilityLevel;
 };
 
-// Helper function to get effective extensiveness (persona locked value or slider value)
+// Helper function to get effective extensiveness (DESIGN CHANGE: slider always controls length)
 const getEffectiveExtensiveness = (model: ModelConfiguration) => {
-  if (model.personaId && PERSONAS[model.personaId]) {
-    return PERSONAS[model.personaId].lockedTraits.responseLength;
-  }
+  // Slider ALWAYS controls length - personas adapt style, not length
   return model.extensivenessLevel;
 };
 
@@ -591,16 +589,21 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="1"
                   max="5"
-                  value={modelA.personaId ? PERSONAS[modelA.personaId].lockedTraits.responseLength : modelA.extensivenessLevel}
+                  value={modelA.extensivenessLevel}
                   onChange={(e) => onModelAChange({ ...modelA, extensivenessLevel: parseInt(e.target.value) })}
-                  disabled={disabled || !!modelA.personaId}
+                  disabled={disabled}
                   className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-response-a ${
-                    disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                   }`}
                   style={{
                     background: getResponseLengthGradient(modelA.extensivenessLevel),
                   }}
                 />
+                {modelA.personaId && (
+                  <div className="text-xs text-gray-400 mt-1 text-center">
+                    Persona will adapt style to this length
+                  </div>
+                )}
               </div>
               
               <div 
@@ -681,16 +684,21 @@ export default function DualPersonalitySlider({
                   type="range"
                   min="1"
                   max="5"
-                  value={modelB.personaId ? PERSONAS[modelB.personaId].lockedTraits.responseLength : modelB.extensivenessLevel}
+                  value={modelB.extensivenessLevel}
                   onChange={(e) => onModelBChange({ ...modelB, extensivenessLevel: parseInt(e.target.value) })}
-                  disabled={disabled || !!modelB.personaId}
+                  disabled={disabled}
                   className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-response-b ${
-                    disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                   }`}
                   style={{
                     background: getResponseLengthGradient(modelB.extensivenessLevel),
                   }}
                 />
+                {modelB.personaId && (
+                  <div className="text-xs text-gray-400 mt-1 text-center">
+                    Persona will adapt style to this length
+                  </div>
+                )}
               </div>
               
               <div 

@@ -404,17 +404,19 @@ function generateSystemPrompt(
   model?: string
 ): string {
   let effectiveAgreeability = agreeabilityLevel;
+  // DESIGN CHANGE: Slider ALWAYS controls length - personas adapt style, not length
   let effectiveExtensiveness = extensivenessLevel;
   let personaPromptPart = '';
   const isMoonshotModel = typeof model === 'string' && model.startsWith('moonshot-v1-');
 
-  // If persona is selected, use FIXED values (no interpolation)
+  // If persona is selected, adapt agreeability but NOT extensiveness
   if (personaId && PERSONAS[personaId]) {
     const persona = PERSONAS[personaId];
     
-    // DIRECT ASSIGNMENT - NO INTERPOLATION
+    // Agreeability still overridden by persona (character trait)
     effectiveAgreeability = 10 - persona.lockedTraits.baseStubbornness;
-    effectiveExtensiveness = persona.lockedTraits.responseLength;
+    // Extensiveness ALWAYS uses slider value - persona adapts style to this length
+    // effectiveExtensiveness remains extensivenessLevel (no override)
     
     // Build persona prompt with stronger separation instructions
     // GPT-5 needs more explicit role-play framing for character adherence
@@ -776,7 +778,13 @@ Your Core Instructions:
 ${getBehavioralInstructions(effectiveAgreeability)}
 
 2. Response Length (Extensiveness: ${Math.round(effectiveExtensiveness)}/5):
-${getExtensivenessInstructions(effectiveExtensiveness)}
+${personaId && PERSONAS[personaId] ? 
+  `• Adapt your ${PERSONAS[personaId].name} style to this length level
+• Maintain your character's voice, perspective, and speaking style
+• Match the extensiveness level while staying true to your persona
+${getExtensivenessInstructions(effectiveExtensiveness)}` :
+  getExtensivenessInstructions(effectiveExtensiveness)
+}
 
 `;
 
@@ -1401,6 +1409,18 @@ async function callOpenAIResponses(
     reply = 'No response generated - check console logs for response structure';
   }
 
+  // Check for finish_reason in GPT-5 Responses API format
+  // GPT-5 Responses API may return finish_reason in data.output[] items
+  let finishReason: string | undefined;
+  if (data.output && Array.isArray(data.output)) {
+    const messageItems = data.output.filter((item: any) => item.type === 'message');
+    if (messageItems.length > 0) {
+      finishReason = messageItems[0].finish_reason || messageItems[0].finishReason;
+    }
+  } else if (data.finish_reason) {
+    finishReason = data.finish_reason;
+  }
+
   // Calculate token usage (Responses API may use different field names)
   const usage = data.usage || data.token_usage;
   const tokenUsage = usage ? {
@@ -1411,7 +1431,30 @@ async function callOpenAIResponses(
                    (usage.output_tokens || usage.completion_tokens || 0) * config.costPer1kTokens.output) / 1000
   } : undefined;
 
-  console.log('✅ callOpenAIResponses: Successfully completed', { replyLength: reply.length, hasTokenUsage: !!tokenUsage });
+  // Log finish_reason for debugging
+  console.log('🔍 GPT-5 Responses API finish_reason:', {
+    finishReason: finishReason || 'UNKNOWN',
+    maxOutputTokens: maxTokens,
+    replyLength: reply.length,
+    wasTruncated: finishReason === 'length' || finishReason === 'max_tokens' || finishReason === 'MAX_TOKENS'
+  });
+
+  // Log actual vs. max tokens
+  if (tokenUsage) {
+    console.log('🔍 Token usage vs. limit:', {
+      outputTokens: tokenUsage.outputTokens,
+      maxOutputTokens: maxTokens,
+      percentageUsed: maxTokens > 0 ? ((tokenUsage.outputTokens / maxTokens) * 100).toFixed(1) + '%' : 'N/A',
+      finishReason: finishReason || 'UNKNOWN',
+      extensivenessLevel: extensivenessLevel || 'NOT PROVIDED'
+    });
+  }
+
+  console.log('✅ callOpenAIResponses: Successfully completed', { 
+    replyLength: reply.length, 
+    hasTokenUsage: !!tokenUsage,
+    finishReason: finishReason || 'UNKNOWN'
+  });
   return { reply, tokenUsage };
   
   } catch (error: any) {
@@ -3037,11 +3080,16 @@ export async function processDebateTurn(params: {
   const normalizedHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
   const effectiveTurnNumber = turnNumber ?? normalizedHistory.length;
 
+  // DESIGN CHANGE: Calculate effectiveExtensiveness BEFORE generating prompt
+  // (Now it's always extensivenessLevel - no persona override)
+  const effectiveExtensiveness = extensivenessLevel; // Slider always controls length
+
   console.log('🤖 Orchestrator: Processing debate turn', {
     model,
     agreeabilityLevel,
     position,
     extensivenessLevel,
+    effectiveExtensiveness, // Log both values (should be equal now)
     topic: topic.substring(0, 60),
     personaId,
     turnNumber: effectiveTurnNumber,
@@ -3097,11 +3145,15 @@ export async function processDebateTurn(params: {
 
   const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
 
-  const debugMaxTokens = getMaxTokensForExtensiveness(extensivenessLevel);
+  // Use effectiveExtensiveness (which equals extensivenessLevel) for token calculation
+  const debugMaxTokens = getMaxTokensForExtensiveness(effectiveExtensiveness);
   console.log('🧭 Extensiveness enforcement', {
     model: modelKey,
     extensivenessLevel,
+    effectiveExtensiveness, // Should equal extensivenessLevel
     maxTokens: debugMaxTokens,
+    personaId: personaId || 'none',
+    personaResponseLength: personaId && PERSONAS[personaId] ? PERSONAS[personaId].lockedTraits.responseLength : 'N/A',
     systemPromptPreview: systemPrompt.substring(0, 500)
   });
 
@@ -3109,25 +3161,25 @@ export async function processDebateTurn(params: {
 
   switch (modelConfig.provider) {
     case 'openai':
-      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', extensivenessLevel);
+      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', effectiveExtensiveness);
       break;
     case 'anthropic':
-      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', extensivenessLevel);
+      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', effectiveExtensiveness);
       break;
     case 'deepseek':
-      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', extensivenessLevel);
+      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', effectiveExtensiveness);
       break;
     case 'google':
-      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel);
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', effectiveExtensiveness);
       break;
     case 'grok':
-      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel);
+      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', effectiveExtensiveness);
       break;
     case 'moonshot':
-      result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', extensivenessLevel);
+      result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', effectiveExtensiveness);
       break;
     case 'openrouter':
-      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', extensivenessLevel);
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', effectiveExtensiveness);
       break;
     default: {
       const exhaustiveCheck: never = modelConfig;
