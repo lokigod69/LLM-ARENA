@@ -276,14 +276,11 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
                         style={{ color: colors.primary }}
                       >
                         {(() => {
-                          // PROMPT 4: Show persona name if message has persona, otherwise model name
+                          // Show persona name if message has persona, otherwise model name
                           if (message.personaId) {
                             const persona = PERSONAS[message.personaId];
                             if (persona) {
-                              const modelDisplayName = actualModelName 
-                                ? getModelDisplayName(actualModelName)
-                                : modelName;
-                              return `${persona.name.toUpperCase()} (${modelDisplayName})`;
+                              return persona.name.toUpperCase();
                             }
                           }
                           return (message.sender || modelName || 'UNKNOWN').toUpperCase();
