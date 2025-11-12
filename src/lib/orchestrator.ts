@@ -405,7 +405,7 @@ function generateSystemPrompt(
 ): string {
   let effectiveAgreeability = agreeabilityLevel;
   // DESIGN CHANGE: Slider ALWAYS controls length - personas adapt style, not length
-  let effectiveExtensiveness = extensivenessLevel;
+  const effectiveExtensiveness = extensivenessLevel;
   let personaPromptPart = '';
   const isMoonshotModel = typeof model === 'string' && model.startsWith('moonshot-v1-');
 
