@@ -533,9 +533,8 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
         case 'gemini-2.5-flash-lite':
         case 'grok-4-fast-reasoning':
         case 'grok-4-fast':
-        case 'qwen3-4b-free':  // QWEN 3-TIER: Added FREE economy tier
-        case 'qwen-plus':      // QWEN 3-TIER: Added recommended tier
-        case 'qwen3-max':      // QWEN 3-TIER: Kept premium tier
+        case 'qwen-plus':      // QWEN: Recommended tier
+        case 'qwen3-max':      // QWEN: Premium tier
           apiModel = targetModel; // Use exact API model name
           break;
         default:

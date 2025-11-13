@@ -3,8 +3,7 @@
 // Updated to use exact API model names for proper API calls
 // MODEL UPDATE: Swapped Gemini Flash model to gemini-2.5-flash
 // MIGRATION SUPPORT: Added legacy model name migrations for backward compatibility
-// QWEN 3-TIER UPDATE: Replaced qwen3-30b-a3b with qwen3-4b-free (FREE Economy) and qwen-plus (Recommended)
-// Added display configs for qwen3-4b-free (FREE) and qwen-plus, updated qwen3-max description
+// QWEN UPDATE: Removed broken qwen3-4b-free, keeping only working qwen-plus and qwen3-max
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
@@ -121,13 +120,6 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     shortName: 'Grok 4',
     color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s ultra-fast conversational model for rapid debates'
-  },
-  'qwen3-4b-free': {
-    name: 'qwen3-4b-free',
-    displayName: 'Qwen 4B Free',
-    shortName: 'Qwen 4B',
-    color: '#E8420A', // Qwen brand color - Economy tier (FREE)
-    description: 'FREE Economy tier - 4B parameter model. Great for quick debates at zero cost.'
   },
   'qwen-plus': {
     name: 'qwen-plus',

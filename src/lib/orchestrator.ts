@@ -244,19 +244,9 @@ export const MODEL_CONFIGS = {
     costPer1kTokens: { input: 0.0002, output: 0.0005 }, // $0.20/$0.50 per million tokens = $0.0002/$0.0005 per 1k tokens
     elevenLabsVoiceId: 'BpjGufoPiobT79j2vtj4' // Grok voice
   },
-  // PHASE 3: Qwen models (via OpenRouter) - 3-Tier System
-  // UPDATE: Replaced deprecated qwen3-30b-a3b with qwen3-4b-free (FREE Economy) and qwen-plus (Recommended)
-  // Added qwen3-4b-free (FREE - $0/$0 per M tokens) and qwen-plus ($0.4/$1.2 per M tokens)
-  // Kept qwen3-max as Premium tier ($1.2/$6 per M tokens)
-  'qwen3-4b-free': {
-    provider: 'openrouter',
-    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    modelName: 'qwen/qwen3-4b:free',  // OpenRouter format - FREE model
-    maxTokens: 200,
-    apiKeyEnv: 'OPENROUTER_API_KEY',
-    costPer1kTokens: { input: 0, output: 0 }, // FREE - $0/$0 per million tokens
-    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
-  },
+  // PHASE 3: Qwen models (via OpenRouter) - 2-Tier System
+  // UPDATE: Removed broken qwen3-4b-free, keeping only working models
+  // qwen-plus ($0.4/$1.2 per M tokens) and qwen3-max ($1.2/$6 per M tokens)
   'qwen-plus': {
     provider: 'openrouter',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
@@ -1881,7 +1871,7 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
 /**
  * Unified OpenRouter API caller (for Qwen and future models)
  */
-async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen3-4b-free' | 'qwen-plus' | 'qwen3-max', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen-plus' | 'qwen3-max', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -2234,7 +2224,7 @@ export async function callFlexibleOracle(
         analysis = await callMoonshotOracle(oraclePrompt, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', oracleConfigs);
         break;
       case 'openrouter':
-        analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen3-4b-free' | 'qwen-plus' | 'qwen3-max', oracleConfigs);
+        analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen-plus' | 'qwen3-max', oracleConfigs);
         break;
       default:
         throw new Error(`Unsupported Oracle model provider: ${(config as any).provider}`);
@@ -2272,7 +2262,6 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast-reasoning': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast': { maxTokens: 8000, temperature: 0.1 },
-    'qwen3-4b-free': { maxTokens: 8000, temperature: 0.1 },
     'qwen-plus': { maxTokens: 8000, temperature: 0.1 },
     'qwen3-max': { maxTokens: 8000, temperature: 0.1 },
     'moonshot-v1-8k': { maxTokens: 6000, temperature: 0.1 },
@@ -2518,7 +2507,7 @@ async function callGrokOracle(
  */
 async function callOpenRouterOracle(
   oraclePrompt: string,
-  modelType: 'qwen3-4b-free' | 'qwen-plus' | 'qwen3-max',
+  modelType: 'qwen-plus' | 'qwen3-max',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
   const config = MODEL_CONFIGS[modelType];
@@ -2654,7 +2643,6 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'gemini-2.5-flash-lite': 'ultra-efficient and focused',
     'grok-4-fast-reasoning': 'real-time data access with transparent reasoning',
     'grok-4-fast': 'ultra-fast analysis with conversational insights',
-    'qwen3-4b-free': 'free analysis with cost-effective insights - 4B parameter model',
     'qwen-plus': 'balanced analysis quality with excellent cost-performance ratio',
     'qwen3-max': 'exceptional multilingual analysis with 1T parameter depth',
     'moonshot-v1-8k': 'Fast bilingual reasoning',
@@ -2738,7 +2726,6 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'gemini-2.5-flash-lite': '\n\nProvide ultra-efficient analysis with focused pattern recognition.',
     'grok-4-fast-reasoning': '\n\nUse real-time data access and transparent reasoning chains for analysis.',
     'grok-4-fast': '\n\nProvide ultra-fast analysis with conversational insights and real-time context.',
-    'qwen3-4b-free': '\n\nProvide free analysis with cost-effective insights using the 4B parameter model.',
     'qwen-plus': '\n\nDeliver balanced analysis quality with excellent cost-performance ratio for most debates.',
     'qwen3-max': '\n\nLeverage exceptional multilingual capabilities and 1T parameter depth for comprehensive analysis.',
     'moonshot-v1-8k': '\n\nUtilize Kimi\'s bilingual agility while keeping analysis concise and evidence-driven.',
@@ -3320,7 +3307,7 @@ export async function processDebateTurn(params: {
       result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', effectiveExtensiveness);
       break;
     case 'openrouter':
-      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-4b-free' | 'qwen-plus' | 'qwen3-max', effectiveExtensiveness);
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen-plus' | 'qwen3-max', effectiveExtensiveness);
       break;
     default: {
       const exhaustiveCheck: never = modelConfig;
