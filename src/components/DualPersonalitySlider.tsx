@@ -366,7 +366,7 @@ export default function DualPersonalitySlider({
                     <div className="text-center px-2">
                       <div className="text-lg mb-1">🔒</div>
                       <div className="text-xs font-matrix text-matrix-green/80">
-                        Locked to {PERSONAS[modelA.personaId].name}'s stance
+                        Locked to {PERSONAS[modelA.personaId].name}&apos;s stance
                       </div>
                     </div>
                   </div>
@@ -503,7 +503,7 @@ export default function DualPersonalitySlider({
                     <div className="text-center px-2">
                       <div className="text-lg mb-1">🔒</div>
                       <div className="text-xs font-matrix text-matrix-green/80">
-                        Locked to {PERSONAS[modelB.personaId].name}'s stance
+                        Locked to {PERSONAS[modelB.personaId].name}&apos;s stance
                       </div>
                     </div>
                   </div>
