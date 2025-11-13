@@ -1,6 +1,7 @@
 // Task 4.1 Complete: Matrix-style Control Panel for Debate Management
 // Cyberpunk-themed interface for monitoring debate flow and configuration
 // SIMPLIFIED: Only monitoring and configuration - no control buttons
+// PHASE 1 UI IMPROVEMENTS: Renamed "Max Turns" to "Total Turns" for clarity (keeps current logic, rounds implementation deferred to Phase 2)
 'use client';
 
 import { useState } from 'react';
@@ -63,7 +64,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 htmlFor="max-turns"
                 className="block text-xl text-center font-matrix text-matrix-green/80 mb-4"
               >
-                Max Turns: <span className="text-2xl text-matrix-blue font-bold">{maxTurns}</span>
+                Total Turns: <span className="text-2xl text-matrix-blue font-bold">{maxTurns}</span>
               </label>
               <input
                 id="max-turns"

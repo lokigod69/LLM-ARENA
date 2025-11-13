@@ -4,10 +4,11 @@
 // Maintains Matrix cyberpunk theme and all personality features
 // EXTENSIVENESS FEATURE: Added response length control (1-5 levels) for each model
 // UI ENHANCEMENT: Removed headers, combined sections, simplified response length display
-// FINAL REFINEMENT: Unified layout with STANCE/SCOPE sections, single dice button at bottom, matching text sizes
-// EMOJI UPDATE: Added emojis to scope sliders for concise to academic spectrum
+// FINAL REFINEMENT: Unified layout with STANCE/RESPONSE DEPTH sections, single dice button at bottom, matching text sizes
+// EMOJI UPDATE: Added emojis to response depth sliders for concise to academic spectrum
 // PERSONA INTEGRATION: Displays effective slider ranges when a persona is active.
 // PERSONA-AWARE RANDOMIZE: Randomize button disabled when both personas selected, only randomizes non-persona sides when one persona selected, uses effective values for gradient colors to prevent color changes on persona sides.
+// PHASE 1 UI IMPROVEMENTS: Renamed "Scope" to "Response Depth", moved Pro/Con position buttons to top of stance cards with enhanced prominence, added disabled slider overlay with persona lock indicator (🔒 Locked to [Persona Name]'s stance), improved accessibility with aria-labels
 
 'use client';
 
@@ -290,6 +291,51 @@ export default function DualPersonalitySlider({
               className="bg-gradient-to-br from-matrix-dark to-matrix-darker p-5 rounded-lg border"
               style={{ borderColor: `${getModelColor(modelA.name)}40` }}
             >
+              {/* Model A Position Assignment - MOVED TO TOP */}
+              <div className="text-center mb-6">
+                <div 
+                  className="text-xs mb-3 tracking-wider uppercase"
+                  style={{ color: getModelColor(modelA.name) }}
+                >
+                  POSITION
+                </div>
+                <motion.div
+                  className="cursor-pointer p-4 rounded-lg transition-all"
+                  style={{ 
+                    backgroundColor: modelA.position === 'pro' 
+                      ? 'rgba(34, 197, 94, 0.15)' 
+                      : 'rgba(239, 68, 68, 0.15)',
+                    border: `2px solid ${modelA.position === 'pro' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                  }}
+                  onClick={() => handlePositionToggle('A')}
+                  whileHover={!disabled ? { scale: 1.05 } : {}}
+                  whileTap={!disabled ? { scale: 0.95 } : {}}
+                  transition={{ duration: 0.2 }}
+                  aria-label={`Toggle Model A position (currently ${modelA.position})`}
+                >
+                  <motion.div
+                    className="text-4xl mb-2"
+                    key={modelA.position} // Re-animate when position changes
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
+                  >
+                    {getPositionIcon(modelA.position)}
+                  </motion.div>
+                  <div 
+                    className="text-base font-matrix tracking-wider font-bold"
+                    style={{ color: getPositionColor(modelA.position) }}
+                  >
+                    {modelA.position.toUpperCase()}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Divider */}
+              <div className="mb-6">
+                <div className="h-px bg-gradient-to-r from-transparent via-matrix-green to-transparent opacity-50"></div>
+              </div>
+
               {/* Centered Icon and Level */}
               <div className="flex items-center justify-center gap-3 mb-4">
                 <motion.span 
@@ -315,6 +361,16 @@ export default function DualPersonalitySlider({
 
               {/* Model A Slider */}
               <div className="relative mb-4">
+                {modelA.personaId && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-matrix-black/60 rounded-lg pointer-events-none">
+                    <div className="text-center px-2">
+                      <div className="text-lg mb-1">🔒</div>
+                      <div className="text-xs font-matrix text-matrix-green/80">
+                        Locked to {PERSONAS[modelA.personaId].name}'s stance
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <input
                   type="range"
                   min="0"
@@ -323,11 +379,14 @@ export default function DualPersonalitySlider({
                   onChange={handleModelAChange}
                   disabled={disabled || !!modelA.personaId}
                   className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-model-a ${
-                    disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    disabled || !!modelA.personaId ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                   }`}
                   style={{
                     background: getBackgroundGradient(getEffectiveAgreeability(modelA)),
                   }}
+                  aria-label={modelA.personaId 
+                    ? `Stance slider locked to persona: ${PERSONAS[modelA.personaId].name}` 
+                    : 'Adjust Model A stance level'}
                 />
               </div>
 
@@ -351,49 +410,6 @@ export default function DualPersonalitySlider({
                   );
                 })()}
               </div>
-
-              {/* Green Divider */}
-              <div className="my-4">
-                <div className="h-px bg-gradient-to-r from-transparent via-matrix-green to-transparent opacity-50"></div>
-              </div>
-
-              {/* Model A Position Assignment */}
-              <div className="text-center">
-                <div 
-                  className="text-xs mb-2 tracking-wider"
-                  style={{ color: getModelColor(modelA.name) }}
-                >
-                  POSITION
-                </div>
-                <motion.div
-                  className="cursor-pointer p-3 rounded-lg"
-                  style={{ 
-                    backgroundColor: modelA.position === 'pro' 
-                      ? 'rgba(34, 197, 94, 0.1)' 
-                      : 'rgba(239, 68, 68, 0.1)' 
-                  }}
-                  onClick={() => handlePositionToggle('A')}
-                  whileHover={!disabled ? { scale: 1.1 } : {}}
-                  whileTap={!disabled ? { scale: 0.9 } : {}}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.div
-                    className="text-3xl mb-1"
-                    key={modelA.position} // Re-animate when position changes
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
-                  >
-                    {getPositionIcon(modelA.position)}
-                  </motion.div>
-                  <div 
-                    className="text-sm font-matrix tracking-wider"
-                    style={{ color: getPositionColor(modelA.position) }}
-                  >
-                    {modelA.position.toUpperCase()}
-                  </div>
-                </motion.div>
-              </div>
             </div>
           </motion.div>
 
@@ -407,6 +423,56 @@ export default function DualPersonalitySlider({
               className="bg-gradient-to-br from-matrix-dark to-matrix-darker p-5 rounded-lg border"
               style={{ borderColor: `${getModelColor(modelB.name)}40` }}
             >
+              {/* Model B Position Assignment - MOVED TO TOP */}
+              <div className="text-center mb-6">
+                <div 
+                  className="text-xs mb-3 tracking-wider uppercase"
+                  style={{ color: getModelColor(modelB.name) }}
+                >
+                  POSITION
+                </div>
+                <motion.div
+                  className="cursor-pointer p-4 rounded-lg transition-all"
+                  style={{ 
+                    backgroundColor: modelB.position === 'pro' 
+                      ? 'rgba(34, 197, 94, 0.15)' 
+                      : 'rgba(239, 68, 68, 0.15)',
+                    border: `2px solid ${modelB.position === 'pro' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                  }}
+                  onClick={() => handlePositionToggle('B')}
+                  whileHover={!disabled ? { scale: 1.05 } : {}}
+                  whileTap={!disabled ? { scale: 0.95 } : {}}
+                  transition={{ duration: 0.2 }}
+                  aria-label={`Toggle Model B position (currently ${modelB.position})`}
+                >
+                  <motion.div
+                    className="text-4xl mb-2"
+                    key={modelB.position} // Re-animate when position changes
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
+                  >
+                    {getPositionIcon(modelB.position)}
+                  </motion.div>
+                  <div 
+                    className="text-base font-matrix tracking-wider font-bold"
+                    style={{ color: getPositionColor(modelB.position) }}
+                  >
+                    {modelB.position.toUpperCase()}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Divider */}
+              <div className="mb-6">
+                <div 
+                  className="h-px bg-gradient-to-r from-transparent to-transparent opacity-50"
+                  style={{ 
+                    background: `linear-gradient(to right, transparent, ${getModelColor(modelB.name)}, transparent)` 
+                  }}
+                ></div>
+              </div>
+
               {/* Centered Icon and Level */}
               <div className="flex items-center justify-center gap-3 mb-4">
                 <motion.span 
@@ -432,6 +498,16 @@ export default function DualPersonalitySlider({
 
               {/* Model B Slider */}
               <div className="relative mb-4">
+                {modelB.personaId && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-matrix-black/60 rounded-lg pointer-events-none">
+                    <div className="text-center px-2">
+                      <div className="text-lg mb-1">🔒</div>
+                      <div className="text-xs font-matrix text-matrix-green/80">
+                        Locked to {PERSONAS[modelB.personaId].name}'s stance
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <input
                   type="range"
                   min="0"
@@ -440,11 +516,14 @@ export default function DualPersonalitySlider({
                   onChange={handleModelBChange}
                   disabled={disabled || !!modelB.personaId}
                   className={`w-full h-2 bg-matrix-darker rounded-lg appearance-none slider-model-b ${
-                    disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    disabled || !!modelB.personaId ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
                   }`}
                   style={{
                     background: getBackgroundGradient(getEffectiveAgreeability(modelB)),
                   }}
+                  aria-label={modelB.personaId 
+                    ? `Stance slider locked to persona: ${PERSONAS[modelB.personaId].name}` 
+                    : 'Adjust Model B stance level'}
                 />
               </div>
 
@@ -468,60 +547,12 @@ export default function DualPersonalitySlider({
                   );
                 })()}
               </div>
-
-              {/* Divider with Model B color */}
-              <div className="my-4">
-                <div 
-                  className="h-px bg-gradient-to-r from-transparent to-transparent opacity-50"
-                  style={{ 
-                    background: `linear-gradient(to right, transparent, ${getModelColor(modelB.name)}, transparent)` 
-                  }}
-                ></div>
-              </div>
-
-              {/* Model B Position Assignment */}
-              <div className="text-center">
-                <div 
-                  className="text-xs mb-2 tracking-wider"
-                  style={{ color: getModelColor(modelB.name) }}
-                >
-                  POSITION
-                </div>
-                <motion.div
-                  className="cursor-pointer p-3 rounded-lg"
-                  style={{ 
-                    backgroundColor: modelB.position === 'pro' 
-                      ? 'rgba(34, 197, 94, 0.1)' 
-                      : 'rgba(239, 68, 68, 0.1)' 
-                  }}
-                  onClick={() => handlePositionToggle('B')}
-                  whileHover={!disabled ? { scale: 1.1 } : {}}
-                  whileTap={!disabled ? { scale: 0.9 } : {}}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.div
-                    className="text-3xl mb-1"
-                    key={modelB.position} // Re-animate when position changes
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ duration: 0.4, type: "spring", stiffness: 200 }}
-                  >
-                    {getPositionIcon(modelB.position)}
-                  </motion.div>
-                  <div 
-                    className="text-sm font-matrix tracking-wider"
-                    style={{ color: getPositionColor(modelB.position) }}
-                  >
-                    {modelB.position.toUpperCase()}
-                  </div>
-                </motion.div>
-              </div>
             </div>
           </motion.div>
         </div>
       </motion.div>
 
-      {/* SCOPE Control Section */}
+      {/* RESPONSE DEPTH Control Section */}
       <motion.div
         className="mt-4"
         initial={{ opacity: 0, y: 20 }}
@@ -529,7 +560,7 @@ export default function DualPersonalitySlider({
         transition={{ duration: 0.5, delay: 0.3 }}
       >
         <h3 className="text-2xl font-matrix font-bold text-matrix-green text-center mb-4 tracking-wider">
-          SCOPE
+          RESPONSE DEPTH
         </h3>
         
         {/* Model A Extensiveness */}
