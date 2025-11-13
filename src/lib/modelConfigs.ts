@@ -3,6 +3,8 @@
 // Updated to use exact API model names for proper API calls
 // MODEL UPDATE: Swapped Gemini Flash model to gemini-2.5-flash
 // MIGRATION SUPPORT: Added legacy model name migrations for backward compatibility
+// QWEN 3-TIER UPDATE: Replaced qwen3-30b-a3b with qwen-flash (Economy) and qwen-plus (Recommended)
+// Added display configs for qwen-flash (green) and qwen-plus (amber with ⭐), updated qwen3-max description
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
@@ -120,19 +122,26 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     color: '#FFFFFF', // White - matches official Grok branding
     description: 'xAI\'s ultra-fast conversational model for rapid debates'
   },
+  'qwen-flash': {
+    name: 'qwen-flash',
+    displayName: 'Qwen Flash',
+    shortName: 'Qwen Flash',
+    color: '#10B981', // Green for economy tier
+    description: 'Fastest and most cost-effective. Great for quick debates.'
+  },
+  'qwen-plus': {
+    name: 'qwen-plus',
+    displayName: 'Qwen Plus ⭐',
+    shortName: 'Qwen Plus',
+    color: '#F59E0B', // Amber/gold for recommended
+    description: 'Balanced performance and cost. Recommended for most debates.'
+  },
   'qwen3-max': {
     name: 'qwen3-max',
-    displayName: 'Qwen 3 Max',
+    displayName: 'Qwen Max',
     shortName: 'Qwen Max',
     color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
-    description: 'Alibaba\'s 1T parameter flagship with exceptional multilingual and reasoning capabilities'
-  },
-  'qwen3-30b-a3b': {
-    name: 'qwen3-30b-a3b',
-    displayName: 'Qwen 3 30B',
-    shortName: 'Qwen 30B',
-    color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
-    description: 'Cost-effective MoE model with optional reasoning - excellent for scaled debates'
+    description: 'Highest quality for complex topics. Premium option.'
   },
   'moonshot-v1-8k': {
     name: 'moonshot-v1-8k',

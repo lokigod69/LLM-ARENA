@@ -2,6 +2,7 @@
 // Configurable insight extraction system for debate analysis
 // ARCHITECTURAL REFACTOR: Separated verdict from format, enhanced bias detection
 // PHASE B: Added Oracle model selection for flexible analysis engines
+// QWEN 3-TIER UPDATE: Removed qwen3-30b-a3b from ORACLE_CAPABLE_MODELS, added qwen-flash and qwen-plus
 
 import type { AvailableModel } from './index';
 
@@ -129,8 +130,9 @@ export const ORACLE_CAPABLE_MODELS: AvailableModel[] = [
   'gemini-2.5-flash-lite',          // Gemini Flash-Lite
   'grok-4-fast-reasoning',          // Grok Fast Reasoning
   'grok-4-fast',                    // Grok Fast
-  'qwen3-max',                      // Qwen 3 Max
-  'qwen3-30b-a3b',                  // Qwen 3 30B
+  'qwen-flash',                     // Qwen Flash (Economy)
+  'qwen-plus',                      // Qwen Plus (Recommended)
+  'qwen3-max',                      // Qwen 3 Max (Premium)
   'moonshot-v1-128k',               // Moonshot Kimi 128K
 ];
 
@@ -149,8 +151,9 @@ export const ORACLE_MODEL_STRENGTHS: Record<AvailableModel, string> = {
   'gemini-2.5-flash-lite': 'Quick insights, cost-effective judgments',
   'grok-4-fast-reasoning': 'Real-time data access, transparent reasoning chains',
   'grok-4-fast': 'Ultra-fast analysis, conversational insights',
-  'qwen3-max': 'Exceptional multilingual analysis, 1T parameter depth',
-  'qwen3-30b-a3b': 'Cost-effective reasoning, efficient analysis',
+  'qwen-flash': 'Ultra-fast analysis, cost-effective insights',
+  'qwen-plus': 'Balanced analysis quality, excellent cost-performance ratio',
+  'qwen3-max': 'Exceptional multilingual analysis, 1T parameter depth - Premium quality',
   'moonshot-v1-8k': 'Fast bilingual assistant with short context',
   'moonshot-v1-32k': 'Extended context bilingual reasoning',
   'moonshot-v1-128k': 'Long-context bilingual analysis, excels at evidence aggregation'

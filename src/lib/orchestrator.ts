@@ -244,7 +244,28 @@ export const MODEL_CONFIGS = {
     costPer1kTokens: { input: 0.0002, output: 0.0005 }, // $0.20/$0.50 per million tokens = $0.0002/$0.0005 per 1k tokens
     elevenLabsVoiceId: 'BpjGufoPiobT79j2vtj4' // Grok voice
   },
-  // PHASE 3: Qwen models (via OpenRouter)
+  // PHASE 3: Qwen models (via OpenRouter) - 3-Tier System
+  // UPDATE: Replaced deprecated qwen3-30b-a3b with qwen-flash (Economy) and qwen-plus (Recommended)
+  // Added qwen-flash ($0.05/$0.4 per M tokens) and qwen-plus ($0.4/$1.2 per M tokens)
+  // Kept qwen3-max as Premium tier ($1.2/$6 per M tokens)
+  'qwen-flash': {
+    provider: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    modelName: 'qwen/qwen-flash',  // OpenRouter format with provider prefix
+    maxTokens: 200,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    costPer1kTokens: { input: 0.00005, output: 0.0004 }, // $0.05/$0.40 per million tokens = $0.00005/$0.0004 per 1k tokens
+    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
+  },
+  'qwen-plus': {
+    provider: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    modelName: 'qwen/qwen-plus',  // OpenRouter format with provider prefix
+    maxTokens: 200,
+    apiKeyEnv: 'OPENROUTER_API_KEY',
+    costPer1kTokens: { input: 0.0004, output: 0.0012 }, // $0.40/$1.20 per million tokens = $0.0004/$0.0012 per 1k tokens
+    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
+  },
   'qwen3-max': {
     provider: 'openrouter',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
@@ -252,16 +273,7 @@ export const MODEL_CONFIGS = {
     maxTokens: 200,
     apiKeyEnv: 'OPENROUTER_API_KEY',
     costPer1kTokens: { input: 0.0012, output: 0.006 }, // $1.20/$6.00 per million tokens = $0.0012/$0.006 per 1k tokens
-    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
-  },
-  'qwen3-30b-a3b': {
-    provider: 'openrouter',
-    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    modelName: 'qwen/qwen3-30b-a3b-instruct',  // OpenRouter format with provider prefix
-    maxTokens: 200,
-    apiKeyEnv: 'OPENROUTER_API_KEY',
-    costPer1kTokens: { input: 0.00015, output: 0.0006 }, // $0.15/$0.60 per million tokens = $0.00015/$0.0006 per 1k tokens
-    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice
+    elevenLabsVoiceId: 'jGf6Nvwr7qkFPrcLThmD' // Qwen voice - Premium tier
   },
   'moonshot-v1-8k': {
     provider: 'moonshot',
@@ -1869,7 +1881,7 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
 /**
  * Unified OpenRouter API caller (for Qwen and future models)
  */
-async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen3-max' | 'qwen3-30b-a3b', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
+async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen-flash' | 'qwen-plus' | 'qwen3-max', extensivenessLevel?: number): Promise<{reply: string, tokenUsage: RunTurnResponse['tokenUsage']}> {
   const config = MODEL_CONFIGS[modelType];
   const apiKey = process.env[config.apiKeyEnv];
   
@@ -2222,7 +2234,7 @@ export async function callFlexibleOracle(
         analysis = await callMoonshotOracle(oraclePrompt, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', oracleConfigs);
         break;
       case 'openrouter':
-        analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', oracleConfigs);
+        analysis = await callOpenRouterOracle(oraclePrompt, modelKey as 'qwen-flash' | 'qwen-plus' | 'qwen3-max', oracleConfigs);
         break;
       default:
         throw new Error(`Unsupported Oracle model provider: ${(config as any).provider}`);
@@ -2260,8 +2272,9 @@ function getOracleModelConfig(modelName: AvailableModel): { maxTokens: number; t
     'gemini-2.5-flash-lite': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast-reasoning': { maxTokens: 8000, temperature: 0.1 },
     'grok-4-fast': { maxTokens: 8000, temperature: 0.1 },
+    'qwen-flash': { maxTokens: 8000, temperature: 0.1 },
+    'qwen-plus': { maxTokens: 8000, temperature: 0.1 },
     'qwen3-max': { maxTokens: 8000, temperature: 0.1 },
-    'qwen3-30b-a3b': { maxTokens: 8000, temperature: 0.1 },
     'moonshot-v1-8k': { maxTokens: 6000, temperature: 0.1 },
     'moonshot-v1-32k': { maxTokens: 20000, temperature: 0.1 },
     'moonshot-v1-128k': { maxTokens: 60000, temperature: 0.1 }
@@ -2505,7 +2518,7 @@ async function callGrokOracle(
  */
 async function callOpenRouterOracle(
   oraclePrompt: string,
-  modelType: 'qwen3-max' | 'qwen3-30b-a3b',
+  modelType: 'qwen-flash' | 'qwen-plus' | 'qwen3-max',
   oracleConfig: { maxTokens: number; temperature: number }
 ): Promise<string> {
   const config = MODEL_CONFIGS[modelType];
@@ -2641,8 +2654,9 @@ function generateMockOracleAnalysis(oraclePrompt: string, modelName: AvailableMo
     'gemini-2.5-flash-lite': 'ultra-efficient and focused',
     'grok-4-fast-reasoning': 'real-time data access with transparent reasoning',
     'grok-4-fast': 'ultra-fast analysis with conversational insights',
+    'qwen-flash': 'ultra-fast analysis with cost-effective insights',
+    'qwen-plus': 'balanced analysis quality with excellent cost-performance ratio',
     'qwen3-max': 'exceptional multilingual analysis with 1T parameter depth',
-    'qwen3-30b-a3b': 'cost-effective reasoning with efficient analysis',
     'moonshot-v1-8k': 'Fast bilingual reasoning',
     'moonshot-v1-32k': 'Extended context analysis',
     'moonshot-v1-128k': 'Ultra-long context aggregation',
@@ -2724,8 +2738,9 @@ Think through each step methodically, then provide your comprehensive analysis.`
     'gemini-2.5-flash-lite': '\n\nProvide ultra-efficient analysis with focused pattern recognition.',
     'grok-4-fast-reasoning': '\n\nUse real-time data access and transparent reasoning chains for analysis.',
     'grok-4-fast': '\n\nProvide ultra-fast analysis with conversational insights and real-time context.',
+    'qwen-flash': '\n\nProvide ultra-fast analysis with cost-effective insights for quick evaluations.',
+    'qwen-plus': '\n\nDeliver balanced analysis quality with excellent cost-performance ratio for most debates.',
     'qwen3-max': '\n\nLeverage exceptional multilingual capabilities and 1T parameter depth for comprehensive analysis.',
-    'qwen3-30b-a3b': '\n\nApply cost-effective reasoning with efficient multilingual analysis.',
     'moonshot-v1-8k': '\n\nUtilize Kimi\'s bilingual agility while keeping analysis concise and evidence-driven.',
     'moonshot-v1-32k': '\n\nLeverage Kimi\'s extended context window to cross-reference prior arguments and evidence.',
     'moonshot-v1-128k': '\n\nExploit Kimi\'s 128K context to synthesize long-range debate patterns and multilingual evidence.',
@@ -3305,7 +3320,7 @@ export async function processDebateTurn(params: {
       result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', effectiveExtensiveness);
       break;
     case 'openrouter':
-      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen3-max' | 'qwen3-30b-a3b', effectiveExtensiveness);
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen-flash' | 'qwen-plus' | 'qwen3-max', effectiveExtensiveness);
       break;
     default: {
       const exhaustiveCheck: never = modelConfig;
