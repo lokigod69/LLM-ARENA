@@ -71,12 +71,22 @@ export interface OracleResult {
 
 export interface OracleAnalysisRequest {
   topic: string;
-  gptMessages: any[]; // Will use Message type from main types
-  claudeMessages: any[];
-  gptPersonality: any; // Will use ModelPersonality type
-  claudePersonality: any;
   totalTurns: number;
   config: OracleConfig;
+  
+  // ✅ PRIMARY: Flexible model system (PHASE B)
+  modelAMessages?: import('./index').Message[];
+  modelBMessages?: import('./index').Message[];
+  modelAName?: string;
+  modelBName?: string;
+  modelAPersonality?: import('./index').ModelConfiguration;
+  modelBPersonality?: import('./index').ModelConfiguration;
+  
+  // ⚠️ LEGACY: Backward compatibility (deprecated - use modelAMessages/modelBMessages instead)
+  gptMessages?: any[]; // Will use Message type from main types
+  claudeMessages?: any[];
+  gptPersonality?: any; // Will use ModelPersonality type
+  claudePersonality?: any;
 }
 
 // Lens descriptions for UI

@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
-import type { Message } from '@/types';
+import type { Message, AvailableModel } from '@/types';
 import type { ModelPersonality } from '@/hooks/useDebate';
 import type { 
   OracleConfig, 
@@ -19,6 +19,8 @@ import type {
   VerdictScope,
   BiasDetection 
 } from '@/types/oracle';
+import { getModelDisplayName } from '@/lib/modelConfigs';
+import { PERSONAS } from '@/lib/personas';
 
 // Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -242,7 +244,7 @@ POLITICAL BIAS ANALYSIS:
   return prompt;
 };
 
-// NEW: Comprehensive prompt builder
+// NEW: Comprehensive prompt builder - UPDATED: Uses flexible model data
 const buildOraclePrompt = (
   request: OracleAnalysisRequest,
   config: OracleConfig
@@ -262,15 +264,49 @@ const buildOraclePrompt = (
   prompt += `DEBATE TOPIC: "${request.topic}"\n\n`;
   prompt += `TOTAL TURNS: ${request.totalTurns}\n\n`;
   
-  // Add GPT messages
-  prompt += "GPT-4 RESPONSES:\n";
-  request.gptMessages.forEach((msg, index) => {
+  // ✅ Use flexible model data with fallback to legacy
+  const messagesA = (request.modelAMessages && request.modelAMessages.length > 0) 
+    ? request.modelAMessages 
+    : (request.gptMessages || []);
+  const messagesB = (request.modelBMessages && request.modelBMessages.length > 0) 
+    ? request.modelBMessages 
+    : (request.claudeMessages || []);
+  
+  // ✅ Get display names and persona names dynamically
+  let labelA = 'Model A';
+  let labelB = 'Model B';
+  
+  try {
+    const nameA = request.modelAName 
+      ? getModelDisplayName(request.modelAName as AvailableModel)
+      : 'GPT-4';
+    const nameB = request.modelBName 
+      ? getModelDisplayName(request.modelBName as AvailableModel)
+      : 'Claude';
+    
+    const personaA = request.modelAPersonality?.personaId 
+      ? PERSONAS[request.modelAPersonality.personaId]?.name 
+      : null;
+    const personaB = request.modelBPersonality?.personaId 
+      ? PERSONAS[request.modelBPersonality.personaId]?.name 
+      : null;
+    
+    labelA = personaA ? `${personaA} (${nameA})` : nameA;
+    labelB = personaB ? `${personaB} (${nameB})` : nameB;
+  } catch (error) {
+    // Fallback to simple labels if anything fails
+    labelA = request.modelAName || 'GPT-4';
+    labelB = request.modelBName || 'Claude';
+  }
+  
+  // ✅ Use dynamic labels and actual messages
+  prompt += `${labelA} RESPONSES:\n`;
+  messagesA.forEach((msg, index) => {
     prompt += `Turn ${index + 1}: ${msg.text}\n\n`;
   });
   
-  // Add Claude messages
-  prompt += "CLAUDE RESPONSES:\n";
-  request.claudeMessages.forEach((msg, index) => {
+  prompt += `${labelB} RESPONSES:\n`;
+  messagesB.forEach((msg, index) => {
     prompt += `Turn ${index + 1}: ${msg.text}\n\n`;
   });
   
@@ -290,8 +326,30 @@ export async function POST(request: NextRequest) {
   
   try {
     const body: OracleAnalysisRequest & { accessCode?: string } = await request.json();
-    const { topic, gptMessages, claudeMessages, gptPersonality, claudePersonality, totalTurns, config } = body;
+    const { 
+      topic, 
+      // ✅ PRIMARY: Extract flexible model data
+      modelAMessages = [],
+      modelBMessages = [],
+      modelAName,
+      modelBName,
+      modelAPersonality,
+      modelBPersonality,
+      totalTurns, 
+      config,
+      // ⚠️ LEGACY: Fallback to legacy fields if flexible not available
+      gptMessages = [],
+      claudeMessages = [],
+      gptPersonality,
+      claudePersonality
+    } = body;
     const accessCode = (body as any).accessCode as string | undefined;
+
+    // ✅ Determine which data to use (prefer flexible, fallback to legacy)
+    const messagesA = modelAMessages.length > 0 ? modelAMessages : gptMessages;
+    const messagesB = modelBMessages.length > 0 ? modelBMessages : claudeMessages;
+    const nameA = modelAName || 'gpt-4o-mini'; // Fallback to a default model name
+    const nameB = modelBName || 'claude-3-5-sonnet-20241022'; // Fallback to a default model name
 
     console.log('🔮 ORACLE v1.1: Starting configurable analysis...', {
       topic: topic.substring(0, 50) + '...',
@@ -301,6 +359,24 @@ export async function POST(request: NextRequest) {
       verdictScope: config.verdict.scope,
       biasDetectionEnabled: config.biasDetection.enabled,
       totalTurns
+    });
+
+    // ✅ DEBUG: Log data flow for investigation
+    console.log('🔮 ORACLE DEBUG: Request data received', {
+      topic: topic.substring(0, 50),
+      modelAMessagesCount: modelAMessages.length,
+      modelBMessagesCount: modelBMessages.length,
+      modelAName,
+      modelBName,
+      modelAPersonaId: modelAPersonality?.personaId,
+      modelBPersonaId: modelBPersonality?.personaId,
+      legacyGptMessagesCount: gptMessages.length,
+      legacyClaudeMessagesCount: claudeMessages.length,
+      usingFlexibleData: modelAMessages.length > 0 || modelBMessages.length > 0,
+      finalMessagesACount: messagesA.length,
+      finalMessagesBCount: messagesB.length,
+      finalNameA: nameA,
+      finalNameB: nameB
     });
 
     // Check authentication via cookies
@@ -649,8 +725,44 @@ async function generateRealAnalysis(request: OracleAnalysisRequest, startTime: n
 
 /**
  * Build enhanced Oracle prompt with Chain of Thought instructions for DeepSeek-Reasoner
+ * UPDATED: Uses flexible model data with dynamic labels
  */
 function buildEnhancedOraclePrompt(request: OracleAnalysisRequest, config: OracleConfig): string {
+  // ✅ Use flexible model data with fallback to legacy
+  const messagesA = (request.modelAMessages && request.modelAMessages.length > 0) 
+    ? request.modelAMessages 
+    : (request.gptMessages || []);
+  const messagesB = (request.modelBMessages && request.modelBMessages.length > 0) 
+    ? request.modelBMessages 
+    : (request.claudeMessages || []);
+  
+  // ✅ Get display names and persona names dynamically
+  let labelA = 'Model A';
+  let labelB = 'Model B';
+  
+  try {
+    const nameA = request.modelAName 
+      ? getModelDisplayName(request.modelAName as AvailableModel)
+      : 'GPT-4';
+    const nameB = request.modelBName 
+      ? getModelDisplayName(request.modelBName as AvailableModel)
+      : 'Claude';
+    
+    const personaA = request.modelAPersonality?.personaId 
+      ? PERSONAS[request.modelAPersonality.personaId]?.name 
+      : null;
+    const personaB = request.modelBPersonality?.personaId 
+      ? PERSONAS[request.modelBPersonality.personaId]?.name 
+      : null;
+    
+    labelA = personaA ? `${personaA} (${nameA})` : nameA;
+    labelB = personaB ? `${personaB} (${nameB})` : nameB;
+  } catch (error) {
+    // Fallback to simple labels if anything fails
+    labelA = request.modelAName || 'GPT-4';
+    labelB = request.modelBName || 'Claude';
+  }
+
   let prompt = `${ORACLE_NEUTRALITY_DIRECTIVE}
 
 CHAIN OF THOUGHT ANALYSIS REQUIRED:
@@ -675,14 +787,14 @@ DEBATE CONTENT TO ANALYZE:
 Topic: "${request.topic}"
 Total Turns: ${request.totalTurns}
 
-GPT-4 RESPONSES:`;
+${labelA} RESPONSES:`;
 
-  request.gptMessages.forEach((msg, index) => {
+  messagesA.forEach((msg, index) => {
     prompt += `\nTurn ${index + 1}: ${msg.text}`;
   });
 
-  prompt += `\n\nCLAUDE RESPONSES:`;
-  request.claudeMessages.forEach((msg, index) => {
+  prompt += `\n\n${labelB} RESPONSES:`;
+  messagesB.forEach((msg, index) => {
     prompt += `\nTurn ${index + 1}: ${msg.text}`;
   });
 
