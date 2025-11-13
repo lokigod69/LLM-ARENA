@@ -8,8 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from 'uuid';
-import type { Message, AvailableModel } from '@/types';
-import type { ModelPersonality } from '@/hooks/useDebate';
+import type { AvailableModel } from '@/types';
 import type { 
   OracleConfig, 
   OracleResult, 
@@ -245,7 +244,8 @@ POLITICAL BIAS ANALYSIS:
 };
 
 // NEW: Comprehensive prompt builder - UPDATED: Uses flexible model data
-const buildOraclePrompt = (
+// Note: Currently unused, kept for potential future use
+const _buildOraclePrompt = (
   request: OracleAnalysisRequest,
   config: OracleConfig
 ): string => {
@@ -339,11 +339,9 @@ export async function POST(request: NextRequest) {
       config,
       // ⚠️ LEGACY: Fallback to legacy fields if flexible not available
       gptMessages = [],
-      claudeMessages = [],
-      gptPersonality,
-      claudePersonality
+      claudeMessages = []
     } = body;
-    const accessCode = (body as any).accessCode as string | undefined;
+    const _accessCode = (body as any).accessCode as string | undefined;
 
     // ✅ Determine which data to use (prefer flexible, fallback to legacy)
     const messagesA = modelAMessages.length > 0 ? modelAMessages : gptMessages;
@@ -464,19 +462,27 @@ export async function POST(request: NextRequest) {
 
 // Mock analysis generation - UPDATED for new architecture
 async function generateMockAnalysis(request: OracleAnalysisRequest, startTime: number): Promise<OracleResult> {
-  const { topic, gptMessages, claudeMessages, config, totalTurns } = request;
+  const { topic, config, totalTurns } = request;
+  
+  // ✅ Use flexible model data with fallback to legacy
+  const messagesA = (request.modelAMessages && request.modelAMessages.length > 0) 
+    ? request.modelAMessages 
+    : (request.gptMessages || []);
+  const messagesB = (request.modelBMessages && request.modelBMessages.length > 0) 
+    ? request.modelBMessages 
+    : (request.claudeMessages || []);
   
   // Simulate processing time based on depth level
   const processingDelay = config.depthLevel * 300 + Math.random() * 500;
   await new Promise(resolve => setTimeout(resolve, processingDelay));
   
   // Generate analysis based on configuration
-  const analysis = generateConfiguredAnalysis(config, topic, gptMessages.length, claudeMessages.length, totalTurns);
+  const analysis = generateConfiguredAnalysis(config, topic, messagesA.length, messagesB.length, totalTurns);
   
   // Generate verdict if enabled
   let verdict = undefined;
   if (config.verdict.enabled && config.verdict.scope !== 'disabled') {
-    verdict = generateMockVerdict(gptMessages.length, claudeMessages.length, config.verdict.scope, config.primaryLens);
+    verdict = generateMockVerdict(messagesA.length, messagesB.length, config.verdict.scope, config.primaryLens);
   }
   
   // Generate bias analysis if enabled
