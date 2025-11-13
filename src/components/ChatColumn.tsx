@@ -80,7 +80,7 @@ const ChatColumn = forwardRef<HTMLDivElement, ChatColumnProps>(
       if (name.includes('gemini')) return '#4a9eff'; // Blue
       if (name.includes('deepseek')) return '#9d4edd'; // Purple
       if (name.includes('moonshot') || name.includes('kimi')) return '#ff6b35'; // Moonshot orange
-      if (name.includes('qwen')) return '#E8420A'; // Qwen brand color
+      if (name.includes('qwen')) return '#E8420A'; // Qwen brand color (all Qwen models)
       return '#00ff41'; // Default green
     };
 

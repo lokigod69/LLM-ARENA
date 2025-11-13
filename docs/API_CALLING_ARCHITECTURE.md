@@ -19,7 +19,7 @@ Debate turns are routed through provider-specific helpers inside `src/lib/orches
 | `callUnifiedDeepSeek` | `deepseek-r1`, `deepseek-v3` | `POST /v1/chat/completions` | `Bearer ${DEEPSEEK_API_KEY}` | Adds `response_format: { type: 'text' }`, `temperature: 0.7`, logs finish reasons, estimates cost via `prompt_tokens` + `completion_tokens`. |
 | `callUnifiedGrok` | `grok-4-fast-reasoning`, `grok-4-fast` | `POST https://api.x.ai/v1/chat/completions` | `Bearer ${GROK_API_KEY}` | Same request shape as OpenAI Chat Completions plus `streaming: false`, `temperature: 0.7`. Handles JSON/text fallback parsing. |
 | `callUnifiedGemini` | `gemini-2.5-*` | `POST ...:generateContent` | `x-goog-api-key` query param (constructed via `endpoint` in config) | Builds `contents`/`systemInstruction` payload, maps role to Gemini format, handles candidate finish reasons, extracts text from nested arrays. |
-| `callUnifiedOpenRouter` | `qwen-flash`, `qwen-plus`, `qwen3-max` | `POST https://openrouter.ai/api/v1/chat/completions` | `Authorization: Bearer ${OPENROUTER_API_KEY}` + `HTTP-Referer`, `X-Title` headers | Adds `provider` metadata from config comment, standard Chat Completions payload. |
+| `callUnifiedOpenRouter` | `qwen3-4b-free`, `qwen-plus`, `qwen3-max` | `POST https://openrouter.ai/api/v1/chat/completions` | `Authorization: Bearer ${OPENROUTER_API_KEY}` + `HTTP-Referer`, `X-Title` headers | Adds `provider` metadata from config comment, standard Chat Completions payload. |
 
 ## Streaming
 

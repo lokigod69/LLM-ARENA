@@ -1,6 +1,6 @@
 // Shared types for the application
 // EXTENSIVENESS FEATURE: Added extensivenessLevel to ModelConfiguration and response length presets
-// QWEN 3-TIER UPDATE: Removed deprecated qwen3-30b-a3b, added qwen-flash and qwen-plus to AvailableModel type
+// QWEN 3-TIER UPDATE: Removed deprecated qwen3-30b-a3b, added qwen3-4b-free (FREE) and qwen-plus to AvailableModel type
 
 export interface Message {
   id: string; // Unique identifier for the message
@@ -26,7 +26,7 @@ export type AvailableModel =
   | 'gemini-2.5-flash-lite'
   | 'grok-4-fast-reasoning'
   | 'grok-4-fast'
-  | 'qwen-flash'
+  | 'qwen3-4b-free'
   | 'qwen-plus'
   | 'qwen3-max'
   | 'moonshot-v1-8k'
