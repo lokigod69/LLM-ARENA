@@ -126,22 +126,22 @@ export const MODEL_DISPLAY_CONFIGS: Record<AvailableModel, ModelDisplayConfig> =
     name: 'qwen-flash',
     displayName: 'Qwen Flash',
     shortName: 'Qwen Flash',
-    color: '#10B981', // Green for economy tier
-    description: 'Fastest and most cost-effective. Great for quick debates.'
+    color: '#E8420A', // Qwen brand color - Economy tier
+    description: 'Economy tier - Fastest and most cost-effective. Great for quick debates.'
   },
   'qwen-plus': {
     name: 'qwen-plus',
-    displayName: 'Qwen Plus ⭐',
+    displayName: 'Qwen Plus',
     shortName: 'Qwen Plus',
-    color: '#F59E0B', // Amber/gold for recommended
-    description: 'Balanced performance and cost. Recommended for most debates.'
+    color: '#E8420A', // Qwen brand color - Recommended tier
+    description: 'Recommended - Balanced performance and cost. Recommended for most debates.'
   },
   'qwen3-max': {
     name: 'qwen3-max',
     displayName: 'Qwen Max',
     shortName: 'Qwen Max',
-    color: '#E8420A', // Alibaba red-orange - distinct from Claude orange
-    description: 'Highest quality for complex topics. Premium option.'
+    color: '#E8420A', // Qwen brand color - Premium tier
+    description: 'Premium - Highest quality for complex topics. Premium option.'
   },
   'moonshot-v1-8k': {
     name: 'moonshot-v1-8k',
