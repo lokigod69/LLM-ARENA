@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import type { ChatMessage, ChatConfiguration } from '@/types/chat';
-import { processDebateTurn } from '@/lib/orchestrator';
+import { processChatTurn } from '@/lib/orchestrator';
 import { getRelevantContext } from '@/lib/chatHelpers';
 import { PERSONAS } from '@/lib/personas';
 
@@ -214,19 +214,14 @@ export async function POST(request: NextRequest) {
       contextMessages: relevantMessages.length,
     });
 
-    // Call orchestrator with chat-specific parameters
-    // Note: We use stance as agreeabilityLevel, no position, no topic, no turnNumber
-    const response = await processDebateTurn({
-      prevMessage: message,
+    // Call orchestrator with chat-specific parameters (conversational, not debate)
+    const response = await processChatTurn({
+      userMessage: message,
       conversationHistory: orchestratorHistory,
       model: config.modelName,
-      agreeabilityLevel: config.stance,
-      position: undefined, // No position in chat
+      stance: config.stance,
       extensivenessLevel: config.defaultExtensiveness,
-      topic: 'Conversation', // Placeholder, not used in chat prompts
-      maxTurns: 999, // No turn limit
       personaId: config.personaId,
-      turnNumber: 0, // Not used in chat
     });
 
     console.log('✅ CHAT API: Response received', {

@@ -3329,10 +3329,23 @@ async function callUnifiedMoonshot(
   extensivenessLevel: number
 ): Promise<{ reply: string; tokenUsage: RunTurnResponse['tokenUsage'] }> {
   const config = MODEL_CONFIGS[modelType];
-  const apiKey = process.env[config.apiKeyEnv];
+  const apiKeyEnv = config.apiKeyEnv || 'MOONSHOT_API_KEY';
+  const apiKey = process.env[apiKeyEnv];
+
+  // Enhanced error logging for Moonshot authentication
+  console.log(`🌙 Moonshot authentication check:`, {
+    modelType,
+    apiKeyEnv,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey ? apiKey.length : 0,
+    apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING',
+    isPlaceholder: apiKey === 'YOUR_MOONSHOT_API_KEY_PLACEHOLDER'
+  });
 
   if (!apiKey || apiKey === 'YOUR_MOONSHOT_API_KEY_PLACEHOLDER') {
-    throw new Error(`${config.apiKeyEnv} is not configured. Please set ${config.apiKeyEnv} in your .env.local file.`);
+    const errorMsg = `${apiKeyEnv} is not configured. Please set ${apiKeyEnv} in your .env.local file or Vercel environment variables.`;
+    console.error(`❌ ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   const systemMessage = fullHistory.find((msg) => msg.role === 'system');
@@ -3398,5 +3411,137 @@ async function callUnifiedMoonshot(
       totalTokens,
       estimatedCost,
     },
+  };
+}
+
+/**
+ * Process a chat turn (conversational, not debate)
+ * Uses conversational prompts instead of debate prompts
+ */
+export async function processChatTurn(params: {
+  userMessage: string;
+  conversationHistory: { sender: string; text: string }[];
+  model: string;
+  stance: number; // 0-10 opinion strength
+  extensivenessLevel: number; // 1-5 response detail
+  personaId: string;
+}): Promise<RunTurnResponse> {
+  const {
+    userMessage,
+    conversationHistory,
+    model,
+    stance,
+    extensivenessLevel,
+    personaId
+  } = params;
+
+  const normalizedHistory = Array.isArray(conversationHistory) ? conversationHistory : [];
+  const persona = PERSONAS[personaId];
+
+  if (!persona) {
+    throw new Error(`Persona not found: ${personaId}`);
+  }
+
+  console.log('💬 Orchestrator: Processing chat turn', {
+    model,
+    personaId,
+    stance,
+    extensivenessLevel,
+    historyLength: normalizedHistory.length,
+    userMessageLength: userMessage.length
+  });
+
+  // Import chat helper for system prompt generation
+  const { generateChatSystemPrompt } = await import('./chatHelpers');
+  
+  // Get relevant context (last messages for conversation history)
+  // Convert to ChatMessage format for generateChatSystemPrompt
+  const recentMessages = normalizedHistory.slice(-10).map(msg => ({
+    role: (msg.sender === 'User' ? 'user' : 'assistant') as 'user' | 'assistant',
+    content: msg.text
+  }));
+
+  // Build conversational system prompt (NOT debate prompt)
+  const systemPrompt = generateChatSystemPrompt(
+    personaId,
+    stance,
+    extensivenessLevel,
+    recentMessages as any, // Type compatibility - ChatMessage expects role/content
+    persona.name,
+    persona.identity,
+    persona.turnRules || ''
+  );
+
+  const modelKey = getModelKey(model);
+  const modelConfig = MODEL_CONFIGS[modelKey];
+
+  if (!modelConfig) {
+    throw new Error(`Model configuration not found for: ${model}`);
+  }
+
+  // Build message history for API call
+  const messages = normalizedHistory.map((entry) => {
+    const isUser = entry.sender === 'User';
+    return {
+      role: isUser ? 'user' : 'assistant',
+      content: entry.text
+    };
+  });
+
+  // Add current user message
+  messages.push({
+    role: 'user',
+    content: userMessage
+  });
+
+  const fullHistory = [{ role: 'system', content: systemPrompt }, ...messages];
+
+  // Check if this is a GPT-5 model for token limit calculation
+  const isGPT5ForTokens = modelKey === 'gpt-5' || modelKey === 'gpt-5-mini' || modelKey === 'gpt-5-nano';
+  const maxTokens = getMaxTokensForExtensiveness(extensivenessLevel, isGPT5ForTokens);
+  
+  console.log('💬 Chat turn: Extensiveness enforcement', {
+    model: modelKey,
+    extensivenessLevel,
+    maxTokens,
+    personaId,
+    systemPromptPreview: systemPrompt.substring(0, 200)
+  });
+
+  let result: { reply: string; tokenUsage: RunTurnResponse['tokenUsage'] | undefined };
+
+  switch (modelConfig.provider) {
+    case 'openai':
+      result = await callUnifiedOpenAI(fullHistory, modelKey as 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano' | 'gpt-4o-mini', extensivenessLevel);
+      break;
+    case 'anthropic':
+      result = await callUnifiedAnthropic(fullHistory, modelKey as 'claude-3-5-sonnet-20241022' | 'claude-haiku-4-5-20251001', extensivenessLevel);
+      break;
+    case 'deepseek':
+      result = await callUnifiedDeepSeek(fullHistory, modelKey as 'deepseek-r1' | 'deepseek-v3', extensivenessLevel);
+      break;
+    case 'google':
+      result = await callUnifiedGemini(fullHistory, modelKey as 'gemini-2.5-flash' | 'gemini-2.5-pro-preview-05-06' | 'gemini-2.5-flash-lite', extensivenessLevel);
+      break;
+    case 'grok':
+      result = await callUnifiedGrok(fullHistory, modelKey as 'grok-4-fast-reasoning' | 'grok-4-fast', extensivenessLevel);
+      break;
+    case 'moonshot':
+      result = await callUnifiedMoonshot(fullHistory, modelKey as 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', extensivenessLevel);
+      break;
+    case 'openrouter':
+      result = await callUnifiedOpenRouter(fullHistory, modelKey as 'qwen-plus' | 'qwen3-max', extensivenessLevel);
+      break;
+    default: {
+      const exhaustiveCheck: never = modelConfig;
+      throw new Error('Unsupported model provider encountered in processChatTurn');
+    }
+  }
+
+  return {
+    reply: result.reply,
+    model: modelKey,
+    timestamp: new Date().toISOString(),
+    tokenUsage: result.tokenUsage
   };
 }
