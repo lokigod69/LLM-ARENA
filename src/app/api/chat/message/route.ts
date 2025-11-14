@@ -162,12 +162,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate configuration properties
+    if (!configuration.personaId || !configuration.modelName) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            type: 'api',
+            message: 'Invalid configuration: missing personaId or modelName',
+            retryable: false,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     // Get relevant context using token-budget sliding window
-    const relevantMessages = getRelevantContext(conversationHistory, 4000);
+    const relevantMessages = getRelevantContext(conversationHistory || [], 4000);
 
     // Convert chat messages to orchestrator format
     const orchestratorHistory = relevantMessages.map((msg) => ({
-      sender: msg.role === 'user' ? 'User' : PERSONAS[configuration.personaId]?.name || 'Assistant',
+      sender: msg.role === 'user' ? 'User' : (PERSONAS[configuration.personaId]?.name || 'Assistant'),
       text: msg.content,
     }));
 
