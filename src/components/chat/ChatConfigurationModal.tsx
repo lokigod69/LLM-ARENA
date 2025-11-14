@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AvailableModel, ChatConfiguration } from '@/types/chat';
+import type { AvailableModel } from '@/types';
+import type { ChatConfiguration } from '@/types/chat';
 import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
 import { getAvailableModels, getModelDisplayName, getModelColor } from '@/lib/modelConfigs';
 
