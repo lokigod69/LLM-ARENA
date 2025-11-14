@@ -205,6 +205,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Debug logging for Moonshot/Kimi authentication
+    const isMoonshotModel = config.modelName.startsWith('moonshot') || config.modelName.includes('kimi');
+    if (isMoonshotModel) {
+      console.log('🔍 Moonshot Debug:', {
+        apiKeyExists: !!process.env.MOONSHOT_API_KEY,
+        apiKeyPrefix: process.env.MOONSHOT_API_KEY?.substring(0, 10),
+        modelName: config.modelName,
+        apiKeyEnv: 'MOONSHOT_API_KEY',
+      });
+    }
+
     console.log('💬 CHAT API: Processing message', {
       model: config.modelName,
       personaId: config.personaId,
@@ -212,6 +223,7 @@ export async function POST(request: NextRequest) {
       extensiveness: config.defaultExtensiveness,
       messageLength: message.length,
       contextMessages: relevantMessages.length,
+      isMoonshotModel,
     });
 
     // Call orchestrator with chat-specific parameters (conversational, not debate)

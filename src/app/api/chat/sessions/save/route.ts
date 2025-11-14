@@ -31,10 +31,17 @@ export async function POST(req: NextRequest) {
       timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp,
     }));
 
-    // Save to Supabase
+    // Save to Supabase (use upsert to handle both new and existing sessions)
+    console.log('💾 Attempting to save session:', {
+      sessionId: session.id,
+      messageCount: session.messages.length,
+      modelName: session.configuration.modelName,
+      personaId: session.configuration.personaId,
+    });
+
     const { data, error } = await supabase!
       .from('chat_sessions')
-      .insert({
+      .upsert({
         id: session.id,
         user_id: session.userId || null,
         access_code: session.accessCode || null,
@@ -47,14 +54,24 @@ export async function POST(req: NextRequest) {
         messages: messagesForStorage,
         total_tokens: session.metadata?.totalTokens || 0,
         total_cost: session.metadata?.totalCost || 0,
+      }, {
+        onConflict: 'id',
       })
       .select()
       .single();
 
     if (error) {
-      console.error('❌ Supabase save error:', error);
+      console.error('❌ Supabase save error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return NextResponse.json(
-        { error: 'Failed to save chat session', details: error.message },
+        { 
+          success: false,
+          error: error.message || 'Failed to save chat session',
+        },
         { status: 500 }
       );
     }
@@ -65,8 +82,8 @@ export async function POST(req: NextRequest) {
     console.error('❌ Chat session save error:', error);
     return NextResponse.json(
       {
-        error: 'Failed to save chat session',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to save chat session',
       },
       { status: 500 }
     );
