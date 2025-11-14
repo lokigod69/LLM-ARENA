@@ -33,6 +33,15 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
           <img
             src={portraitSrc}
             alt={persona.name}
+            onError={(e) => {
+              const fallbackPaths = getPersonaPortraitPaths(personaId || '');
+              if (e.currentTarget.src !== fallbackPaths.fallback) {
+                e.currentTarget.src = fallbackPaths.fallback || '/personas/A1.jpeg';
+              } else {
+                e.currentTarget.src = '/personas/A1.jpeg';
+                e.currentTarget.onerror = null;
+              }
+            }}
             className="w-10 h-10 rounded-full border-2"
             style={{ borderColor: modelName ? getModelColor(modelName) : '#00ff41' }}
           />

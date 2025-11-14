@@ -64,7 +64,7 @@ export default function ChatConfigurationModal({
             </h2>
             <button
               onClick={onClose}
-              className="text-matrix-green-dim hover:text-matrix-green transition-colors text-2xl"
+              className="text-matrix-green-dim hover:text-matrix-green transition-colors text-2xl cursor-pointer"
             >
               ×
             </button>
@@ -75,6 +75,15 @@ export default function ChatConfigurationModal({
             <img
               src={portraitSrc}
               alt={persona.name}
+              onError={(e) => {
+                const fallbackSrc = portraitPaths.fallback || persona.portrait;
+                if (e.currentTarget.src !== fallbackSrc) {
+                  e.currentTarget.src = fallbackSrc;
+                } else {
+                  e.currentTarget.src = '/personas/A1.jpeg';
+                  e.currentTarget.onerror = null;
+                }
+              }}
               className="w-16 h-16 rounded-full border-2 border-matrix-green"
             />
             <div>
@@ -93,14 +102,21 @@ export default function ChatConfigurationModal({
             <select
               value={modelName}
               onChange={(e) => setModelName(e.target.value as AvailableModel)}
-              className="w-full p-3 rounded-lg bg-matrix-darker border-2 border-matrix-green/40 text-matrix-green font-matrix focus:border-matrix-green focus:outline-none"
+              className="w-full p-3 rounded-lg bg-matrix-darker border-2 border-matrix-green/40 text-matrix-green font-matrix focus:border-matrix-green focus:outline-none cursor-pointer"
               style={{
                 color: getModelColor(modelName),
                 borderColor: `${getModelColor(modelName)}60`,
               }}
             >
               {availableModels.map((model) => (
-                <option key={model} value={model} style={{ backgroundColor: '#0D0D0D' }}>
+                <option 
+                  key={model} 
+                  value={model} 
+                  style={{ 
+                    backgroundColor: '#0D0D0D',
+                    color: getModelColor(model),
+                  }}
+                >
                   {getModelDisplayName(model)}
                 </option>
               ))}
@@ -140,7 +156,10 @@ export default function ChatConfigurationModal({
               max="5"
               value={extensiveness}
               onChange={(e) => setExtensiveness(Number(e.target.value))}
-              className="w-full h-2 bg-matrix-dark rounded-lg appearance-none cursor-pointer accent-matrix-green"
+              className="w-full h-2 bg-matrix-dark rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, #3b82f6 0%, #8b5cf6 25%, #a855f7 50%, #c084fc 75%, #ef4444 100%)`,
+              }}
             />
             <div className="flex justify-between text-xs text-matrix-green-dim mt-1">
               <span>Terse</span>
@@ -151,7 +170,7 @@ export default function ChatConfigurationModal({
           {/* Start Chat Button */}
           <button
             onClick={handleStartChat}
-            className="w-full py-3 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border-2 border-matrix-green text-matrix-green font-matrix font-bold tracking-wider transition-colors"
+            className="w-full py-3 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border-2 border-matrix-green text-matrix-green font-matrix font-bold tracking-wider transition-colors cursor-pointer"
           >
             START CHAT
           </button>

@@ -48,7 +48,12 @@ export default function ChatInput({
           value={extensiveness}
           onChange={(e) => onExtensivenessChange(Number(e.target.value))}
           disabled={isLoading}
-          className="w-full h-1.5 bg-matrix-darker rounded-lg appearance-none cursor-pointer accent-matrix-green"
+          className="w-full h-1.5 bg-matrix-darker rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
+          style={{
+            background: isLoading 
+              ? '#1a1a1a' 
+              : `linear-gradient(to right, #3b82f6 0%, #8b5cf6 25%, #a855f7 50%, #c084fc 75%, #ef4444 100%)`,
+          }}
         />
         <div className="flex justify-between text-xs text-matrix-green-dim mt-1">
           <span>Brief</span>
@@ -70,7 +75,7 @@ export default function ChatInput({
         <button
           onClick={handleSend}
           disabled={!input.trim() || isLoading}
-          className="px-6 py-3 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border-2 border-matrix-green text-matrix-green font-matrix font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-3 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border-2 border-matrix-green text-matrix-green font-matrix font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           SEND
         </button>

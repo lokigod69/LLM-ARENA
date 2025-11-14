@@ -78,49 +78,52 @@ export default function ChatSessionPage() {
       {/* Header */}
       <ChatHeader queriesRemaining={queriesRemaining} onBack={handleBack} />
 
-      {/* Configuration Panel */}
-      <div className="relative z-10">
-        <ChatConfiguration
-          configuration={configuration}
-          onConfigurationChange={updateConfiguration}
-        />
-        {/* Save Session Button */}
-        {messages.length > 0 && (
-          <div className="border-b border-matrix-green/30 bg-matrix-dark p-2">
-            <motion.button
-              onClick={saveSession}
-              disabled={isLoading}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-full py-2 px-4 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border border-matrix-green/50 text-matrix-green font-matrix text-sm transition-colors disabled:opacity-50"
-            >
-              💾 SAVE SESSION
-            </motion.button>
-          </div>
-        )}
-      </div>
+      {/* Main Chat Container - Centered and Constrained */}
+      <div className="relative z-10 flex-1 flex flex-col max-w-5xl mx-auto w-full">
+        {/* Configuration Panel */}
+        <div className="relative z-10">
+          <ChatConfiguration
+            configuration={configuration}
+            onConfigurationChange={updateConfiguration}
+          />
+          {/* Save Session Button */}
+          {messages.length > 0 && (
+            <div className="border-b border-matrix-green/30 bg-matrix-dark p-2">
+              <motion.button
+                onClick={saveSession}
+                disabled={isLoading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full py-2 px-4 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border border-matrix-green/50 text-matrix-green font-matrix text-sm transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                💾 SAVE SESSION
+              </motion.button>
+            </div>
+          )}
+        </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-hidden relative z-10">
-        <ChatMessageList
-          messages={messages}
-          isLoading={isLoading}
-          error={error}
-          modelName={configuration.modelName}
-          personaId={configuration.personaId}
-          onRetry={retryLastMessage}
-          onDismissError={clearError}
-        />
-      </div>
+        {/* Message List */}
+        <div className="flex-1 overflow-hidden relative z-10">
+          <ChatMessageList
+            messages={messages}
+            isLoading={isLoading}
+            error={error}
+            modelName={configuration.modelName}
+            personaId={configuration.personaId}
+            onRetry={retryLastMessage}
+            onDismissError={clearError}
+          />
+        </div>
 
-      {/* Input Area */}
-      <div className="relative z-10">
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          extensiveness={nextMessageExtensiveness}
-          onExtensivenessChange={setNextMessageExtensiveness}
-          isLoading={isLoading}
-        />
+        {/* Input Area */}
+        <div className="relative z-10">
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            extensiveness={nextMessageExtensiveness}
+            onExtensivenessChange={setNextMessageExtensiveness}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
     </div>
   );
