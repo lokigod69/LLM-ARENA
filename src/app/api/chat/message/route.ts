@@ -177,24 +177,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // At this point, TypeScript knows configuration is defined and has required properties
+    // Create a const reference to help TypeScript with type narrowing
+    const config = configuration;
+
     // Get relevant context using token-budget sliding window
     const relevantMessages = getRelevantContext(conversationHistory || [], 4000);
 
     // Convert chat messages to orchestrator format
     const orchestratorHistory = relevantMessages.map((msg) => ({
-      sender: msg.role === 'user' ? 'User' : (PERSONAS[configuration.personaId]?.name || 'Assistant'),
+      sender: msg.role === 'user' ? 'User' : (PERSONAS[config.personaId]?.name || 'Assistant'),
       text: msg.content,
     }));
 
     // Get persona details
-    const persona = PERSONAS[configuration.personaId];
+    const persona = PERSONAS[config.personaId];
     if (!persona) {
       return NextResponse.json(
         {
           success: false,
           error: {
             type: 'api',
-            message: `Persona not found: ${configuration.personaId}`,
+            message: `Persona not found: ${config.personaId}`,
             retryable: false,
           },
         },
@@ -203,10 +207,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('💬 CHAT API: Processing message', {
-      model: configuration.modelName,
-      personaId: configuration.personaId,
-      stance: configuration.stance,
-      extensiveness: configuration.defaultExtensiveness,
+      model: config.modelName,
+      personaId: config.personaId,
+      stance: config.stance,
+      extensiveness: config.defaultExtensiveness,
       messageLength: message.length,
       contextMessages: relevantMessages.length,
     });
@@ -216,13 +220,13 @@ export async function POST(request: NextRequest) {
     const response = await processDebateTurn({
       prevMessage: message,
       conversationHistory: orchestratorHistory,
-      model: configuration.modelName,
-      agreeabilityLevel: configuration.stance,
+      model: config.modelName,
+      agreeabilityLevel: config.stance,
       position: undefined, // No position in chat
-      extensivenessLevel: configuration.defaultExtensiveness,
+      extensivenessLevel: config.defaultExtensiveness,
       topic: 'Conversation', // Placeholder, not used in chat prompts
       maxTurns: 999, // No turn limit
-      personaId: configuration.personaId,
+      personaId: config.personaId,
       turnNumber: 0, // Not used in chat
     });
 
