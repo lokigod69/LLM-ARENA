@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     // Check if Supabase is configured
     if (!isSupabaseEnabled()) {

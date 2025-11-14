@@ -9,7 +9,8 @@ import type {
   ChatMessage, 
   ChatConfiguration, 
   ChatError, 
-  ChatState 
+  ChatState,
+  ChatSession,
 } from '@/types/chat';
 
 interface ChatSessionActions {

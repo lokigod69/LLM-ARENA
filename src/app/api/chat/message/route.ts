@@ -3,7 +3,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import type { AvailableModel } from '@/types';
 import type { ChatMessage, ChatConfiguration } from '@/types/chat';
 import { processDebateTurn } from '@/lib/orchestrator';
 import { getRelevantContext } from '@/lib/chatHelpers';

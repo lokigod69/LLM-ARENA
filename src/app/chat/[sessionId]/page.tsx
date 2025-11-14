@@ -30,17 +30,8 @@ export default function ChatSessionPage() {
     setNextMessageExtensiveness,
     clearError,
     retryLastMessage,
-    initializeSession,
     saveSession,
   } = useChatSession();
-
-  // Initialize session if needed
-  useEffect(() => {
-    if (!currentSessionId && urlSessionId) {
-      // Session will be initialized from sessionStorage or use defaults
-      // This ensures we have a session even if page is refreshed
-    }
-  }, [currentSessionId, urlSessionId]);
 
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
 
