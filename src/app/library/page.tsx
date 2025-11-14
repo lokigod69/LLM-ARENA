@@ -21,6 +21,8 @@ import MatrixRain from '../../components/MatrixRain';
 import type { OracleResult } from '@/types/oracle';
 import OracleResultsPanel from '@/components/OracleResultsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PERSONAS } from '@/lib/personas';
+import { getModelDisplayName } from '@/lib/modelConfigs';
 
 const LibraryPage: React.FC = () => {
   // State for library data
@@ -28,7 +30,8 @@ const LibraryPage: React.FC = () => {
   const [likeCategories, setLikeCategories] = useState<string[]>([]);
   const [starReasons, setStarReasons] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false); // <-- To prevent hydration mismatch
-  const [activeView, setActiveView] = useState<'marked' | 'oracle'>('marked');
+  const [activeView, setActiveView] = useState<'debates' | 'chats' | 'oracle'>('debates');
+  const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [oracleResults, setOracleResults] = useState<OracleResult[]>([]);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set()); // Track expanded debate cards
 
@@ -66,6 +69,24 @@ const LibraryPage: React.FC = () => {
       }
     }
     
+    // Load chat sessions from API
+    const loadChatSessions = async () => {
+      try {
+        const response = await fetch('/api/chat/sessions/list', {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setChatSessions(data.sessions || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load chat sessions:', error);
+      }
+    };
+    
+    loadChatSessions();
     setIsLoaded(true); // Mark as loaded
   }, []);
 
@@ -195,26 +216,51 @@ const LibraryPage: React.FC = () => {
               <img src="/assets/logo.png" alt="Matrix Arena Logo" className="h-10 w-10 rounded-full shadow-lg border-2 border-matrix-green bg-matrix-black" style={{ objectFit: 'cover' }} />
               <h1 className="text-3xl font-matrix font-black matrix-title text-matrix-green drop-shadow-lg">MATRIX ARENA LIBRARY</h1>
             </div>
-            <Link href="/" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Back to Arena" style={{ fontSize: 28 }}>
-              <span role="img" aria-label="Arena">🏟️</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Back to Arena" style={{ fontSize: 28 }}>
+                <span role="img" aria-label="Arena">🏟️</span>
+              </Link>
+              <Link href="/chat" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Character Chat" style={{ fontSize: 28 }}>
+                <span role="img" aria-label="Chat">💬</span>
+              </Link>
+              <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
+                <span role="img" aria-label="Library">📚</span>
+              </Link>
+            </div>
           </div>
         </header>
         <main className="flex-1 max-w-5xl mx-auto w-full p-8">
           <div className="matrix-panel p-8 rounded-xl bg-gradient-to-b from-matrix-black to-matrix-dark border border-matrix-green-dark shadow-lg">
-            {/* View Toggle: Marked Items vs Oracle Analyses */}
+            {/* View Toggle: Debates vs Chat Sessions vs Oracle Analyses */}
             <div className="flex gap-2 mb-6 border-b border-matrix-green-dark pb-4">
               <motion.button
-                onClick={() => setActiveView('marked')}
+                onClick={() => setActiveView('debates')}
                 className={`px-6 py-3 font-matrix tracking-wider transition-all duration-200 ${
-                  activeView === 'marked'
+                  activeView === 'debates'
                     ? 'bg-matrix-green/20 text-matrix-green border-b-2 border-matrix-green'
                     : 'text-matrix-green-dim hover:text-matrix-green hover:bg-matrix-green/10'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                📚 MARKED ITEMS
+                📚 DEBATES
+              </motion.button>
+              <motion.button
+                onClick={() => setActiveView('chats')}
+                className={`px-6 py-3 font-matrix tracking-wider transition-all duration-200 ${
+                  activeView === 'chats'
+                    ? 'bg-matrix-green/20 text-matrix-green border-b-2 border-matrix-green'
+                    : 'text-matrix-green-dim hover:text-matrix-green hover:bg-matrix-green/10'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                💬 CHAT SESSIONS
+                {chatSessions.length > 0 && (
+                  <span className="ml-2 bg-blue-500 text-white text-xs rounded-full px-2 py-1">
+                    {chatSessions.length}
+                  </span>
+                )}
               </motion.button>
               <motion.button
                 onClick={() => setActiveView('oracle')}
@@ -235,7 +281,7 @@ const LibraryPage: React.FC = () => {
               </motion.button>
             </div>
             
-            {activeView === 'marked' ? (
+            {activeView === 'debates' ? (
               <>
                 <div className="flex flex-wrap gap-4 mb-8 items-center">
               <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as any)} className="matrix-select bg-matrix-dark text-matrix-green border border-matrix-green-dark rounded px-3 py-2 font-matrix">
@@ -487,6 +533,44 @@ const LibraryPage: React.FC = () => {
                   <div className="space-y-6">
                     {oracleResults.slice().reverse().map((result) => (
                       <OracleResultsPanel key={result.id} result={result} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {activeView === 'chats' && (
+              <div>
+                <h2 className="text-2xl font-matrix font-bold text-matrix-green mb-6 tracking-wider">
+                  CHAT SESSIONS
+                </h2>
+                {chatSessions.length === 0 ? (
+                  <p className="text-matrix-green-dim text-center py-8">
+                    No chat sessions saved yet. Start a conversation in Character Chat to save sessions here.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {chatSessions.map((session) => (
+                      <motion.div
+                        key={session.id}
+                        whileHover={{ scale: 1.02 }}
+                        className="p-4 rounded-lg border-2 border-matrix-green/30 bg-matrix-dark hover:border-matrix-green cursor-pointer"
+                        onClick={() => window.location.href = `/chat/${session.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-matrix font-bold text-matrix-green">
+                              {PERSONAS[session.configuration.personaId]?.name || 'Unknown Persona'}
+                            </h3>
+                            <p className="text-sm text-matrix-green-dim">
+                              {getModelDisplayName(session.configuration.modelName)} • {session.messageCount} messages
+                            </p>
+                            <p className="text-xs text-matrix-green-dim mt-1">
+                              {new Date(session.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <span className="text-matrix-green">→</span>
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}

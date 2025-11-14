@@ -359,6 +359,9 @@ function HomeContent() {
                 <p className="text-xs text-matrix-green-dim">QUERIES REMAINING</p>
                 <p className="text-sm text-matrix-text font-matrix">{queriesRemaining}</p>
               </div>
+              <Link href="/chat" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Character Chat" style={{ fontSize: 28 }}>
+                <span role="img" aria-label="Chat">💬</span>
+              </Link>
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
                 <span role="img" aria-label="Library">📚</span>
               </Link>
