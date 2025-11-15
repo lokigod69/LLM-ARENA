@@ -436,6 +436,7 @@ export default function ChatSessionPage() {
                 extensiveness={nextMessageExtensiveness}
                 onExtensivenessChange={setNextMessageExtensiveness}
                 isLoading={isLoading}
+                hideExtensiveness={true}
               />
             </motion.div>
           </>

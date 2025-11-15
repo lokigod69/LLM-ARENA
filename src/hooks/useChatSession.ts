@@ -216,9 +216,15 @@ export const useChatSession = (): ChatState & ChatSessionActions => {
   }, []);
 
   const setNextMessageExtensiveness = useCallback((level: number) => {
+    const clampedLevel = Math.max(1, Math.min(5, level));
     setState(prev => ({
       ...prev,
-      nextMessageExtensiveness: Math.max(1, Math.min(5, level)),
+      nextMessageExtensiveness: clampedLevel,
+      // Fix 2: Sync configuration.defaultExtensiveness when slider changes
+      configuration: {
+        ...prev.configuration,
+        defaultExtensiveness: clampedLevel,
+      },
     }));
   }, []);
 

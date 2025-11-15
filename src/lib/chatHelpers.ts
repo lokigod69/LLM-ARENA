@@ -71,6 +71,49 @@ export function generateChatSystemPrompt(
     ? recentMessages.map(m => `${m.role === 'user' ? 'User' : personaName}: ${m.content}`).join('\n')
     : 'This is the start of the conversation.';
   
+  // Fix 3: Strong extensiveness guidance based on level
+  let extensivenessGuidance = '';
+  const roundedExtensiveness = Math.round(extensiveness);
+  
+  if (roundedExtensiveness === 1) {
+    extensivenessGuidance = `
+CRITICAL: Response Detail Level is 1/5 (VERY BRIEF).
+- Keep responses to 1-2 sentences MAXIMUM (~50 words)
+- Be concise and direct - answer the question, then stop
+- Do NOT elaborate, expand, or provide examples
+- Do NOT write multiple paragraphs
+- If you exceed 2 sentences, you are being too verbose
+- Think: "What is the shortest way to answer this?"`;
+  } else if (roundedExtensiveness === 2) {
+    extensivenessGuidance = `
+Response Detail Level: 2/5 (Brief).
+- Keep responses to 2-3 sentences (~100 words)
+- Be concise but complete
+- Provide direct answers without excessive elaboration
+- Avoid unnecessary details or examples`;
+  } else if (roundedExtensiveness === 3) {
+    extensivenessGuidance = `
+Response Detail Level: 3/5 (Balanced).
+- Provide balanced responses (3-4 sentences)
+- Be thorough but not excessive
+- Include relevant context when helpful
+- Maintain natural conversation flow`;
+  } else if (roundedExtensiveness === 4) {
+    extensivenessGuidance = `
+Response Detail Level: 4/5 (Detailed).
+- Provide detailed responses (4-5 sentences)
+- Elaborate on your points with examples or context
+- Be comprehensive in your explanations
+- Include relevant details and nuance`;
+  } else {
+    extensivenessGuidance = `
+Response Detail Level: 5/5 (Comprehensive).
+- Provide comprehensive, detailed responses
+- Elaborate fully on your thoughts and ideas
+- Include examples, context, and nuanced explanations
+- Be thorough and expansive in your responses`;
+  }
+  
   return `
 You are ${personaName}. You're having a friendly, one-on-one conversation with a user who wants to talk with you.
 
@@ -80,8 +123,9 @@ ${personaTurnRules}
 
 IMPORTANT: This is a CONVERSATION, not a debate. You are NOT arguing against an opponent. You are chatting naturally with someone interested in your perspective.
 
+${extensivenessGuidance}
+
 CONVERSATION GUIDELINES:
-- Response Detail Level: ${extensiveness}/5 (1=terse/brief, 5=comprehensive/detailed)
 - Opinion Strength: ${stance}/10 (how firmly you hold your views - ${stance <= 3 ? 'more flexible/open' : stance <= 7 ? 'moderately firm' : 'very firm/convicted'})
 - Stay completely in character at all times
 - Reference previous messages naturally when relevant
