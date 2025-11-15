@@ -179,6 +179,7 @@ export const useChatSession = (): ChatState & ChatSessionActions => {
         role: 'assistant',
         content: data.reply,
         timestamp: new Date(),
+        modelName: state.configuration.modelName, // Store which model generated this message
         tokenUsage: data.tokenUsage,
       };
 

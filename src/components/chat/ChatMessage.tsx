@@ -20,6 +20,9 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
   const persona = personaId ? PERSONAS[personaId] : null;
   const portraitPaths = personaId ? getPersonaPortraitPaths(personaId) : null;
   const portraitSrc = portraitPaths?.primary || persona?.portrait;
+  
+  // Use message's stored modelName, fallback to prop (for backward compatibility with old messages)
+  const displayModelName = message.modelName || modelName;
 
   return (
     <motion.div
@@ -43,7 +46,7 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
               }
             }}
             className="w-16 h-16 rounded-full border-2 flex-shrink-0"
-            style={{ borderColor: modelName ? getModelColor(modelName) : '#00ff41' }}
+            style={{ borderColor: displayModelName ? getModelColor(displayModelName) : '#00ff41' }}
           />
         </div>
       )}
@@ -60,15 +63,15 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
             <span className="text-sm font-matrix font-bold text-matrix-green">
               {persona?.name || 'Assistant'}
             </span>
-            {modelName && (
+            {displayModelName && (
               <span
                 className="text-xs px-2 py-0.5 rounded"
                 style={{
-                  backgroundColor: `${getModelColor(modelName)}20`,
-                  color: getModelColor(modelName),
+                  backgroundColor: `${getModelColor(displayModelName)}20`,
+                  color: getModelColor(displayModelName),
                 }}
               >
-                {getModelDisplayName(modelName)}
+                {getModelDisplayName(displayModelName)}
               </span>
             )}
           </div>

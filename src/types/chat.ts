@@ -8,6 +8,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  modelName?: AvailableModel; // Stores which model generated this message (for assistant messages)
   tokenUsage?: {
     inputTokens: number;
     outputTokens: number;
