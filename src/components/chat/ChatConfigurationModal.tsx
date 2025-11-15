@@ -155,10 +155,24 @@ export default function ChatConfigurationModal({
             </div>
           </div>
 
-          {/* Start Chat Button - Hover: Green background with black text */}
+          {/* Start Chat Button - Hover: Green background with black text (inline styles for guaranteed behavior) */}
           <button
             onClick={handleStartChat}
-            className="w-full py-3 rounded-lg bg-black hover:bg-matrix-green border-2 border-matrix-green text-matrix-green hover:text-black font-matrix font-bold tracking-wider transition-colors duration-200 cursor-pointer"
+            className="w-full py-3 rounded-lg font-matrix font-bold tracking-wider transition-colors duration-200 cursor-pointer"
+            style={{
+              backgroundColor: '#000000',
+              borderColor: '#00ff41',
+              borderWidth: '2px',
+              color: '#00ff41',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#00ff41';
+              e.currentTarget.style.color = '#000000';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#000000';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             START CHAT
           </button>
