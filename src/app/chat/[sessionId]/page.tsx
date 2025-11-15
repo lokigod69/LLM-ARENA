@@ -1,10 +1,22 @@
 // Active Chat Session Page
 // Main chat interface for conversations
+//
+// Phase 1 Changes (Header Redesign):
+// - Added "MATRIX ARENA" link (navigates to /)
+// - Removed redundant back arrow button
+// - Replaced "Change →" with "Change Character" button
+// - Added "CONFIGURATION ▼" button (modal implementation in Phase 2)
+// - Added chat badge (💬) to indicate current section
+// - Reduced persona avatar size from 64px to 40px
+// - Added Response Depth display next to model name (e.g., "GPT-5 Nano (3/5)")
+// - Removed queries remaining from header (will move to config modal in Phase 2)
+// - Improved responsive layout with max-w-7xl container
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import Link from 'next/link';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatConfiguration from '@/components/chat/ChatConfiguration';
 import ChatMessageList from '@/components/chat/ChatMessageList';
@@ -38,6 +50,8 @@ export default function ChatSessionPage() {
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [appIsLoading, setAppIsLoading] = useState(true);
+  // Phase 2: Configuration modal state (modal component will be implemented in Phase 2)
+  const [configModalOpen, setConfigModalOpen] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -88,9 +102,7 @@ export default function ChatSessionPage() {
     clearError(); // Clear any auth errors
   };
 
-  const handleBack = () => {
-    router.push('/chat');
-  };
+  // Removed handleBack - no longer needed (redundant with Change Character button)
 
   const handleSendMessage = async (content: string, extensiveness: number) => {
     await sendMessage(content, extensiveness);
@@ -120,11 +132,22 @@ export default function ChatSessionPage() {
         <MatrixRain />
       </div>
 
-      {/* Header with Persona Display */}
+      {/* Header with Persona Display - Phase 1 Redesign */}
       <div className="sticky top-0 z-50 border-b border-matrix-green-dark bg-gradient-to-r from-matrix-black via-matrix-dark to-matrix-black backdrop-blur-sm">
-        <div className="flex items-center justify-between p-4">
-          {/* Left: Persona Info */}
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
+          {/* Left: Navigation to Matrix Arena */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-matrix-green hover:text-matrix-green-dim transition-colors cursor-pointer"
+          >
+            <span className="text-xl">🎭</span>
+            <span className="font-matrix font-bold tracking-wider hidden sm:inline">
+              MATRIX ARENA
+            </span>
+          </Link>
+
+          {/* Center: Persona + Model + Response Depth */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {persona && (
               <>
                 <img
@@ -139,36 +162,40 @@ export default function ChatSessionPage() {
                       e.currentTarget.onerror = null;
                     }
                   }}
-                  className="w-16 h-16 rounded-full border-2 border-matrix-green flex-shrink-0"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-matrix-green flex-shrink-0"
                 />
-                <div>
-                  <h2 className="text-xl font-matrix font-bold text-matrix-green">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm font-matrix font-bold text-matrix-green truncate">
                     {persona.name.toUpperCase()}
-                  </h2>
-                  <p className="text-sm text-matrix-green-dim">
-                    {getModelDisplayName(configuration.modelName)}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-matrix-green-dim truncate">
+                    {getModelDisplayName(configuration.modelName)} ({configuration.defaultExtensiveness}/5)
                   </p>
                 </div>
-                <button
-                  onClick={() => router.push('/chat')}
-                  className="ml-2 text-xs text-matrix-green/70 hover:text-matrix-green transition-colors cursor-pointer font-matrix"
-                >
-                  Change →
-                </button>
               </>
             )}
-            <button
-              onClick={handleBack}
-              className="text-matrix-green hover:text-matrix-green-dim transition-colors text-xl ml-4 cursor-pointer"
-            >
-              ←
-            </button>
           </div>
 
-          {/* Right: Queries Remaining */}
-          <div className="text-right">
-            <p className="text-xs text-matrix-green-dim">QUERIES REMAINING</p>
-            <p className="text-sm text-matrix-text font-matrix">{queriesRemaining}</p>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3">
+            {/* Configuration Button (triggers modal in Phase 2) */}
+            <button
+              onClick={() => setConfigModalOpen(true)}
+              className="text-xs font-matrix text-matrix-green/70 hover:text-matrix-green transition-colors px-3 py-1 border border-matrix-green/30 rounded hover:border-matrix-green/50 cursor-pointer"
+            >
+              CONFIGURATION ▼
+            </button>
+
+            {/* Chat Badge (current section indicator) */}
+            <span className="text-lg" title="Character Chat">💬</span>
+
+            {/* Change Character Button */}
+            <button
+              onClick={() => router.push('/chat')}
+              className="text-xs font-matrix text-matrix-green/70 hover:text-matrix-green transition-colors cursor-pointer"
+            >
+              Change Character
+            </button>
           </div>
         </div>
       </div>
