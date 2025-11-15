@@ -70,8 +70,8 @@ export default function ChatConfigurationModal({
             </button>
           </div>
 
-          {/* Persona Display */}
-          <div className="flex items-center gap-4 mb-6 p-4 bg-matrix-dark rounded-lg border border-matrix-green/30">
+          {/* Persona Display - Option A (Simple Identity) + Option B (Famous Quote) */}
+          <div className="flex items-start gap-4 mb-6 p-4 bg-matrix-dark rounded-lg border border-matrix-green/30">
             <img
               src={portraitSrc}
               alt={persona.name}
@@ -84,13 +84,24 @@ export default function ChatConfigurationModal({
                   e.currentTarget.onerror = null;
                 }
               }}
-              className="w-16 h-16 rounded-full border-2 border-matrix-green"
+              className="w-16 h-16 rounded-full border-2 border-matrix-green flex-shrink-0"
             />
-            <div>
-              <h3 className="text-xl font-matrix font-bold text-matrix-green">
+            <div className="flex-1">
+              {/* Option A: Simple Identity */}
+              <h3 className="text-xl font-matrix font-bold text-matrix-green mb-1">
                 {persona.name.toUpperCase()}
               </h3>
-              <p className="text-sm text-matrix-green-dim">{persona.identity.substring(0, 100)}...</p>
+              {persona.era && (
+                <p className="text-xs text-matrix-green-dim mb-2">{persona.era}</p>
+              )}
+              {/* Option B: Famous Quote */}
+              {persona.quote ? (
+                <p className="text-sm text-matrix-green-dim italic">
+                  "{persona.quote}"
+                </p>
+              ) : (
+                <p className="text-sm text-matrix-green-dim">{persona.identity.substring(0, 100)}...</p>
+              )}
             </div>
           </div>
 

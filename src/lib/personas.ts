@@ -18,6 +18,8 @@ export interface PersonaDefinition {
   };
   portrait: string; // Path to image
   elevenLabsVoiceId?: string; // ID for ElevenLabs TTS
+  quote?: string; // Famous quote for display
+  era?: string; // Time period/era for display
 }
 
 export const PERSONAS: Record<string, PersonaDefinition> = {
@@ -29,6 +31,8 @@ export const PERSONAS: Record<string, PersonaDefinition> = {
     lockedTraits: { baseStubbornness: 7, responseLength: 2 },
     portrait: '/personas/A1.jpeg',
     elevenLabsVoiceId: 'S9WrLrqYPJzmQyWPWbZ5',
+    quote: 'You have power over your mind—not outside events. Realize this, and you will find strength.',
+    era: 'Roman Emperor, 121-180 CE',
   },
   diogenes: {
     id: 'diogenes',

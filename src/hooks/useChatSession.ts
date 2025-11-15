@@ -203,37 +203,14 @@ export const useChatSession = (): ChatState & ChatSessionActions => {
   }, [state.sessionId, state.nextMessageExtensiveness, state.configuration, state.messages, initializeSession]);
 
   const updateConfiguration = useCallback((config: Partial<ChatConfiguration>) => {
-    setState(prev => {
-      const previousModel = prev.configuration.modelName;
-      const newModel = config.modelName;
-      const modelChanged = newModel && newModel !== previousModel;
-      const hasUnansweredMessage = prev.messages.length > 0 && 
-        prev.messages[prev.messages.length - 1].role === 'user';
-
-      const newState = {
-        ...prev,
-        configuration: { ...prev.configuration, ...config },
-        // Clear error when changing configuration
-        error: null,
-      };
-
-      // Auto-retry last message if model changed and there's an unanswered user message
-      if (modelChanged && hasUnansweredMessage) {
-        const lastMessage = prev.messages[prev.messages.length - 1];
-        const messageContent = lastMessage.content;
-        console.log('🔄 Model changed, auto-retrying last message with new model:', newModel);
-        
-        // Use setTimeout to allow state update to complete first, then retry
-        setTimeout(() => {
-          sendMessage(messageContent).catch(err => {
-            console.error('Failed to retry message after model change:', err);
-          });
-        }, 100);
-      }
-
-      return newState;
-    });
-  }, [sendMessage]);
+    setState(prev => ({
+      ...prev,
+      configuration: { ...prev.configuration, ...config },
+      // Clear error when changing configuration
+      error: null,
+    }));
+    // Model change does NOT auto-send - user must manually send next message
+  }, []);
 
   const setNextMessageExtensiveness = useCallback((level: number) => {
     setState(prev => ({

@@ -27,7 +27,7 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
       animate={{ opacity: 1, y: 0 }}
       className={`flex gap-3 mb-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
     >
-      {/* Avatar */}
+      {/* Avatar - Increased to 48px */}
       {!isUser && persona && (
         <div className="flex-shrink-0">
           <img
@@ -42,7 +42,7 @@ export default function ChatMessage({ message, modelName, personaId }: ChatMessa
                 e.currentTarget.onerror = null;
               }
             }}
-            className="w-10 h-10 rounded-full border-2"
+            className="w-12 h-12 rounded-full border-2 flex-shrink-0"
             style={{ borderColor: modelName ? getModelColor(modelName) : '#00ff41' }}
           />
         </div>
