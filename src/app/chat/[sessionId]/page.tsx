@@ -393,6 +393,9 @@ export default function ChatSessionPage() {
                 extensiveness={nextMessageExtensiveness}
                 onExtensivenessChange={setNextMessageExtensiveness}
                 isLoading={isLoading}
+                hideExtensiveness={true}
+                placeholder=""
+                autoFocus={true}
               />
             </motion.div>
           </motion.div>

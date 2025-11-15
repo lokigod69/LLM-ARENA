@@ -155,10 +155,10 @@ export default function ChatConfigurationModal({
             </div>
           </div>
 
-          {/* Start Chat Button */}
+          {/* Start Chat Button - Fix 3: Improved hover effect */}
           <button
             onClick={handleStartChat}
-            className="w-full py-3 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border-2 border-matrix-green text-matrix-green font-matrix font-bold tracking-wider transition-colors cursor-pointer"
+            className="w-full py-3 rounded-lg bg-black hover:bg-matrix-green border-2 border-matrix-green text-matrix-green hover:text-black font-matrix font-bold tracking-wider transition-colors duration-200 cursor-pointer"
           >
             START CHAT
           </button>
