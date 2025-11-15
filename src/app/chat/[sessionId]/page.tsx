@@ -20,6 +20,15 @@
 // - Added ESC key handler for closing modal
 // - Moved queries remaining display into modal
 // - Added body scroll lock when modal is open
+//
+// Phase 3 Changes (Layout State Machine):
+// - Defined ChatLayoutState type ('empty' | 'first-message' | 'conversation')
+// - Created LayoutConfig interface for layout configuration
+// - Implemented getLayoutState() function (based on message count)
+// - Implemented getLayoutConfig() function (returns config for each state)
+// - Added layoutState state variable
+// - Added useEffect to update layout state when messages change
+// - Layout configs ready for Phase 4 (empty state) and Phase 5 (input transitions)
 
 'use client';
 
@@ -59,8 +68,68 @@ export default function ChatSessionPage() {
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [appIsLoading, setAppIsLoading] = useState(true);
-  // Phase 2: Configuration modal state (modal component will be implemented in Phase 2)
+  // Phase 2: Configuration modal state
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  
+  // Phase 3: Layout State Machine
+  type ChatLayoutState = 'empty' | 'first-message' | 'conversation';
+  
+  interface LayoutConfig {
+    showCenteredAvatar: boolean;
+    avatarSize: 'large' | 'small' | 'none';
+    inputPosition: 'centered' | 'bottom-fixed';
+    inputWidth: 'narrow' | 'wide' | 'full';
+    messagesContainerClass: string;
+    inputContainerClass: string;
+  }
+  
+  const getLayoutState = (messageCount: number): ChatLayoutState => {
+    if (messageCount === 0) return 'empty';
+    if (messageCount === 1) return 'first-message';
+    return 'conversation';
+  };
+  
+  const getLayoutConfig = (layoutState: ChatLayoutState): LayoutConfig => {
+    switch (layoutState) {
+      case 'empty':
+        return {
+          showCenteredAvatar: true,
+          avatarSize: 'large',
+          inputPosition: 'centered',
+          inputWidth: 'narrow',
+          messagesContainerClass: 'hidden',
+          inputContainerClass: 'flex items-center justify-center h-full',
+        };
+      case 'first-message':
+        return {
+          showCenteredAvatar: false,
+          avatarSize: 'none',
+          inputPosition: 'bottom-fixed',
+          inputWidth: 'wide',
+          messagesContainerClass: 'flex-1 overflow-y-auto p-4',
+          inputContainerClass: 'border-t border-matrix-green/30',
+        };
+      case 'conversation':
+        return {
+          showCenteredAvatar: false,
+          avatarSize: 'none',
+          inputPosition: 'bottom-fixed',
+          inputWidth: 'full',
+          messagesContainerClass: 'flex-1 overflow-y-auto p-4',
+          inputContainerClass: 'border-t border-matrix-green/30',
+        };
+    }
+  };
+  
+  const [layoutState, setLayoutState] = useState<ChatLayoutState>('empty');
+  
+  // Update layout state when messages change
+  useEffect(() => {
+    const newState = getLayoutState(messages.length);
+    setLayoutState(newState);
+  }, [messages.length]);
+  
+  const layoutConfig = getLayoutConfig(layoutState);
 
   // Check authentication on mount
   useEffect(() => {
