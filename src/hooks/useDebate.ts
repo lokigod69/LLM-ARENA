@@ -215,7 +215,7 @@ export const useDebate = (): EnhancedDebateState & EnhancedDebateActions => {
     
     // NEW: Default flexible model configuration - Updated with exact API names
     modelA: savedState?.modelA ?? { 
-      name: 'gpt-5' as AvailableModel, 
+      name: 'gpt-5-nano' as AvailableModel, 
       position: 'pro' as ModelPosition, 
       agreeabilityLevel: 7,
       extensivenessLevel: 3 // Default: Balanced response

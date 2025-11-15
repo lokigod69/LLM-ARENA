@@ -205,6 +205,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Derive stance from persona's hardcoded baseStubbornness
+    // NOTE: Stance slider removed from UI - each persona uses their authentic stubbornness
+    const derivedStance = persona.lockedTraits.baseStubbornness;
+
+    console.log('💬 CHAT API: Using persona\'s hardcoded stance', {
+      personaId: config.personaId,
+      personaName: persona.name,
+      hardcodedStance: derivedStance,
+      userProvidedStance: config.stance, // May exist in old sessions
+      using: 'hardcodedStance'
+    });
+
     // Debug logging for Moonshot/Kimi authentication
     const isMoonshotModel = config.modelName.startsWith('moonshot') || config.modelName.includes('kimi');
     if (isMoonshotModel) {
@@ -219,7 +231,7 @@ export async function POST(request: NextRequest) {
     console.log('💬 CHAT API: Processing message', {
       model: config.modelName,
       personaId: config.personaId,
-      stance: config.stance,
+      stance: derivedStance, // Using persona's hardcoded value
       extensiveness: config.defaultExtensiveness,
       messageLength: message.length,
       contextMessages: relevantMessages.length,
@@ -231,7 +243,7 @@ export async function POST(request: NextRequest) {
       userMessage: message,
       conversationHistory: orchestratorHistory,
       model: config.modelName,
-      stance: config.stance,
+      stance: derivedStance, // Using persona's hardcoded baseStubbornness
       extensivenessLevel: config.defaultExtensiveness,
       personaId: config.personaId,
     });

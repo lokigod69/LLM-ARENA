@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
 import type { ChatSession } from '@/types/chat';
+import { PERSONAS } from '@/lib/personas';
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,7 +50,10 @@ export async function POST(req: NextRequest) {
         updated_at: session.updatedAt instanceof Date ? session.updatedAt.toISOString() : session.updatedAt,
         model_name: session.configuration.modelName,
         persona_id: session.configuration.personaId,
-        stance: session.configuration.stance,
+        // Save persona's baseStubbornness for reference, or null if missing
+        stance: session.configuration.stance ?? 
+                (session.configuration.personaId && PERSONAS[session.configuration.personaId]?.lockedTraits.baseStubbornness) ?? 
+                null,
         default_extensiveness: session.configuration.defaultExtensiveness,
         messages: messagesForStorage,
         total_tokens: session.metadata?.totalTokens || 0,

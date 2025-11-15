@@ -19,7 +19,7 @@ export interface ChatMessage {
 export interface ChatConfiguration {
   modelName: AvailableModel;
   personaId: string;
-  stance: number;              // 0-10 (how opinionated character is)
+  stance?: number;              // DEPRECATED: Now uses persona's hardcoded baseStubbornness (kept for backward compatibility with saved sessions)
   defaultExtensiveness: number; // 1-5 (default response length)
 }
 

@@ -54,10 +54,13 @@ export function getRelevantContext(
 
 /**
  * Generate system prompt for character conversation
+ * 
+ * NOTE: 'stance' parameter now receives persona's hardcoded baseStubbornness
+ * from personas.ts, not user input. This ensures authentic character behavior.
  */
 export function generateChatSystemPrompt(
   personaId: string,
-  stance: number,
+  stance: number,  // Receives persona's baseStubbornness from API
   extensiveness: number,
   recentMessages: ChatMessage[],
   personaName: string,

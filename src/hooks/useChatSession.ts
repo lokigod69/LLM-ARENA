@@ -1,5 +1,8 @@
 // Character Chat Session Hook
 // Complete state management for chat sessions (isolated from debate system)
+//
+// NOTE: Stance is no longer user-controlled in chat.
+// Each persona uses their hardcoded baseStubbornness value defined in personas.ts
 
 'use client';
 
@@ -32,7 +35,7 @@ export const useChatSession = (): ChatState & ChatSessionActions => {
     configuration: {
       modelName: 'gpt-5',
       personaId: 'marcus_aurelius',
-      stance: 5,
+      // stance removed - will be derived from persona's baseStubbornness
       defaultExtensiveness: 3,
     },
     messages: [],

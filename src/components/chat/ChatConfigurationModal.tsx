@@ -25,8 +25,7 @@ export default function ChatConfigurationModal({
   const portraitPaths = getPersonaPortraitPaths(personaId);
   const portraitSrc = portraitPaths.primary || persona.portrait;
 
-  const [modelName, setModelName] = useState<AvailableModel>('gpt-5');
-  const [stance, setStance] = useState(5);
+  const [modelName, setModelName] = useState<AvailableModel>('gpt-5-nano');
   const [extensiveness, setExtensiveness] = useState(3);
 
   const availableModels = getAvailableModels();
@@ -35,7 +34,7 @@ export default function ChatConfigurationModal({
     const config: ChatConfiguration = {
       modelName,
       personaId,
-      stance,
+      // stance is no longer included - will be derived from persona's baseStubbornness
       defaultExtensiveness: extensiveness,
     };
     onStartChat(config);
@@ -134,32 +133,10 @@ export default function ChatConfigurationModal({
             </select>
           </div>
 
-          {/* Stance Slider */}
-          <div className="mb-6">
-            <label className="block text-matrix-green font-matrix mb-2 tracking-wider">
-              OPINION STRENGTH: {stance}/10
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="10"
-              value={stance}
-              onChange={(e) => setStance(Number(e.target.value))}
-              className="w-full h-2 bg-matrix-dark rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #3b82f6 0%, #8b5cf6 50%, #ef4444 100%)`,
-              }}
-            />
-            <div className="flex justify-between text-xs text-matrix-green-dim mt-1">
-              <span>Open-minded</span>
-              <span>Firm</span>
-            </div>
-          </div>
-
           {/* Extensiveness Slider */}
           <div className="mb-6">
             <label className="block text-matrix-green font-matrix mb-2 tracking-wider">
-              RESPONSE DETAIL: {extensiveness}/5
+              RESPONSE DEPTH: {extensiveness}/5
             </label>
             <input
               type="range"
@@ -173,8 +150,8 @@ export default function ChatConfigurationModal({
               }}
             />
             <div className="flex justify-between text-xs text-matrix-green-dim mt-1">
-              <span>Terse</span>
-              <span>Comprehensive</span>
+              <span>Concise</span>
+              <span>Extensive</span>
             </div>
           </div>
 

@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       configuration: {
         modelName: data.model_name,
         personaId: data.persona_id,
-        stance: data.stance,
+        stance: data.stance ?? undefined, // Backward compatibility: old sessions may have stance
         defaultExtensiveness: data.default_extensiveness,
       },
       messages: (data.messages || []).map((msg: any) => ({

@@ -7,7 +7,7 @@
 
 import type { AvailableModel, ModelDisplayConfig } from '@/types';
 
-const DEFAULT_MODEL_KEY: AvailableModel = 'gpt-5';
+const DEFAULT_MODEL_KEY: AvailableModel = 'gpt-5-nano';
 
 // Model migration map - handles renamed/deprecated models
 export const MODEL_MIGRATIONS: Record<string, AvailableModel> = {
@@ -178,8 +178,29 @@ export function getModelDisplayConfig(model: AvailableModel): ModelDisplayConfig
 }
 
 // Get all available models for dropdown selection
+// Ordered from cheapest to most expensive (first item = default)
 export function getAvailableModels(): AvailableModel[] {
-  return Object.keys(MODEL_DISPLAY_CONFIGS) as AvailableModel[];
+  // Return models in cost order: cheapest first
+  return [
+    'gpt-5-nano',           // Cheapest - NEW DEFAULT
+    'gpt-5-mini',
+    'gpt-4o-mini',
+    'claude-haiku-4-5-20251001',
+    'grok-4-fast',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-flash',
+    'deepseek-v3',
+    'deepseek-r1',
+    'moonshot-v1-32k',
+    'moonshot-v1-128k',
+    'claude-3-5-sonnet-20241022',
+    'gpt-5',               // Most expensive, at the end
+    'gemini-2.5-pro-preview-05-06',
+    'grok-4-fast-reasoning',
+    'qwen-plus',
+    'qwen3-max',
+    'moonshot-v1-8k',
+  ] as AvailableModel[];
 }
 
 // Get model color for styling

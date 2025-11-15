@@ -33,7 +33,6 @@ export default function ChatSessionPage() {
     setNextMessageExtensiveness,
     clearError,
     retryLastMessage,
-    saveSession,
   } = useChatSession();
 
   const [queriesRemaining, setQueriesRemaining] = useState<number | string>('...');
@@ -182,20 +181,6 @@ export default function ChatSessionPage() {
             configuration={configuration}
             onConfigurationChange={updateConfiguration}
           />
-          {/* Save Session Button */}
-          {messages.length > 0 && (
-            <div className="border-b border-matrix-green/30 bg-matrix-dark p-2">
-              <motion.button
-                onClick={saveSession}
-                disabled={isLoading}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full py-2 px-4 rounded-lg bg-matrix-green/20 hover:bg-matrix-green/30 border border-matrix-green/50 text-matrix-green font-matrix text-sm transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                💾 SAVE SESSION
-              </motion.button>
-            </div>
-          )}
         </div>
 
         {/* Message List */}

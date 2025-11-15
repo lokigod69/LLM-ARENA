@@ -130,30 +130,10 @@ export default function ChatConfiguration({
                 </select>
               </div>
 
-              {/* Stance Slider */}
-              <div>
-                <label className="block text-sm text-matrix-green font-matrix mb-2">
-                  OPINION STRENGTH: {configuration.stance}/10
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  value={configuration.stance}
-                  onChange={(e) =>
-                    onConfigurationChange({ stance: Number(e.target.value) })
-                  }
-                  className="w-full h-2 bg-matrix-darker rounded-lg appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #8b5cf6 50%, #ef4444 100%)`,
-                  }}
-                />
-              </div>
-
               {/* Default Extensiveness */}
               <div>
                 <label className="block text-sm text-matrix-green font-matrix mb-2">
-                  DEFAULT RESPONSE DETAIL: {configuration.defaultExtensiveness}/5
+                  DEFAULT RESPONSE DEPTH: {configuration.defaultExtensiveness}/5
                 </label>
                 <input
                   type="range"
@@ -171,8 +151,8 @@ export default function ChatConfiguration({
                   }}
                 />
                 <div className="flex justify-between text-xs text-matrix-green-dim mt-1">
-                  <span>Terse</span>
-                  <span>Comprehensive</span>
+                  <span>Concise</span>
+                  <span>Extensive</span>
                 </div>
               </div>
             </div>
