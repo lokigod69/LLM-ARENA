@@ -29,6 +29,15 @@
 // - Added layoutState state variable
 // - Added useEffect to update layout state when messages change
 // - Layout configs ready for Phase 4 (empty state) and Phase 5 (input transitions)
+//
+// Phase 4 Changes (Empty State with Avatar):
+// - Implemented conditional rendering: empty state vs conversation layout
+// - Added large centered avatar (120-200px responsive)
+// - Added persona name, era, and quote display
+// - Added fade-out animation for avatar (AnimatePresence)
+// - Added hover effect on avatar (scale 1.05)
+// - Centered input in empty state
+// - Added backward compatibility check (skip empty if messages exist on mount)
 
 'use client';
 
@@ -128,6 +137,14 @@ export default function ChatSessionPage() {
     const newState = getLayoutState(messages.length);
     setLayoutState(newState);
   }, [messages.length]);
+  
+  // Phase 4: Skip empty state if messages exist on mount (backward compatibility)
+  useEffect(() => {
+    if (messages.length > 0 && layoutState === 'empty') {
+      const newState = getLayoutState(messages.length);
+      setLayoutState(newState);
+    }
+  }, []); // Run once on mount
   
   const layoutConfig = getLayoutConfig(layoutState);
 
@@ -290,30 +307,104 @@ export default function ChatSessionPage() {
 
       {/* Main Chat Container - Centered and Constrained */}
       <div className="relative z-10 flex-1 flex flex-col max-w-5xl mx-auto w-full">
-        {/* Configuration Panel - Removed in Phase 2 (replaced by modal) */}
+        {/* Phase 4: Empty State with Large Centered Avatar */}
+        {layoutState === 'empty' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8"
+          >
+            {/* Large Centered Avatar */}
+            <AnimatePresence>
+              {layoutConfig.showCenteredAvatar && (
+                <motion.div
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  className="flex flex-col items-center mb-8 sm:mb-12"
+                >
+                  <motion.img
+                    src={portraitSrc}
+                    alt={persona?.name || 'Unknown'}
+                    onError={(e) => {
+                      const fallback = portraitPaths?.fallback || '/personas/A1.jpeg';
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback;
+                      } else {
+                        e.currentTarget.src = '/personas/A1.jpeg';
+                        e.currentTarget.onerror = null;
+                      }
+                    }}
+                    className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 
+                               rounded-full border-4 border-matrix-green 
+                               shadow-xl shadow-matrix-green/50
+                               object-cover"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  />
+                  
+                  <h2 className="text-2xl sm:text-3xl font-matrix font-bold text-matrix-green 
+                                 mt-6 tracking-wider">
+                    {persona?.name.toUpperCase() || 'UNKNOWN'}
+                  </h2>
+                  
+                  {persona?.era && (
+                    <p className="text-sm text-matrix-green-dim mt-2 text-center">
+                      {persona.era}
+                    </p>
+                  )}
+                  
+                  {persona?.quote && (
+                    <p className="text-sm text-matrix-green/70 mt-4 italic text-center 
+                                  max-w-md px-4">
+                      &ldquo;{persona.quote}&rdquo;
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-        {/* Message List */}
-        <div className="flex-1 overflow-hidden relative z-10">
-          <ChatMessageList
-            messages={messages}
-            isLoading={isLoading}
-            error={error}
-            modelName={configuration.modelName}
-            personaId={configuration.personaId}
-            onRetry={retryLastMessage}
-            onDismissError={clearError}
-          />
-        </div>
+            {/* Centered Input */}
+            <motion.div
+              layout
+              className="w-full max-w-[90%] sm:max-w-md"
+            >
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                extensiveness={nextMessageExtensiveness}
+                onExtensivenessChange={setNextMessageExtensiveness}
+                isLoading={isLoading}
+              />
+            </motion.div>
+          </motion.div>
+        ) : (
+          <>
+            {/* Conversation Layout (first-message or conversation state) */}
+            {/* Message List */}
+            <div className={`${layoutConfig.messagesContainerClass} relative z-10`}>
+              <ChatMessageList
+                messages={messages}
+                isLoading={isLoading}
+                error={error}
+                modelName={configuration.modelName}
+                personaId={configuration.personaId}
+                onRetry={retryLastMessage}
+                onDismissError={clearError}
+              />
+            </div>
 
-        {/* Input Area */}
-        <div className="relative z-10">
-          <ChatInput
-            onSendMessage={handleSendMessage}
-            extensiveness={nextMessageExtensiveness}
-            onExtensivenessChange={setNextMessageExtensiveness}
-            isLoading={isLoading}
-          />
-        </div>
+            {/* Input Area */}
+            <div className={`${layoutConfig.inputContainerClass} relative z-10`}>
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                extensiveness={nextMessageExtensiveness}
+                onExtensivenessChange={setNextMessageExtensiveness}
+                isLoading={isLoading}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
