@@ -178,28 +178,41 @@ export function getModelDisplayConfig(model: AvailableModel): ModelDisplayConfig
 }
 
 // Get all available models for dropdown selection
-// Ordered from cheapest to most expensive (first item = default)
+// Grouped by provider (cheapest first within each group)
+// First item = default (GPT-5 Nano)
 export function getAvailableModels(): AvailableModel[] {
-  // Return models in cost order: cheapest first
   return [
-    'gpt-5-nano',           // Cheapest - NEW DEFAULT
+    // OpenAI (Green) - Cheapest first within group
+    'gpt-5-nano',           // Cheapest - DEFAULT
     'gpt-5-mini',
     'gpt-4o-mini',
+    'gpt-5',
+    
+    // Anthropic (Orange) - Cheapest first within group
     'claude-haiku-4-5-20251001',
+    'claude-3-5-sonnet-20241022',
+    
+    // xAI (White) - Cheapest first within group
     'grok-4-fast',
+    'grok-4-fast-reasoning',
+    
+    // Google (Blue) - Cheapest first within group
     'gemini-2.5-flash-lite',
     'gemini-2.5-flash',
+    'gemini-2.5-pro-preview-05-06',
+    
+    // DeepSeek (Purple) - Cheapest first within group
     'deepseek-v3',
     'deepseek-r1',
+    
+    // Moonshot (Orange/Red) - Cheapest first within group
+    'moonshot-v1-8k',
     'moonshot-v1-32k',
     'moonshot-v1-128k',
-    'claude-3-5-sonnet-20241022',
-    'gpt-5',               // Most expensive, at the end
-    'gemini-2.5-pro-preview-05-06',
-    'grok-4-fast-reasoning',
+    
+    // Qwen (Red) - Cheapest first within group
     'qwen-plus',
     'qwen3-max',
-    'moonshot-v1-8k',
   ] as AvailableModel[];
 }
 
