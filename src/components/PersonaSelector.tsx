@@ -3,7 +3,7 @@
 
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
+import { PERSONAS, getPersonaPortraitPaths, getPersonasForContext } from '@/lib/personas';
 
 // Card flip animation styles
 const flipStyles = `
@@ -68,7 +68,7 @@ const PersonaSelector: React.FC<PersonaSelectorProps> = ({
         
         {/* Persona Grid with Flip Cards */}
         <div className="grid grid-cols-5 gap-4">
-          {Object.values(PERSONAS).map((persona) => {
+          {Object.values(getPersonasForContext('debate')).map((persona) => {
             const portraitPaths = getPersonaPortraitPaths(persona.id);
             const portraitSrc = portraitPaths.primary || persona.portrait;
             const shouldFallback = portraitPaths.fallback && portraitPaths.fallback !== portraitSrc;

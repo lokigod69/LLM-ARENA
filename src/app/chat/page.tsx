@@ -10,7 +10,7 @@ import ChatHeader from '@/components/chat/ChatHeader';
 import ChatConfigurationModal from '@/components/chat/ChatConfigurationModal';
 import AccessCodeModal from '@/components/AccessCodeModal';
 import MatrixRain from '@/components/MatrixRain';
-import { PERSONAS, getPersonaPortraitPaths } from '@/lib/personas';
+import { PERSONAS, getPersonaPortraitPaths, getPersonasForContext } from '@/lib/personas';
 import type { ChatConfiguration } from '@/types/chat';
 import { useChatSession } from '@/hooks/useChatSession';
 
@@ -108,7 +108,7 @@ export default function ChatPage() {
 
           {/* Persona Grid - Reduced size by 12% */}
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 lg:gap-4">
-            {Object.values(PERSONAS).map((persona) => {
+            {Object.values(getPersonasForContext('chat')).map((persona) => {
               const portraitPaths = getPersonaPortraitPaths(persona.id);
               const portraitSrc = portraitPaths.primary || persona.portrait;
               const fallbackSrc = portraitPaths.fallback || persona.portrait;
