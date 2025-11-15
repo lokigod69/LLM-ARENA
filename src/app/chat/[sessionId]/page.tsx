@@ -150,6 +150,12 @@ export default function ChatSessionPage() {
                     {getModelDisplayName(configuration.modelName)}
                   </p>
                 </div>
+                <button
+                  onClick={() => router.push('/chat')}
+                  className="ml-2 text-xs text-matrix-green/70 hover:text-matrix-green transition-colors cursor-pointer font-matrix"
+                >
+                  Change →
+                </button>
               </>
             )}
             <button
