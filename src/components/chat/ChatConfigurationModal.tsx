@@ -97,7 +97,7 @@ export default function ChatConfigurationModal({
               {/* Option B: Famous Quote */}
               {persona.quote ? (
                 <p className="text-sm text-matrix-green-dim italic">
-                  "{persona.quote}"
+                  &ldquo;{persona.quote}&rdquo;
                 </p>
               ) : (
                 <p className="text-sm text-matrix-green-dim">{persona.identity.substring(0, 100)}...</p>
