@@ -11,6 +11,15 @@
 // - Added Response Depth display next to model name (e.g., "GPT-5 Nano (3/5)")
 // - Removed queries remaining from header (will move to config modal in Phase 2)
 // - Improved responsive layout with max-w-7xl container
+//
+// Phase 2 Changes (Configuration Modal):
+// - Created ConfigurationModal component (centered overlay)
+// - Removed collapsible ChatConfiguration panel from main layout
+// - Added backdrop with blur effect (z-200)
+// - Added modal animations (Framer Motion)
+// - Added ESC key handler for closing modal
+// - Moved queries remaining display into modal
+// - Added body scroll lock when modal is open
 
 'use client';
 
@@ -18,7 +27,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import ChatHeader from '@/components/chat/ChatHeader';
-import ChatConfiguration from '@/components/chat/ChatConfiguration';
+import ConfigurationModal from '@/components/chat/ConfigurationModal';
 import ChatMessageList from '@/components/chat/ChatMessageList';
 import ChatInput from '@/components/chat/ChatInput';
 import MatrixRain from '@/components/MatrixRain';
@@ -200,15 +209,19 @@ export default function ChatSessionPage() {
         </div>
       </div>
 
+      {/* Configuration Modal (Phase 2) */}
+      <ConfigurationModal
+        isOpen={configModalOpen}
+        onClose={() => setConfigModalOpen(false)}
+        configuration={configuration}
+        onConfigurationChange={updateConfiguration}
+        personaId={configuration.personaId}
+        queriesRemaining={queriesRemaining}
+      />
+
       {/* Main Chat Container - Centered and Constrained */}
       <div className="relative z-10 flex-1 flex flex-col max-w-5xl mx-auto w-full">
-        {/* Configuration Panel */}
-        <div className="relative z-10">
-          <ChatConfiguration
-            configuration={configuration}
-            onConfigurationChange={updateConfiguration}
-          />
-        </div>
+        {/* Configuration Panel - Removed in Phase 2 (replaced by modal) */}
 
         {/* Message List */}
         <div className="flex-1 overflow-hidden relative z-10">
