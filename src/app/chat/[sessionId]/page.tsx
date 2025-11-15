@@ -38,6 +38,14 @@
 // - Added hover effect on avatar (scale 1.05)
 // - Centered input in empty state
 // - Added backward compatibility check (skip empty if messages exist on mount)
+//
+// Phase 5 Changes (Input Position Transitions):
+// - Wrapped input containers with motion.div for smooth transitions
+// - Implemented width transitions: 400px (empty) → 600px (first-message) → 100% (conversation)
+// - Added position transitions using layout prop (centered → bottom-fixed)
+// - Added GPU acceleration hints (will-change: transform, width)
+// - Added responsive max-width constraints (400px/600px/800px)
+// - Smooth cubic-bezier easing for natural feel
 
 'use client';
 
@@ -365,10 +373,20 @@ export default function ChatSessionPage() {
               )}
             </AnimatePresence>
 
-            {/* Centered Input */}
+            {/* Centered Input - Phase 5: Width transition */}
             <motion.div
               layout
-              className="w-full max-w-[90%] sm:max-w-md"
+              animate={{
+                width: layoutConfig.inputWidth === 'narrow' ? '400px' : '100%',
+              }}
+              transition={{ 
+                duration: 0.3, 
+                ease: 'easeInOut' 
+              }}
+              className="w-full max-w-[90%] sm:max-w-md mx-auto"
+              style={{
+                maxWidth: layoutConfig.inputWidth === 'narrow' ? '400px' : '100%',
+              }}
             >
               <ChatInput
                 onSendMessage={handleSendMessage}
@@ -394,15 +412,29 @@ export default function ChatSessionPage() {
               />
             </div>
 
-            {/* Input Area */}
-            <div className={`${layoutConfig.inputContainerClass} relative z-10`}>
+            {/* Input Area - Phase 5: Width and position transitions */}
+            <motion.div
+              layout
+              animate={{
+                width: layoutConfig.inputWidth === 'wide' ? '600px' : '100%',
+              }}
+              transition={{ 
+                duration: 0.4, 
+                ease: [0.4, 0, 0.2, 1] // cubic-bezier
+              }}
+              className={`${layoutConfig.inputContainerClass} relative z-10 mx-auto`}
+              style={{
+                maxWidth: layoutConfig.inputWidth === 'wide' ? '600px' : '800px',
+                willChange: 'transform, width', // GPU acceleration hint
+              }}
+            >
               <ChatInput
                 onSendMessage={handleSendMessage}
                 extensiveness={nextMessageExtensiveness}
                 onExtensivenessChange={setNextMessageExtensiveness}
                 isLoading={isLoading}
               />
-            </div>
+            </motion.div>
           </>
         )}
       </div>
