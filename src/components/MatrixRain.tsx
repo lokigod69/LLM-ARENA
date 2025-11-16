@@ -1,6 +1,8 @@
 // Matrix Rain Background Component
 // Creates the iconic falling green characters effect from The Matrix
 // Enhanced with side-column layout and authentic Matrix styling
+// FIX: Dynamic canvas sizing - uses scrollWidth to account for content wider than viewport
+// This fixes the issue where right Matrix rain was cut off at 100% zoom
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -14,14 +16,6 @@ const MatrixRain = () => {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Set canvas size
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
 
     // Authentic Matrix characters (Japanese katakana and numbers)
     const matrixChars = 'ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍｸﾁｺｿﾉﾄﾆﾌﾒﾋﾅﾖｱｶﾁｼﾘﾏｴﾎﾞ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:・."=*+-<>';
@@ -40,21 +34,45 @@ const MatrixRain = () => {
     const brightnesses: number[] = [];
     const columnPositions: number[] = [];
     
-    // Initialize left side columns
-    for (let i = 0; i < leftColumns; i++) {
-      drops[i] = Math.random() * canvas.height;
-      speeds[i] = Math.random() * 3 + 1; // Speed between 1-4
-      brightnesses[i] = Math.random() * 0.5 + 0.3; // Brightness 0.3-0.8
-      columnPositions[i] = i * fontSize;
-    }
+    // Initialize column positions function
+    const initializeColumnPositions = () => {
+      // Initialize left side columns
+      for (let i = 0; i < leftColumns; i++) {
+        if (drops[i] === undefined) {
+          drops[i] = Math.random() * canvas.height;
+          speeds[i] = Math.random() * 3 + 1;
+          brightnesses[i] = Math.random() * 0.5 + 0.3;
+        }
+        columnPositions[i] = i * fontSize;
+      }
+      
+      // Initialize right side columns (recalculate positions based on current canvas width)
+      for (let i = leftColumns; i < totalColumns; i++) {
+        if (drops[i] === undefined) {
+          drops[i] = Math.random() * canvas.height;
+          speeds[i] = Math.random() * 3 + 1;
+          brightnesses[i] = Math.random() * 0.5 + 0.3;
+        }
+        columnPositions[i] = canvas.width - sideWidth + (i - leftColumns) * fontSize;
+      }
+    };
+
+    // Set canvas size - FIX: Use scrollWidth to account for content wider than viewport
+    const resizeCanvas = () => {
+      // Use larger of viewport width or document scroll width
+      // This accounts for content wider than viewport (with overflow-x: hidden)
+      const scrollWidth = document.documentElement.scrollWidth;
+      const viewportWidth = window.innerWidth;
+      
+      canvas.width = Math.max(scrollWidth, viewportWidth);
+      canvas.height = window.innerHeight;
+      
+      // Re-initialize column positions when canvas width changes
+      initializeColumnPositions();
+    };
     
-    // Initialize right side columns
-    for (let i = leftColumns; i < totalColumns; i++) {
-      drops[i] = Math.random() * canvas.height;
-      speeds[i] = Math.random() * 3 + 1;
-      brightnesses[i] = Math.random() * 0.5 + 0.3;
-      columnPositions[i] = canvas.width - sideWidth + (i - leftColumns) * fontSize;
-    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     const draw = () => {
       // Create trailing effect
