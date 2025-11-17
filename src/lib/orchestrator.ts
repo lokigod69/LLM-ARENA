@@ -33,6 +33,10 @@
 //   - Personas now use character-appropriate evidence (e.g., Marcus cites Stoic philosophy, not modern studies)
 //   - Prevents anachronistic citations (ancient personas no longer cite 2019 studies)
 //   - Maintains evidence requirements while allowing authentic character argumentation
+// EM DASH SPACING FIX: Added formatEmDashes() function to add spaces around em dashes (British/Oxford style)
+//   - Applied to all AI model responses (GPT-5, Claude, Gemini, Grok, Qwen, DeepSeek) for better readability
+//   - Added system prompt instruction for British/Oxford punctuation style
+//   - Converts "word—word" to "word — word" automatically
 
 import type { AvailableModel } from '@/types';
 import { PERSONAS, PersonaDefinition } from './personas';
@@ -72,6 +76,21 @@ interface RunTurnResponse {
 function estimateTokens(text: string): number {
   // Rough estimate: 1 token per 4 characters
   return Math.ceil(text.length / 4);
+}
+
+/**
+ * Format em dashes with proper spacing (British/Oxford style)
+ * Converts "word—word" to "word — word" for better readability
+ * FIX: Em dash spacing - adds spaces around em dashes for better readability
+ */
+function formatEmDashes(text: string): string {
+  // Add space before em dash if missing (word character before dash)
+  text = text.replace(/(\w)—/g, '$1 —');
+  // Add space after em dash if missing (word character after dash)
+  text = text.replace(/—(\w)/g, '— $1');
+  // Clean up any double spaces created
+  text = text.replace(/\s{2,}/g, ' ');
+  return text;
 }
 
 // BUG FIX: Calculate maxTokens dynamically based on extensiveness level
@@ -1052,6 +1071,13 @@ then advance with FRESH evidence.
 REMINDER: Respond as ${persona.name} would, but focus on DEBATING the topic, not introducing yourself.`;
   }
 
+  // FIX: Em dash spacing - Add punctuation style instruction for better readability
+  systemPrompt += `
+
+PUNCTUATION STYLE: Use British/Oxford style with spaces around em dashes for better readability.
+Example: "word — word" (not "word—word")
+Always include spaces before and after em dashes.`;
+
   return systemPrompt;
 }
 
@@ -1512,6 +1538,11 @@ async function callOpenAIResponses(
     reply = 'No response generated - check console logs for response structure';
   }
 
+  // Format em dashes for better readability (British/Oxford style)
+  if (reply) {
+    reply = formatEmDashes(reply);
+  }
+
   // Check for finish_reason in GPT-5 Responses API format
   // GPT-5 Responses API may return finish_reason in data.output[] items
   let finishReason: string | undefined;
@@ -1729,6 +1760,9 @@ async function callUnifiedAnthropic(messages: any[], modelType: 'claude-3-5-sonn
     reply = reply.trimEnd() + '...';
   }
   
+  // Format em dashes for better readability (British/Oxford style)
+  reply = formatEmDashes(reply);
+  
   // Calculate token usage and cost (Anthropic format)
   const usage = data.usage;
   const tokenUsage = usage ? {
@@ -1854,7 +1888,10 @@ async function callUnifiedGrok(messages: any[], modelType: 'grok-4-fast-reasonin
   }
 
   const data = await response.json();
-  const reply = data.choices?.[0]?.message?.content || 'No response generated';
+  let reply = data.choices?.[0]?.message?.content || 'No response generated';
+
+  // Format em dashes for better readability (British/Oxford style)
+  reply = formatEmDashes(reply);
 
   const usage = data.usage;
   const tokenUsage = usage ? {
@@ -1922,6 +1959,9 @@ async function callUnifiedOpenRouter(messages: any[], modelType: 'qwen-plus' | '
     console.warn(`⚠️ Response truncated at token limit for ${modelType} (finish_reason: ${finishReason})`);
     reply = reply.trimEnd() + '...';
   }
+  
+  // Format em dashes for better readability (British/Oxford style)
+  reply = formatEmDashes(reply);
   
   // Calculate token usage and cost (OpenAI-compatible format)
   const usage = data.usage;
@@ -2083,6 +2123,9 @@ async function callUnifiedGemini(messages: any[], modelType: 'gemini-2.5-flash' 
       console.warn(`⚠️ Gemini response ends without punctuation (finishReason: STOP, length: ${reply.length}) - may be incomplete`);
     }
   }
+  
+  // Format em dashes for better readability (British/Oxford style)
+  reply = formatEmDashes(reply);
   
   // Calculate token usage and cost (Gemini format)
   const usage = data.usageMetadata;

@@ -1,5 +1,6 @@
 // Character Chat System Helpers
 // Token estimation and context window management for chat system
+// EM DASH SPACING FIX: Added punctuation style instruction for British/Oxford em dash formatting
 
 import type { ChatMessage } from '@/types/chat';
 
@@ -146,6 +147,10 @@ DO:
 
 RECENT CONVERSATION CONTEXT:
 ${contextText}
+
+PUNCTUATION STYLE: Use British/Oxford style with spaces around em dashes for better readability.
+Example: "word — word" (not "word—word")
+Always include spaces before and after em dashes.
 
 Respond as ${personaName} would in a natural, friendly conversation. Be authentic to your character but conversational, not adversarial.
 `;
