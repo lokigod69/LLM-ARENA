@@ -7,7 +7,7 @@
 //   - Matched OUTPUT label size to top "Input" label (text-2xl)
 //   - Aligned container width with sections above (max-w-5xl)
 //   - Enlarged display box with responsive padding (p-6 sm:p-8 md:p-10)
-//   - Increased topic text size (text-2xl md:text-3xl for better readability)
+//   - Topic text size (text-lg - readable but not overwhelming, smaller than label)
 //   - Removed status section (timestamp/status redundant)
 
 'use client';
@@ -108,7 +108,7 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
             
             {/* Content */}
             <div className="relative z-10 p-6 sm:p-8 md:p-10 text-center">
-              <p className="text-2xl md:text-3xl text-white font-sans whitespace-pre-wrap">
+              <p className="text-lg text-white font-sans whitespace-pre-wrap">
                 {topic}
               </p>
             </div>
