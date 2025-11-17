@@ -3,9 +3,11 @@
 // Creates clear visual hierarchy and sophisticated design
 // UI REDESIGN: Cleaner, more focused design
 //   - Removed subtitle for cleaner appearance
-//   - Enlarged INPUT label (text-3xl, bold, uppercase)
+//   - Changed label from "INPUT" to "OUTPUT" (matches terminology - displays output, not input)
+//   - Matched OUTPUT label size to top "Input" label (text-2xl)
+//   - Aligned container width with sections above (max-w-5xl)
 //   - Enlarged display box with responsive padding (p-6 sm:p-8 md:p-10)
-//   - Increased topic text size (text-xl)
+//   - Increased topic text size (text-2xl md:text-3xl for better readability)
 //   - Removed status section (timestamp/status redundant)
 
 'use client';
@@ -34,7 +36,7 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
         {/* Subtle background glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-5"></div>
         
-        <div className="relative max-w-4xl mx-auto">
+        <div className="relative max-w-5xl mx-auto">
           {/* Header */}
           <motion.div
             className="text-center mb-6"
@@ -64,9 +66,9 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
                 </svg>
               </motion.div>
               
-              <h3 className="text-3xl font-matrix text-white tracking-wider font-bold">
+              <h3 className="text-2xl font-matrix text-white tracking-wider font-bold">
                 <TypewriterText 
-                  text="INPUT"
+                  text="OUTPUT"
                   speed={60}
                   className="drop-shadow-lg"
                   allowSkip={false}
@@ -106,7 +108,7 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
             
             {/* Content */}
             <div className="relative z-10 p-6 sm:p-8 md:p-10 text-center">
-              <p className="text-xl text-white font-sans whitespace-pre-wrap">
+              <p className="text-2xl md:text-3xl text-white font-sans whitespace-pre-wrap">
                 {topic}
               </p>
             </div>
