@@ -9,6 +9,12 @@
 //   - Filled notches glow bright green, unfilled are dark outlines
 //   - Fixed label color (blue → green)
 //   - Enhanced thumb with hover effects
+// GLOWING SEGMENTS ENHANCEMENT: Ethereal glow effect between notches
+//   - 9 glowing segments positioned between the 10 notches
+//   - Radial gradient with blur creates "invisible bar made of glow" effect
+//   - Faint green glow (35% opacity, 3px blur) radiates softly
+//   - Segments only glow when filled (segmentNumber < maxTurns)
+//   - Creates Matrix-inspired ethereal aesthetic
 'use client';
 
 import { useState } from 'react';
@@ -84,8 +90,35 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     boxShadow: '0 0 4px rgba(0, 255, 65, 0.3)'
                   }}
                 />
+                
+                {/* Glowing segments - faint green glow between notches */}
+                <div 
+                  className="absolute inset-0 flex justify-between items-center pointer-events-none px-1" 
+                  style={{ marginTop: '-6px', zIndex: 5 }}
+                >
+                  {Array.from({ length: 9 }).map((_, segmentIndex) => {
+                    const segmentNumber = segmentIndex + 1; // 1-9
+                    const shouldGlow = segmentNumber < maxTurns;
+                    
+                    return (
+                      <div
+                        key={segmentIndex}
+                        className="flex-1 h-3 transition-all duration-300"
+                        style={{
+                          background: shouldGlow
+                            ? 'radial-gradient(ellipse, rgba(0,255,65,0.35) 0%, rgba(0,255,65,0.25) 30%, rgba(0,255,65,0.15) 60%, transparent 100%)'
+                            : 'transparent',
+                          filter: shouldGlow ? 'blur(3px)' : 'none',
+                          opacity: shouldGlow ? 1 : 0,
+                          transition: 'all 0.3s ease'
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                
                 {/* Notch indicators - 10 segments for 1-10 turns */}
-                <div className="relative -mt-2 h-4 flex justify-between items-end pointer-events-none px-1">
+                <div className="relative -mt-2 h-4 flex justify-between items-end pointer-events-none px-1" style={{ zIndex: 15 }}>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((turn) => (
                     <div
                       key={turn}
