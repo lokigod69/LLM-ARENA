@@ -93,8 +93,13 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 
                 {/* Glowing segments - faint green glow between notches */}
                 <div 
-                  className="absolute inset-0 flex justify-between items-center pointer-events-none px-1" 
-                  style={{ marginTop: '-6px', zIndex: 5 }}
+                  className="absolute left-0 right-0 flex justify-between items-center pointer-events-none px-1" 
+                  style={{ 
+                    top: 'calc(50% + 2px)',
+                    transform: 'translateY(-50%)',
+                    height: '20px',
+                    zIndex: 12
+                  }}
                 >
                   {Array.from({ length: 9 }).map((_, segmentIndex) => {
                     const segmentNumber = segmentIndex + 1; // 1-9
@@ -103,13 +108,15 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     return (
                       <div
                         key={segmentIndex}
-                        className="flex-1 h-3 transition-all duration-300"
+                        className="flex-1 transition-all duration-300"
                         style={{
                           background: shouldGlow
-                            ? 'radial-gradient(ellipse, rgba(0,255,65,0.35) 0%, rgba(0,255,65,0.25) 30%, rgba(0,255,65,0.15) 60%, transparent 100%)'
+                            ? 'radial-gradient(ellipse at center, rgba(0,255,65,0.6) 0%, rgba(0,255,65,0.4) 40%, rgba(0,255,65,0.2) 70%, transparent 100%)'
                             : 'transparent',
-                          filter: shouldGlow ? 'blur(3px)' : 'none',
+                          filter: shouldGlow ? 'blur(5px)' : 'none',
                           opacity: shouldGlow ? 1 : 0,
+                          height: '20px',
+                          margin: '0 1px',
                           transition: 'all 0.3s ease'
                         }}
                       />
