@@ -1,6 +1,12 @@
 // InitialPrompt.tsx - Elegant display component for the initial debate topic
 // Features white/silver Matrix styling to contrast with the green/cyan chat themes
 // Creates clear visual hierarchy and sophisticated design
+// UI REDESIGN: Cleaner, more focused design
+//   - Removed subtitle for cleaner appearance
+//   - Enlarged INPUT label (text-3xl, bold, uppercase)
+//   - Enlarged display box with responsive padding (p-6 sm:p-8 md:p-10)
+//   - Increased topic text size (text-xl)
+//   - Removed status section (timestamp/status redundant)
 
 'use client';
 
@@ -36,7 +42,7 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="flex items-center justify-center gap-3">
               {/* Neural network icon */}
               <motion.div
                 className="w-8 h-8 flex items-center justify-center"
@@ -58,9 +64,9 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
                 </svg>
               </motion.div>
               
-              <h3 className="text-lg font-matrix text-white tracking-wider">
+              <h3 className="text-3xl font-matrix text-white tracking-wider font-bold">
                 <TypewriterText 
-                  text="Input"
+                  text="INPUT"
                   speed={60}
                   className="drop-shadow-lg"
                   allowSkip={false}
@@ -83,9 +89,7 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
               />
             </div>
             
-            <p className="text-sm text-gray-400 font-matrix">
-              Core neural prompt driving the artificial intelligence confrontation
-            </p>
+            {/* Subtitle removed for cleaner design */}
           </motion.div>
 
           {/* Main Prompt Display */}
@@ -101,30 +105,14 @@ const InitialPrompt: React.FC<InitialPromptProps> = ({ topic, isActive }) => {
             <div className="absolute inset-[1px] rounded-lg bg-gradient-to-r from-gray-900 via-black to-gray-900"></div>
             
             {/* Content */}
-            <div className="relative z-10 p-6 text-center">
-              <p className="text-lg text-white font-sans whitespace-pre-wrap">
+            <div className="relative z-10 p-6 sm:p-8 md:p-10 text-center">
+              <p className="text-xl text-white font-sans whitespace-pre-wrap">
                 {topic}
               </p>
             </div>
           </motion.div>
 
-          {/* Status info */}
-          <motion.div
-            className="mt-4 flex justify-center items-center gap-6 text-xs text-gray-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.8, duration: 0.5 }}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-              <span className="font-matrix">TIMESTAMP: {new Date().toLocaleTimeString()}</span>
-            </div>
-            <div className="w-px h-4 bg-gray-600"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-              <span className="font-matrix">STATUS: {isActive ? 'PROCESSING' : 'INITIALIZED'}</span>
-            </div>
-          </motion.div>
+          {/* Status section removed for cleaner, more focused design */}
         </div>
       </motion.section>
     </AnimatePresence>
