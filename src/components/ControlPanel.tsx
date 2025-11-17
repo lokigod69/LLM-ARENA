@@ -2,6 +2,13 @@
 // Cyberpunk-themed interface for monitoring debate flow and configuration
 // SIMPLIFIED: Only monitoring and configuration - no control buttons
 // PHASE 1 UI IMPROVEMENTS: Renamed "Max Turns" to "Total Turns" for clarity (keeps current logic, rounds implementation deferred to Phase 2)
+// SLIDER REDESIGN: Matrix-themed notched slider design
+//   - Removed rainbow gradient (blue → purple → red)
+//   - Black track with green border + glow
+//   - 10 green notch indicators (one per turn value 1-10)
+//   - Filled notches glow bright green, unfilled are dark outlines
+//   - Fixed label color (blue → green)
+//   - Enhanced thumb with hover effects
 'use client';
 
 import { useState } from 'react';
@@ -19,11 +26,6 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onMaxTurnsChange,
 }) => {
   const [isOpen, setIsOpen] = useState(true); // Default to open
-
-  const getSliderGradient = (value: number, max: number) => {
-    const percentage = ((value - 1) / (max - 1)) * 100;
-    return `linear-gradient(to right, #0047FF, #8024A3 ${percentage}%, #FF0047)`;
-  };
 
   return (
     <motion.div 
@@ -64,19 +66,41 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 htmlFor="max-turns"
                 className="block text-xl text-center font-matrix text-matrix-green/80 mb-4"
               >
-                Total Turns: <span className="text-2xl text-matrix-blue font-bold">{maxTurns}</span>
+                Total Turns: <span className="text-2xl text-matrix-green font-bold">{maxTurns}</span>
               </label>
-              <input
-                id="max-turns"
-                type="range"
-                min="1"
-                max="10"
-                value={maxTurns}
-                onChange={e => onMaxTurnsChange(parseInt(e.target.value, 10))}
-                disabled={isDebateActive}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer slider-max-turns"
-                style={{ background: getSliderGradient(maxTurns, 10) }}
-              />
+              <div className="relative">
+                <input
+                  id="max-turns"
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={maxTurns}
+                  onChange={e => onMaxTurnsChange(parseInt(e.target.value, 10))}
+                  disabled={isDebateActive}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer slider-max-turns relative z-10"
+                  style={{ 
+                    background: '#000000',
+                    border: '1px solid #00FF41',
+                    boxShadow: '0 0 4px rgba(0, 255, 65, 0.3)'
+                  }}
+                />
+                {/* Notch indicators - 10 segments for 1-10 turns */}
+                <div className="relative -mt-2 h-4 flex justify-between items-end pointer-events-none px-1">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((turn) => (
+                    <div
+                      key={turn}
+                      className={`w-0.5 transition-all duration-200 ${
+                        turn <= maxTurns
+                          ? 'bg-matrix-green h-4 shadow-[0_0_6px_rgba(0,255,65,0.6)]'
+                          : 'bg-transparent border-l border-matrix-green/20 h-2'
+                      }`}
+                      style={{
+                        borderColor: turn <= maxTurns ? 'transparent' : 'rgba(0, 255, 65, 0.2)'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -85,24 +109,38 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       <style jsx>{`
         .slider-max-turns::-webkit-slider-thumb {
           appearance: none;
-          width: 16px;
-          height: 16px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           background: #00FF41;
           cursor: pointer;
-          border: 2px solid #000;
-          box-shadow: 0 0 8px #00FF41;
+          border: 2px solid #003300;
+          box-shadow: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.3);
           transition: all 0.3s ease;
+          position: relative;
+          z-index: 20;
+        }
+        
+        .slider-max-turns::-webkit-slider-thumb:hover {
+          background: #00FF66;
+          box-shadow: 0 0 15px rgba(0, 255, 65, 0.8), 0 0 30px rgba(0, 255, 65, 0.4);
         }
         
         .slider-max-turns::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           background: #00FF41;
           cursor: pointer;
-          border: 2px solid #000;
-          box-shadow: 0 0 8px #00FF41;
+          border: 2px solid #003300;
+          box-shadow: 0 0 10px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.3);
+          position: relative;
+          z-index: 20;
+        }
+        
+        .slider-max-turns::-moz-range-thumb:hover {
+          background: #00FF66;
+          box-shadow: 0 0 15px rgba(0, 255, 65, 0.8), 0 0 30px rgba(0, 255, 65, 0.4);
         }
       `}</style>
     </motion.div>
