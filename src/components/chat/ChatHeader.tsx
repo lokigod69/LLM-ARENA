@@ -5,6 +5,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import SignInButton from '@/components/SignInButton';
 
 interface ChatHeaderProps {
   queriesRemaining: number | string;
@@ -61,6 +62,7 @@ export default function ChatHeader({ queriesRemaining, onBack }: ChatHeaderProps
           <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library">
             <span role="img" aria-label="Library">📚</span>
           </Link>
+          <SignInButton />
         </motion.div>
       </div>
     </motion.header>

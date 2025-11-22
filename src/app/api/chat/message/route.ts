@@ -60,6 +60,12 @@ export async function POST(request: NextRequest) {
     // PHASE 2A: Dual authentication check (OAuth + Access Codes)
     const userAuth = await getUserAuth();
     
+    console.log('💬 CHAT MESSAGE API: Auth check:', {
+      hasAuth: !!userAuth,
+      authType: userAuth?.type,
+      email: userAuth?.type === 'oauth' ? userAuth.email : 'n/a'
+    });
+    
     if (!userAuth) {
       return NextResponse.json(
         {
@@ -78,7 +84,10 @@ export async function POST(request: NextRequest) {
 
     if (userAuth.type === 'oauth') {
       // OAuth user - check Supabase quota (using email for lookup)
+      console.log('💬 OAuth user detected, checking chat quota for:', userAuth.email);
       const quotaCheck = await checkOAuthQuota(userAuth.email, 'chat');
+      
+      console.log('💬 Quota check result:', quotaCheck);
       
       if (!quotaCheck.allowed) {
         return NextResponse.json(
@@ -97,8 +106,12 @@ export async function POST(request: NextRequest) {
       }
       
       // Decrement quota
+      console.log('💬 Decrementing chat quota for:', userAuth.email);
       const result = await decrementOAuthQuota(userAuth.email, 'chat');
+      console.log('💬 Decrement result:', result);
+      
       if (!result.success) {
+        console.error('❌ Failed to decrement chat quota');
         return NextResponse.json(
           {
             success: false,
@@ -113,6 +126,7 @@ export async function POST(request: NextRequest) {
       }
       
       remainingQueries = result.remaining;
+      console.log('✅ Chat quota decremented successfully. Remaining:', remainingQueries);
       
     } else if (userAuth.type === 'admin') {
       // Admin bypass - no quota check

@@ -23,6 +23,7 @@ import OracleResultsPanel from '@/components/OracleResultsPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PERSONAS } from '@/lib/personas';
 import { getModelDisplayName } from '@/lib/modelConfigs';
+import SignInButton from '@/components/SignInButton';
 
 const LibraryPage: React.FC = () => {
   // State for library data
@@ -226,6 +227,7 @@ const LibraryPage: React.FC = () => {
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
                 <span role="img" aria-label="Library">📚</span>
               </Link>
+              <SignInButton />
             </div>
           </div>
         </header>
