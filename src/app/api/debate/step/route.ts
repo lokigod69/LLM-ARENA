@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
     let remainingQueries: number | string = 'Unlimited';
 
     if (userAuth.type === 'oauth') {
-      // OAuth user - check Supabase quota
-      const quotaCheck = await checkOAuthQuota(userAuth.userId, 'debate');
+      // OAuth user - check Supabase quota (using email for lookup)
+      const quotaCheck = await checkOAuthQuota(userAuth.email, 'debate');
       
       if (!quotaCheck.allowed) {
         return NextResponse.json({ 
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Decrement quota
-      const result = await decrementOAuthQuota(userAuth.userId, 'debate');
+      const result = await decrementOAuthQuota(userAuth.email, 'debate');
       if (!result.success) {
         return NextResponse.json({ error: 'Failed to update quota' }, { status: 500 });
       }

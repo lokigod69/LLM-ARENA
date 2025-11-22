@@ -5,8 +5,8 @@ import { supabase } from "./supabase"
 // User auth type definitions
 export type OAuthUser = {
   type: 'oauth'
-  userId: string
-  email: string | null
+  userId: string  // Can be UUID or email (JWT-only mode)
+  email: string   // Always present for OAuth users
   tier: string
   debatesRemaining: number
   chatsRemaining: number
@@ -31,11 +31,11 @@ export async function getUserAuth(): Promise<UserAuth> {
   // Try NextAuth OAuth session first
   const session = await auth()
   
-  if (session?.user) {
+  if (session?.user && session.user.email) {
     return {
       type: 'oauth',
       userId: session.user.id,
-      email: session.user.email ?? null,
+      email: session.user.email,  // Guaranteed to exist
       tier: session.user.tier,
       debatesRemaining: session.user.debatesRemaining,
       chatsRemaining: session.user.chatsRemaining,
@@ -60,9 +60,10 @@ export async function getUserAuth(): Promise<UserAuth> {
 
 /**
  * Check if OAuth user has remaining quota for a specific action
+ * @param userEmail - User's email address (more reliable than ID in JWT-only mode)
  */
 export async function checkOAuthQuota(
-  userId: string,
+  userEmail: string,
   action: 'debate' | 'chat'
 ): Promise<{ allowed: boolean; remaining: number }> {
   if (!supabase) {
@@ -72,7 +73,7 @@ export async function checkOAuthQuota(
   const { data: profile, error } = await supabase
     .from('user_profiles')
     .select('debates_remaining, chats_remaining, tier')
-    .eq('id', userId)
+    .eq('email', userEmail)
     .single()
   
   if (error || !profile) {
@@ -91,9 +92,10 @@ export async function checkOAuthQuota(
 
 /**
  * Decrement OAuth user quota after successful action
+ * @param userEmail - User's email address (more reliable than ID in JWT-only mode)
  */
 export async function decrementOAuthQuota(
-  userId: string,
+  userEmail: string,
   action: 'debate' | 'chat'
 ): Promise<{ success: boolean; remaining: number }> {
   if (!supabase) {
@@ -102,54 +104,41 @@ export async function decrementOAuthQuota(
   
   const field = action === 'debate' ? 'debates_remaining' : 'chats_remaining'
   
-  // Atomic decrement using RPC or direct update
-  const { data, error } = await supabase
-    .rpc('decrement_quota', {
-      user_id: userId,
-      quota_field: field,
-    })
+  // Direct update (no RPC needed for JWT-only mode)
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id, debates_remaining, chats_remaining')
+    .eq('email', userEmail)
+    .single()
   
-  // Fallback: If RPC doesn't exist, use regular update
-  if (error?.code === '42883') { // Function does not exist
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('debates_remaining, chats_remaining')
-      .eq('id', userId)
-      .single()
-    
-    if (!profile) {
-      return { success: false, remaining: 0 }
-    }
-    
-    const currentValue = (field === 'debates_remaining' 
-      ? profile.debates_remaining 
-      : profile.chats_remaining) as number
-    const newValue = Math.max(0, currentValue - 1)
-    
-    const { error: updateError } = await supabase
-      .from('user_profiles')
-      .update({ [field]: newValue })
-      .eq('id', userId)
-    
-    if (updateError) {
-      return { success: false, remaining: currentValue }
-    }
-    
-    return { success: true, remaining: newValue }
-  }
   
-  if (error || !data) {
+  if (!profile) {
     return { success: false, remaining: 0 }
   }
   
-  return { success: true, remaining: data.remaining }
+  const currentValue = (field === 'debates_remaining' 
+    ? profile.debates_remaining 
+    : profile.chats_remaining) as number
+  const newValue = Math.max(0, currentValue - 1)
+  
+  const { error: updateError } = await supabase
+    .from('user_profiles')
+    .update({ [field]: newValue })
+    .eq('email', userEmail)
+  
+  if (updateError) {
+    return { success: false, remaining: currentValue }
+  }
+  
+  return { success: true, remaining: newValue }
 }
 
 /**
  * Refresh OAuth user's quota (called after Stripe webhook or tier change)
+ * @param userEmail - User's email address
  */
 export async function refreshOAuthQuota(
-  userId: string,
+  userEmail: string,
   tier: 'free' | 'basic' | 'pro'
 ): Promise<boolean> {
   if (!supabase) {
@@ -172,7 +161,7 @@ export async function refreshOAuthQuota(
       debates_remaining: debates,
       chats_remaining: chats,
     })
-    .eq('id', userId)
+    .eq('email', userEmail)
   
   return !error
 }
