@@ -1,9 +1,11 @@
 // This endpoint returns the current authentication state unambiguously
 // Returns exactly what the UI needs: mode, token info, and remaining queries
 // PHASE 1: Moved KV credentials to environment variables
+// PHASE 2A: Added NextAuth OAuth session check
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 
 // Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -38,6 +40,21 @@ async function kv(cmd: string[]) {
 
 export async function POST() {
   try {
+    // PHASE 2A: Check NextAuth OAuth session first
+    const session = await auth();
+    
+    if (session?.user) {
+      console.log('✓ OAuth session detected in verify endpoint:', session.user.email);
+      return NextResponse.json({
+        mode: 'oauth',
+        email: session.user.email,
+        tier: session.user.tier,
+        remaining: session.user.debatesRemaining,
+        chatsRemaining: session.user.chatsRemaining,
+      });
+    }
+    
+    // Fallback to access code system
     const c = await cookies();
     const mode = c.get('access_mode')?.value;
     

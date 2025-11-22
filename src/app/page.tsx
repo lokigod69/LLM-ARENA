@@ -11,6 +11,7 @@
 'use client'; // Required for useAuth and useState
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import PromptInput from '@/components/PromptInput';
 import ChatColumn from '@/components/ChatColumn';
 import ControlPanel from '@/components/ControlPanel';
@@ -35,8 +36,11 @@ import { AdminPanel } from '@/components/AdminPanel';
 import PlayAllButton from '@/components/PlayAllButton';
 import { PlaybackProvider } from '@/contexts/PlaybackContext';
 import Link from 'next/link';
+import SignInButton from '@/components/SignInButton';
 
 function HomeContent() {
+  // PHASE 2A: Check OAuth session
+  const { data: session, status: sessionStatus } = useSession();
   
   // NEW: State for access control
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -148,13 +152,29 @@ function HomeContent() {
     );
   };
 
-  // PHASE 1 FIX: On initial load, check for existing auth cookies
+  // PHASE 2A: Check for OAuth session OR access code auth
   useEffect(() => {
     const checkAuth = async () => {
+      // If OAuth session exists, unlock immediately
+      if (sessionStatus === 'authenticated' && session?.user) {
+        console.log('✓ OAuth session detected:', session.user.email);
+        setIsUnlocked(true);
+        setIsAdmin(false);
+        setQueriesRemaining(session.user.debatesRemaining >= 0 ? session.user.debatesRemaining : 'Unlimited');
+        setAppIsLoading(false);
+        return;
+      }
+      
+      // If still loading session, wait
+      if (sessionStatus === 'loading') {
+        return;
+      }
+      
+      // No OAuth session, check for access code auth
       try {
         const response = await fetch('/api/auth/verify', {
           method: 'POST',
-          credentials: 'include', // Include cookies
+          credentials: 'include',
         });
         
         if (response.ok) {
@@ -183,13 +203,20 @@ function HomeContent() {
     };
     
     checkAuth();
-  }, []);
+  }, [session, sessionStatus]);
 
-  // PHASE 1: Periodic query verification - poll every 30 seconds
+  // PHASE 2A: Periodic query verification - poll every 30 seconds
   useEffect(() => {
     if (!isUnlocked || queriesRemaining === 'Unlimited') return;
     
     const verifyQueries = async () => {
+      // For OAuth users, refresh from session
+      if (sessionStatus === 'authenticated' && session?.user) {
+        setQueriesRemaining(session.user.debatesRemaining >= 0 ? session.user.debatesRemaining : 'Unlimited');
+        return;
+      }
+      
+      // For access code users, poll the API
       try {
         const response = await fetch('/api/auth/verify', {
           method: 'POST',
@@ -216,7 +243,7 @@ function HomeContent() {
     const interval = setInterval(verifyQueries, 30000); // Every 30 seconds
     
     return () => clearInterval(interval);
-  }, [isUnlocked, queriesRemaining]);
+  }, [isUnlocked, queriesRemaining, session, sessionStatus]);
 
   const handleCodeVerified = (authState: { mode: 'admin' | 'token'; remaining?: number; allowed?: number; code?: string; token?: string }) => {
     setIsUnlocked(true);
