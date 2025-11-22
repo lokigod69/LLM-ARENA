@@ -1,10 +1,12 @@
 // Changes: Wrapped app with audio provider to coordinate global playback.
+// PHASE 2A: Added SessionProvider for NextAuth.js OAuth
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from 'react-hot-toast';
 import { AudioProvider } from "@/contexts/AudioContext";
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -23,21 +25,23 @@ export default function RootLayout({
       <head>
       </head>
       <body>
-        <AuthProvider>
-          <AudioProvider>
-            {children}
-            <Toaster 
-              position="top-center"
-              toastOptions={{
-                style: {
-                  background: '#0D0D0D',
-                  color: '#00FF00',
-                  border: '1px solid #004d00',
-                },
-              }}
-            />
-          </AudioProvider>
-        </AuthProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <AudioProvider>
+              {children}
+              <Toaster 
+                position="top-center"
+                toastOptions={{
+                  style: {
+                    background: '#0D0D0D',
+                    color: '#00FF00',
+                    border: '1px solid #004d00',
+                  },
+                }}
+              />
+            </AudioProvider>
+          </AuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -1,8 +1,11 @@
 // PHASE 2A: Debug endpoint for testing personality generation
 // This endpoint allows testing different personality configurations without making actual LLM API calls
 // Useful for verifying that individual personalities are working correctly
+// PHASE 1: Protected with admin cookie check
 
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { isAdminCookie } from '@/lib/auth-config';
 
 /**
  * Generate dynamic system prompt based on agreeability parameters (copied from orchestrator)
@@ -73,6 +76,17 @@ ${positionText}`;
 }
 
 export async function GET(request: Request) {
+  // PHASE 1: Admin check
+  const cookieStore = await cookies();
+  const accessMode = cookieStore.get('access_mode')?.value;
+  
+  if (!isAdminCookie(accessMode)) {
+    return NextResponse.json(
+      { error: 'Admin access required' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     
@@ -150,6 +164,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // PHASE 1: Admin check
+  const cookieStore = await cookies();
+  const accessMode = cookieStore.get('access_mode')?.value;
+  
+  if (!isAdminCookie(accessMode)) {
+    return NextResponse.json(
+      { error: 'Admin access required' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { 

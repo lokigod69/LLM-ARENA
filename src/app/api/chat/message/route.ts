@@ -217,14 +217,12 @@ export async function POST(request: NextRequest) {
       using: 'hardcodedStance'
     });
 
-    // Debug logging for Moonshot/Kimi authentication
+    // Debug logging for Moonshot/Kimi authentication (dev only)
     const isMoonshotModel = config.modelName.startsWith('moonshot') || config.modelName.includes('kimi');
-    if (isMoonshotModel) {
+    if (isMoonshotModel && process.env.NODE_ENV === 'development') {
       console.log('🔍 Moonshot Debug:', {
         apiKeyExists: !!process.env.MOONSHOT_API_KEY,
-        apiKeyPrefix: process.env.MOONSHOT_API_KEY?.substring(0, 10),
-        modelName: config.modelName,
-        apiKeyEnv: 'MOONSHOT_API_KEY',
+        modelName: config.modelName
       });
     }
 

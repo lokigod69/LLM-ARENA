@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import type { AvailableModel, Message } from '@/types';
+import { getUserAuth, checkOAuthQuota, decrementOAuthQuota } from '@/lib/auth-helpers';
 
 // Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -85,27 +86,48 @@ export async function POST(request: NextRequest) {
     personaId = body.personaId ?? undefined;
     conversationHistory = body.conversationHistory;
 
-    // Check authentication via cookies
-    const c = await cookies();
-    const accessMode = c.get('access_mode')?.value;
-    const accessToken = c.get('access_token')?.value;
+    // PHASE 2A: Dual authentication check (OAuth + Access Codes)
+    const userAuth = await getUserAuth();
+    
+    if (!userAuth) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
     
     let remainingQueries: number | string = 'Unlimited';
 
-    if (accessMode === 'admin') {
+    if (userAuth.type === 'oauth') {
+      // OAuth user - check Supabase quota
+      const quotaCheck = await checkOAuthQuota(userAuth.userId, 'debate');
+      
+      if (!quotaCheck.allowed) {
+        return NextResponse.json({ 
+          error: 'No debates remaining. Upgrade your plan to continue.',
+          tier: userAuth.tier,
+          remaining: 0
+        }, { status: 403 });
+      }
+      
+      // Decrement quota
+      const result = await decrementOAuthQuota(userAuth.userId, 'debate');
+      if (!result.success) {
+        return NextResponse.json({ error: 'Failed to update quota' }, { status: 500 });
+      }
+      
+      remainingQueries = result.remaining;
+      
+    } else if (userAuth.type === 'admin') {
       // Admin bypass - no quota check
       remainingQueries = 'Unlimited';
-    } else if (accessMode === 'token' && accessToken) {
-      // Token user - check and decrement quota
+      
+    } else if (userAuth.type === 'token') {
+      // Access code user - check KV quota (existing logic)
       try {
-        const rawData = await kv(['HGETALL', `token:${accessToken}`]);
+        const rawData = await kv(['HGETALL', `token:${userAuth.token}`]);
         
-        // BUG FIX: KV returns { result: ['key', 'value', ...] } - convert array to object
         if (!rawData || !rawData.result || rawData.result.length === 0) {
           return NextResponse.json({ error: 'Invalid access token' }, { status: 403 });
         }
 
-        // Convert Redis HGETALL array to object
         const tokenData = arrayToObject(rawData.result);
 
         if (tokenData.isActive !== 'true') {
@@ -119,15 +141,12 @@ export async function POST(request: NextRequest) {
 
         // Decrement quota
         const newRemaining = currentRemaining - 1;
-        await kv(['HSET', `token:${accessToken}`, 'queries_remaining', String(newRemaining)]);
+        await kv(['HSET', `token:${userAuth.token}`, 'queries_remaining', String(newRemaining)]);
         remainingQueries = newRemaining;
       } catch (kvError) {
         console.error('KV Error in step:', kvError);
         return NextResponse.json({ error: 'Access token validation failed' }, { status: 403 });
       }
-    } else {
-      // No valid authentication
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     console.log('🎯 STEP API: Request received (FLEXIBLE)');

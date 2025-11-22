@@ -3,6 +3,7 @@
 // Updates KV storage with new TTS toggle state
 
 import { NextResponse } from 'next/server';
+import { isAdminRequest } from '@/lib/auth-config';
 
 // Direct REST API calls to Upstash KV - same pattern as other admin routes
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -17,11 +18,10 @@ async function kv(cmd: string[]) {
     throw new Error('KV credentials not configured');
   }
   const url = `${KV_URL}/${cmd.map(encodeURIComponent).join('/')}`;
-  console.log('🔧 KV REST CALL:', url);
   const r = await fetch(url, { headers: { Authorization: `Bearer ${KV_TOKEN}` }});
   if (!r.ok) {
     const errorText = await r.text();
-    console.error('🔧 KV REST ERROR:', r.status, errorText);
+    console.error('KV Error:', r.status, errorText);
     throw new Error(`KV ${cmd[0]} ${r.status}: ${errorText}`);
   }
   return r.json();
@@ -31,15 +31,8 @@ export async function POST(req: Request) {
   try {
     const { adminCode, enabled } = await req.json();
 
-    // Verify admin access code
-    const ADMIN_ACCESS_CODE = process.env.ADMIN_ACCESS_CODE || "6969";
-    
-    if (!process.env.ADMIN_ACCESS_CODE) {
-      console.warn("⚠️ ADMIN_ACCESS_CODE not set, using default '6969'");
-    }
-
-    if (adminCode !== ADMIN_ACCESS_CODE) {
-      console.log('🔧 TOGGLE_TTS: Unauthorized access attempt');
+    // PHASE 1: Use shared auth-config utility (removes insecure fallback)
+    if (!isAdminRequest(adminCode)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -49,8 +42,6 @@ export async function POST(req: Request) {
 
     // Store TTS enabled state in KV
     await kv(['SET', 'tts-enabled', enabled ? 'true' : 'false']);
-    
-    console.log('🎤 TTS Toggle:', { enabled, adminCode: '***' });
 
     return NextResponse.json({ success: true, enabled });
   } catch (error: any) {

@@ -4,6 +4,7 @@
 
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { isAdminRequest } from '@/lib/auth-config';
 
 // Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -50,25 +51,12 @@ export async function POST(req: Request) {
   try {
     const { code } = await req.json();
     
-    // DEBUG: Log login attempt details
-    console.log('🔐 LOGIN ATTEMPT:', {
-      hasCode: !!code,
-      code: code, // temporarily log the actual code
-      timestamp: new Date().toISOString()
-    });
-    
     if (!code) {
       return NextResponse.json({ error: 'Missing access code' }, { status: 400 });
     }
 
-    // PHASE 1: Master token moved to environment variable
-    const ADMIN_ACCESS_CODE = process.env.ADMIN_ACCESS_CODE || "6969";
-    
-    if (!process.env.ADMIN_ACCESS_CODE) {
-      console.warn("⚠️ ADMIN_ACCESS_CODE not set, using default '6969'");
-    }
-    
-    if (code === ADMIN_ACCESS_CODE) {
+    // PHASE 1: Use shared auth-config utility (removes insecure fallback)
+    if (isAdminRequest(code)) {
       // Admin login
       const cs = await cookies();
       const isProd = process.env.NODE_ENV === 'production';
@@ -82,15 +70,7 @@ export async function POST(req: Request) {
 
     // Token login - verify token exists and is active
     try {
-      console.log('🔍 Looking up token in KV:', `token:${code}`);
       const rawData = await kv(['HGETALL', `token:${code}`]);
-      
-      // DEBUG: Log KV lookup result
-      console.log('🗄️ KV LOOKUP RESULT:', {
-        found: !!rawData && !!rawData.result,
-        dataLength: rawData?.result?.length || 0,
-        rawData: rawData // log what we got back
-      });
       
       // BUG FIX: KV returns { result: ['key', 'value', ...] } - convert array to object
       if (!rawData || !rawData.result || rawData.result.length === 0) {
@@ -100,14 +80,6 @@ export async function POST(req: Request) {
 
       // Convert Redis HGETALL array to object
       const tokenData = arrayToObject(rawData.result);
-      
-      // DEBUG: Log parsed token data
-      console.log('📋 PARSED TOKEN DATA:', {
-        tokenData: tokenData,
-        isActive: tokenData.isActive,
-        queries_remaining: tokenData.queries_remaining,
-        queries_allowed: tokenData.queries_allowed
-      });
 
       if (tokenData.isActive !== 'true') {
         return NextResponse.json({ error: 'Access code has been disabled' }, { status: 403 });

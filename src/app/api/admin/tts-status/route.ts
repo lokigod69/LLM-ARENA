@@ -1,8 +1,11 @@
 // Admin API endpoint to check TTS enabled status
 // Returns the current TTS toggle state from KV storage
 // Used by AdminPanel to display current TTS status
+// PHASE 1: Protected with admin cookie check
 
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { isAdminCookie } from '@/lib/auth-config';
 
 // Direct REST API calls to Upstash KV - same pattern as other admin routes
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -22,6 +25,17 @@ async function kv(cmd: string[]) {
 }
 
 export async function GET() {
+  // PHASE 1: Admin check
+  const cookieStore = await cookies();
+  const accessMode = cookieStore.get('access_mode')?.value;
+  
+  if (!isAdminCookie(accessMode)) {
+    return NextResponse.json(
+      { error: 'Admin access required' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Check if TTS is enabled in KV (default to false if not set)
     const result = await kv(['GET', 'tts-enabled']);

@@ -5,6 +5,7 @@
 // PHASE 1: Moved master token and KV credentials to environment variables
 
 import { NextResponse } from 'next/server';
+import { isAdminRequest } from '@/lib/auth-config';
 
 // Direct REST API calls to Upstash KV - PHASE 1: Moved to environment variables
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -41,14 +42,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Access code is required' }, { status: 400 });
     }
 
-    // 1. Check for the ADMIN code first - PHASE 1: From environment variable
-    const ADMIN_ACCESS_CODE = process.env.ADMIN_ACCESS_CODE || "6969";
-    
-    if (!process.env.ADMIN_ACCESS_CODE) {
-      console.warn("⚠️ ADMIN_ACCESS_CODE not set, using default '6969'");
-    }
-    
-    if (accessCode === ADMIN_ACCESS_CODE) {
+    // 1. Check for the ADMIN code first - PHASE 1: Use shared auth-config utility
+    if (isAdminRequest(accessCode)) {
       return NextResponse.json({
         isValid: true,
         isAdmin: true,

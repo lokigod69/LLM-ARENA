@@ -2225,15 +2225,16 @@ export async function callFlexibleOracle(
   const modelKey = getModelKey(modelName);
   const config = MODEL_CONFIGS[modelKey] as typeof MODEL_CONFIGS[keyof typeof MODEL_CONFIGS];
   
-  // Check for API key with detailed logging
+  // Check for API key
   const apiKey = process.env[config.apiKeyEnv];
-  console.log(`🔑 ORACLE API KEY CHECK: ${modelName}`, {
-    apiKeyEnv: config.apiKeyEnv,
-    hasApiKey: !!apiKey,
-    apiKeyLength: apiKey?.length || 0,
-    containsPlaceholder: apiKey?.includes('PLACEHOLDER') || false,
-    firstChars: apiKey ? apiKey.substring(0, 10) + '...' : 'N/A'
-  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔑 ORACLE API KEY CHECK: ${modelName}`, {
+      apiKeyEnv: config.apiKeyEnv,
+      hasApiKey: !!apiKey,
+      containsPlaceholder: apiKey?.includes('PLACEHOLDER') || false
+    });
+  }
   
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
     console.error(`🎭 ORACLE MOCK MODE: ${config.apiKeyEnv} is missing or placeholder. Using mock analysis.`);
@@ -3141,14 +3142,14 @@ function generateCollaborativeExploration(topic: string): string {
 
 async function callMoonshotOracle(oraclePrompt: string, modelType: 'moonshot-v1-8k' | 'moonshot-v1-32k' | 'moonshot-v1-128k', oracleConfigs: { maxTokens: number; temperature: number }): Promise<string> {
   // Implement moonshot oracle logic
-  console.log(`🔮 MOONSHOT ORACLE: Using ${modelType}`, {
-    modelType,
-    maxTokens: oracleConfigs.maxTokens,
-    temperature: oracleConfigs.temperature,
-    hasApiKey: !!process.env.MOONSHOT_API_KEY,
-    apiKeyEnv: 'MOONSHOT_API_KEY',
-    apiKeyPrefix: process.env.MOONSHOT_API_KEY ? process.env.MOONSHOT_API_KEY.substring(0, 10) + '...' : 'MISSING'
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🔮 MOONSHOT ORACLE: Using ${modelType}`, {
+      modelType,
+      maxTokens: oracleConfigs.maxTokens,
+      temperature: oracleConfigs.temperature,
+      hasApiKey: !!process.env.MOONSHOT_API_KEY
+    });
+  }
 
   if (!process.env.MOONSHOT_API_KEY || process.env.MOONSHOT_API_KEY.includes('PLACEHOLDER')) {
     console.error(`🎭 MOONSHOT MOCK MODE: MOONSHOT_API_KEY is missing or placeholder. Using mock analysis.`);
