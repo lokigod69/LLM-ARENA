@@ -90,13 +90,21 @@ export async function POST(request: NextRequest) {
       console.log('💬 Quota check result:', quotaCheck);
       
       if (!quotaCheck.allowed) {
+        // BETA PROTECTION: Check if user has 0 quota (new free-tier user)
+        const isBetaProtected = userAuth.tier === 'free' && quotaCheck.remaining === 0;
+        
+        const errorMessage = isBetaProtected
+          ? 'Beta access required. Enter an access code to unlock chats, or join our waitlist for early access.'
+          : 'No chats remaining. Upgrade your plan to continue.';
+        
         return NextResponse.json(
           {
             success: false,
             error: {
               type: 'cost',
-              message: 'No chats remaining. Upgrade your plan to continue.',
+              message: errorMessage,
               retryable: false,
+              betaProtected: isBetaProtected,
             },
             tier: userAuth.tier,
             remaining: 0

@@ -52,6 +52,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import SignInButton from '@/components/SignInButton';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ConfigurationModal from '@/components/chat/ConfigurationModal';
 import ChatMessageList from '@/components/chat/ChatMessageList';
@@ -291,6 +292,14 @@ export default function ChatSessionPage() {
 
             {/* Chat Badge (current section indicator) */}
             <span className="text-lg" title="Character Chat">💬</span>
+            
+            {/* Library Link (consistency with other pages) */}
+            <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2" title="Open Library" style={{ fontSize: 20 }}>
+              <span role="img" aria-label="Library">📚</span>
+            </Link>
+            
+            {/* User Menu (consistency with other pages) */}
+            <SignInButton />
 
             {/* Change Character Button */}
             <button

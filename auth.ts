@@ -108,11 +108,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         
         if (error) {
           console.error('❌ Failed to fetch user profile:', error)
-          // Use defaults
+          // Use defaults (BETA PROTECTION: 0 quota until payment)
           token.id = user.email // Fallback to email as ID
           token.tier = 'free'
-          token.debatesRemaining = 5
-          token.chatsRemaining = 10
+          token.debatesRemaining = 0
+          token.chatsRemaining = 0
           token.stripeCustomerId = null
         } else if (profile) {
           console.log('✓ User profile loaded:', { tier: profile.tier, debates: profile.debates_remaining })
@@ -159,8 +159,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string
         session.user.tier = (token.tier as string) || 'free'
-        session.user.debatesRemaining = (token.debatesRemaining as number) ?? 5
-        session.user.chatsRemaining = (token.chatsRemaining as number) ?? 10
+        session.user.debatesRemaining = (token.debatesRemaining as number) ?? 0
+        session.user.chatsRemaining = (token.chatsRemaining as number) ?? 0
         session.user.stripeCustomerId = (token.stripeCustomerId as string | null) || null
       }
       return session
@@ -207,7 +207,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             .eq('email', user.email)
         } else {
           console.log('👤 Creating new user profile for:', user.email)
-          // Create new user with free tier
+          // Create new user with free tier (BETA PROTECTION: 0 quota until payment)
           const { error: insertError } = await supabaseClient
             .from('user_profiles')
             .insert({
@@ -215,8 +215,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: user.name,
               image: user.image,
               tier: 'free',
-              debates_remaining: 5,
-              chats_remaining: 10,
+              debates_remaining: 0,
+              chats_remaining: 0,
               stripe_customer_id: null
             })
           
@@ -225,7 +225,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return false
           }
           
-          console.log('✅ User profile created successfully')
+          console.log('✅ User profile created successfully (BETA: 0 quota)')
         }
         
         return true
