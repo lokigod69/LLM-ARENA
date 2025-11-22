@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
+import { auth } from '@/auth';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,6 +37,18 @@ export async function POST(req: NextRequest) {
       totalTokensUsed
     } = body;
 
+    // SECURITY: Server determines user identity, not client
+    const authSession = await auth();
+    const c = await cookies();
+    const userEmail = authSession?.user?.email || null;
+    const accessToken = c.get('access_token')?.value || null;
+
+    console.log('💾 Saving debate with user association:', {
+      userEmail: userEmail || 'none',
+      accessCode: accessToken ? 'present' : 'none',
+      topic: topic?.substring(0, 50)
+    });
+
     // Save to Supabase
     const { data, error } = await supabase!
       .from('debates')
@@ -50,7 +64,8 @@ export async function POST(req: NextRequest) {
         extensiveness_level: extensivenessLevel,
         messages: messages,
         oracle_analysis: oracleAnalysis || null,
-        access_code: accessCode || null,
+        user_email: userEmail,
+        access_code: accessToken || null,
         debate_duration_seconds: debateDurationSeconds || null,
         total_tokens_used: totalTokensUsed || null
       })

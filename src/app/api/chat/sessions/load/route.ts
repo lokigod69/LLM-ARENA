@@ -4,6 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
 import type { ChatSession } from '@/types/chat';
+import { auth } from '@/auth';
+import { cookies } from 'next/headers';
 
 export async function GET(req: NextRequest) {
   try {
@@ -46,6 +48,34 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
+
+    // SECURITY: Verify ownership before returning data
+    const authSession = await auth();
+    const c = await cookies();
+    const userEmail = authSession?.user?.email;
+    const accessCode = c.get('access_token')?.value;
+
+    const isOwner = 
+      (data.user_email && data.user_email === userEmail) ||
+      (data.access_code && data.access_code === accessCode);
+
+    if (!isOwner) {
+      console.warn('⛔ Unauthorized access attempt:', {
+        sessionId,
+        requestingUser: userEmail || 'none',
+        requestingCode: accessCode ? 'present' : 'none',
+        sessionOwner: data.user_email || data.access_code || 'none'
+      });
+      return NextResponse.json(
+        { error: 'Unauthorized - session belongs to another user' },
+        { status: 403 }
+      );
+    }
+
+    console.log('✅ Session ownership verified:', {
+      sessionId,
+      owner: userEmail || 'access_code_user'
+    });
 
     // Convert back to ChatSession format
     const session: ChatSession = {

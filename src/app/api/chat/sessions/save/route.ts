@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
 import type { ChatSession } from '@/types/chat';
 import { PERSONAS } from '@/lib/personas';
+import { auth } from '@/auth';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +28,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // SECURITY: Server determines user identity, not client
+    const authSession = await auth();
+    const c = await cookies();
+    const userEmail = authSession?.user?.email || null;
+    const accessCode = c.get('access_token')?.value || null;
+
+    console.log('💾 Saving session with identity:', {
+      userEmail: userEmail || 'none',
+      accessCode: accessCode ? 'present' : 'none',
+      sessionId: session.id
+    });
+
     // Convert Date objects to ISO strings for JSONB storage
     const messagesForStorage = session.messages.map(msg => ({
       ...msg,
@@ -44,8 +58,8 @@ export async function POST(req: NextRequest) {
       .from('chat_sessions')
       .upsert({
         id: session.id,
-        user_id: session.userId || null,
-        access_code: session.accessCode || null,
+        user_email: userEmail,
+        access_code: accessCode,
         created_at: session.createdAt instanceof Date ? session.createdAt.toISOString() : session.createdAt,
         updated_at: session.updatedAt instanceof Date ? session.updatedAt.toISOString() : session.updatedAt,
         model_name: session.configuration.modelName,

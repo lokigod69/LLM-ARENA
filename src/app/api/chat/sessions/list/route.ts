@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseEnabled } from '@/lib/supabase';
 import { cookies } from 'next/headers';
+import { auth } from '@/auth';
 
 export async function GET(_req: NextRequest) {
   try {
@@ -15,20 +16,35 @@ export async function GET(_req: NextRequest) {
       );
     }
 
-    // Get access code from cookies for filtering
+    // SECURITY: Determine user identity from server-side session
+    const authSession = await auth();
     const c = await cookies();
-    const accessCode = c.get('access_code')?.value;
+    const userEmail = authSession?.user?.email;
+    const accessCode = c.get('access_token')?.value;
 
-    // Build query
+    console.log('📚 Listing sessions for:', {
+      userEmail: userEmail || 'none',
+      accessCode: accessCode ? 'present' : 'none'
+    });
+
+    // Build query with proper user filtering
     let query = supabase!
       .from('chat_sessions')
       .select('id, created_at, model_name, persona_id, stance, default_extensiveness, message_count')
       .order('created_at', { ascending: false })
       .limit(50);
 
-    // Filter by access code if available
-    if (accessCode) {
+    // Filter by user identity
+    if (userEmail) {
+      // OAuth user - filter by email
+      query = query.eq('user_email', userEmail);
+    } else if (accessCode) {
+      // Access code user - filter by code
       query = query.eq('access_code', accessCode);
+    } else {
+      // No auth - return empty list
+      console.log('⚠️ No authentication found, returning empty list');
+      return NextResponse.json({ success: true, sessions: [] });
     }
 
     const { data, error } = await query;

@@ -392,6 +392,7 @@ function HomeContent() {
               <Link href="/library" className="inline-flex items-center justify-center rounded-full bg-matrix-green/10 hover:bg-matrix-green/30 transition-colors p-2 ml-2" title="Open Library" style={{ fontSize: 28 }}>
                 <span role="img" aria-label="Library">📚</span>
               </Link>
+              <SignInButton />
             </motion.div>
           </div>
         </motion.header>

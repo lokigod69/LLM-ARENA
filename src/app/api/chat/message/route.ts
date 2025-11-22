@@ -7,6 +7,7 @@ import type { ChatMessage, ChatConfiguration } from '@/types/chat';
 import { processChatTurn } from '@/lib/orchestrator';
 import { getRelevantContext } from '@/lib/chatHelpers';
 import { PERSONAS } from '@/lib/personas';
+import { getUserAuth, checkOAuthQuota, decrementOAuthQuota } from '@/lib/auth-helpers';
 
 // Direct REST API calls to Upstash KV - Same pattern as debate system
 const KV_URL = process.env.KV_REST_API_URL || process.env.KV_URL;
@@ -56,16 +57,70 @@ export async function POST(request: NextRequest) {
     configuration = body.configuration;
     conversationHistory = body.conversationHistory || [];
 
-    // Check authentication via cookies
-    const c = await cookies();
-    const accessMode = c.get('access_mode')?.value;
-    const accessToken = c.get('access_token')?.value;
-
+    // PHASE 2A: Dual authentication check (OAuth + Access Codes)
+    const userAuth = await getUserAuth();
+    
+    if (!userAuth) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            type: 'auth',
+            message: 'Authentication required',
+            retryable: false,
+          },
+        },
+        { status: 401 }
+      );
+    }
+    
     let remainingQueries: number | string = 'Unlimited';
 
-    if (accessMode === 'admin') {
+    if (userAuth.type === 'oauth') {
+      // OAuth user - check Supabase quota (using email for lookup)
+      const quotaCheck = await checkOAuthQuota(userAuth.email, 'chat');
+      
+      if (!quotaCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              type: 'cost',
+              message: 'No chats remaining. Upgrade your plan to continue.',
+              retryable: false,
+            },
+            tier: userAuth.tier,
+            remaining: 0
+          },
+          { status: 403 }
+        );
+      }
+      
+      // Decrement quota
+      const result = await decrementOAuthQuota(userAuth.email, 'chat');
+      if (!result.success) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              type: 'api',
+              message: 'Failed to update quota',
+              retryable: true,
+            },
+          },
+          { status: 500 }
+        );
+      }
+      
+      remainingQueries = result.remaining;
+      
+    } else if (userAuth.type === 'admin') {
+      // Admin bypass - no quota check
       remainingQueries = 'Unlimited';
-    } else if (accessMode === 'token' && accessToken) {
+      
+    } else if (userAuth.type === 'token') {
+      // Access code user - check KV quota (existing logic)
+      const accessToken = userAuth.token;
       try {
         const rawData = await kv(['HGETALL', `token:${accessToken}`]);
 
@@ -132,18 +187,6 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            type: 'auth',
-            message: 'Authentication required',
-            retryable: false,
-          },
-        },
-        { status: 401 }
-      );
     }
 
     // Validate required parameters
